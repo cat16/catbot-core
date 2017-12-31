@@ -9,15 +9,13 @@ let isFile = source => fs.lstatSync(source).isFile()
 
 /**
  * gets all files in a directory
- * @param {string} source 
+ * @param {string} directory 
  * @return {string[]}
  */
-let getFiles = (source) => {
-    if(source.startsWith('.')) source = source.substring(1)
-    const path = `${__dirname}/../${source}`
-    let files = fs.readdirSync(path).map(name => path.join(path, name)).filter(isFile)
+let getFiles = (directory) => {
+    let files = fs.readdirSync(directory).map(name => path.join(directory, name)).filter(isFile)
     for (let file in files) {
-        files[file] = files[file].slice(__dirname.length - 5 + source.length)
+        files[file] = files[file].slice(directory.length + 1)
     }
     return files
 }
