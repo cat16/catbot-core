@@ -76,7 +76,7 @@ class Catbot {
             this.log('Config file generated')
             return config
         } else {
-            return require('./config.json')
+            return require(`${this.directory}/${CONFIG_FILE}`)
         }
     }
 
