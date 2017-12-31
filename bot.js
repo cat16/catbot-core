@@ -1,7 +1,7 @@
-const Eris = require('eris')
-const { CommandOptions, Message } = require('eris')
-const fs = require('fs')
-const load = require('./load.js')
+import Eris from 'eris'
+import { CommandOptions, Message } from 'eris'
+import fs from 'fs'
+import load from './load.js'
 
 class Config {
     /**
@@ -37,8 +37,12 @@ class Catbot {
         }
         /**@type {Command[]} */
         let commands = load(`${this.directory}/commands`)
-        for (let command in commands) {
-            this.client.registerCommand(command, (msg, args) => {commands[command].run.(msg, args)})
+        for (let cmd in commands) {
+            let command = commands[cmd];
+            this.client.registerCommand(command.name, (msg, args) => {
+                command.prepare(this)
+                command.run(msg, args, this)
+            }, command.options)
         }
         this.loaded = true
         this.log('loaded.')
@@ -81,24 +85,17 @@ class Catbot {
     }
 }
 
-let Command = class Command extends Eris.Command {
-
-    /**
-     * @typedef {Function} RunFunction
-     * @param {Message} msg
-     * @param {String[]} args
-     * @param {Catbot} bot
-     * @abstract
-     */
+let Command = class Command {
 
     /**
      * @param {String} name 
-     * @param {RunFunction} run
+     * @param {function(Message, String[], Catbot)} run
      * @param {CommandOptions} [options] 
      */
     constructor(name, run, options){
-        super(name, run, options)
         this.name = name
+        this.run = run
+        this.options = options
     }
 
     /**
