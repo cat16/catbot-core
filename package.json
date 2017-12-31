@@ -1,0 +1,22 @@
+{
+  "name": "catbot-core",
+  "version": "1.0.0",
+  "description": "the core code for cat16's discord bots; uses eris",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cat16/catbot-core.git"
+  },
+  "author": "Bryan McShea",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/cat16/catbot-core/issues"
+  },
+  "homepage": "https://github.com/cat16/catbot-core#readme",
+  "dependencies": {
+    "eris": "^0.8.2"
+  }
+}
