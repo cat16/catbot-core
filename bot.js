@@ -1,7 +1,7 @@
-import Eris from 'eris'
-import { CommandOptions, Message } from 'eris'
-import fs from 'fs'
-import load from './load.js'
+const Eris = require('eris')
+const { CommandOptions, Message } = require('eris')
+const fs = require('fs')
+const load = require('./load.js')
 
 class Config {
     /**
