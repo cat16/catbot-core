@@ -20,5 +20,7 @@
     "eris": "^0.8.2",
     "readline-sync": "^1.4.7"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "standard": "^10.0.3"
+  }
 }
