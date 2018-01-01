@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/cat16/catbot-core#readme",
   "dependencies": {
-    "eris": "^0.8.2"
+    "eris": "^0.8.2",
+    "readline-sync": "^1.4.7"
   },
   "devDependencies": {}
 }
