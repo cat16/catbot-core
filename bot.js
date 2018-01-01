@@ -39,13 +39,23 @@ class Catbot {
         this.log(`Could not load event '${event}': No function was exported`)
       }
     }
+    let defaultCommands = load(`${__dirname}/default-commands`)
+    for (let cmd in defaultCommands) {
+      /**
+       * @type {Command}
+       */
+      let command = defaultCommands[cmd](this)
+      this.client.registerCommand(command.name, (msg, args) => {
+        command.prepare(this)
+        command.run(msg, args, this)
+      }, command.options)
+    }
     let commands = load(`${this.directory}/commands`)
     for (let cmd in commands) {
       /**
        * @type {Command}
        */
       let command = commands[cmd](this)
-      this.log(require('util').inspect(command.options))
       this.client.registerCommand(command.name, (msg, args) => {
         command.prepare(this)
         command.run(msg, args, this)
