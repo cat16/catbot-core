@@ -1,6 +1,6 @@
 {
-  "name": "catbot-core",
-  "version": "1.0.9",
+  "name": "cat16-bot-core",
+  "version": "1.0.0",
   "description": "the core code for cat16's discord bots; uses eris",
   "main": "core.js",
   "scripts": {
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cat16/catbot-core.git"
+    "url": "git+https://github.com/cat16/bot-core.git"
   },
   "author": "Bryan McShea",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/cat16/catbot-core/issues"
+    "url": "https://github.com/cat16/bot-core/issues"
   },
-  "homepage": "https://github.com/cat16/catbot-core#readme",
+  "homepage": "https://github.com/cat16/bot-core#readme",
   "dependencies": {
     "eris": "^0.8.3",
     "readline-sync": "^1.4.7",
