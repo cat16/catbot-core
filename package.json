@@ -2,9 +2,9 @@
   "name": "catbot-core",
   "version": "1.0.9",
   "description": "the core code for cat16's discord bots; uses eris",
-  "main": "bot.js",
+  "main": "core.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "repository": {
     "type": "git",
@@ -18,7 +18,8 @@
   "homepage": "https://github.com/cat16/catbot-core#readme",
   "dependencies": {
     "eris": "^0.8.2",
-    "readline-sync": "^1.4.7"
+    "readline-sync": "^1.4.7",
+    "sqlite3": "^3.1.13"
   },
   "devDependencies": {
     "standard": "^10.0.3"

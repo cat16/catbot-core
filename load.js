@@ -1,3 +1,5 @@
+// TODO: implement logging system or make this a class
+
 const fs = require('fs')
 const path = require('path')
 
@@ -24,10 +26,10 @@ let log = msg => {
   console.log(`[load.js] ${msg}`)
 }
 
-let load = (directory) => {
-
+let load = (directory, generateNew) => {
   if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory)
+    if (generateNew) fs.mkdirSync(directory)
+    else return null
   }
 
   let obj = {}
@@ -36,7 +38,7 @@ let load = (directory) => {
       try {
         obj[file.slice(0, -3)] = require(`${directory}/${file}`)
       } catch (ex) {
-        log(`Failed to load file '${file}'! : ${ex}`)
+        log(`Failed to load file '${file}'! : ${ex.stack}`)
       }
     }
   }

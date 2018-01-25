@@ -1,4 +1,4 @@
-const Command = require('../bot.js').Command
+const Command = require('../../core.js').Command
 const util = require('util')
 
 module.exports = (bot) => {
@@ -6,11 +6,10 @@ module.exports = (bot) => {
     return code.toString().replace(bot.config.token, '[TOKEN]').slice(0, 1000)
   }
 
-  return new Command(
-    'eval',
-    async (msg, args, bot) => {
+  return new Command({
+    name: 'eval',
+    run: async (msg, content, bot) => {
       const depth = 0
-      const content = args.join(' ')
       try {
         let evaled = eval(content) // eslint-disable-line no-eval
         let output = evaled
@@ -95,13 +94,6 @@ module.exports = (bot) => {
           }
         })
       }
-    },
-    {
-      requirements: {
-        userIDs: [
-          bot.config.ownerID
-        ]
-      }
     }
-  )
+  })
 }
