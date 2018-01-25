@@ -43,7 +43,7 @@ class Catbot {
     this.logger = new Logger('bot-core')
     this.logger.log('Loading...')
     this.config = this.getConfig()
-    this.client = new Eris.CommandClient(this.config.token, {}, { owner: this.config.ownerID, prefix: this.config.defaultPrefix })
+    this.client = new Eris.Client(this.config.token, {})
     this.commandManager = new CommandManager(this)
     this.tools = {}
     // register everything
