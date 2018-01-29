@@ -5,59 +5,59 @@ const readline = require('readline-sync')
 
 const Logger = require('./logger.js')
 const load = require('./load.js')
+const Config = require('./config.js')
+const DatabaseManager = require('./database-manager.js')
 const CommandManager = require('./command-manager.js')
 const Command = require('./command.js') // eslint-disable-line no-unused-vars
-
-class Config {
-  /**
-   * @typedef ConfigOptions
-   * @prop {String} token
-   * @prop {String} ownerID
-   * @prop {String} defaultPrefix
-   * @prop {boolean} [generateFolders]
-   */
-
-  /**
-   * @param {ConfigOptions} options
-   */
-  constructor (options) {
-    // general
-    if (options == null) options = {}
-    this.token = options.token
-    this.ownerID = options.ownerID
-    this.defaultPrefix = options.defaultPrefix
-    this.generateFolders = options.generateFolders || true
-    // TODO: responses maybe?
-  }
-}
+const userTableInfo = require('./default/database.js').users
 
 class Catbot {
   /**
    * @param {String} directory
    */
-  constructor (directory, options) {
+  constructor (directory) {
     this.directory = directory
-  }
-
-  load () {
     this.logger = new Logger('bot-core')
-    this.logger.log('Loading...')
-    this.config = this.getConfig()
-    this.client = new Eris.Client(this.config.token, {})
-    this.commandManager = new CommandManager(this)
     this.tools = {}
-    // register everything
-    this.registerDir(`${__dirname}/default`, false)
-    this.registerDir(this.directory, this.config.generateFolders)
-
-    this.loaded = true
-    this.logger.log('Loaded.')
+    this.databaseManager = new DatabaseManager('storage')
+    this.commandManager = new CommandManager(this)
+    this.client = null
+    /** @type {Config} */
+    this.config = null
   }
 
+  /**
+   * @return {Promise}
+   */
+  load () {
+    return new Promise(async (resolve, reject) => {
+      this.logger.log('Loading...')
+      this.loadConfig('config.json')
+      this.client = new Eris.Client(this.config.token, {})
+      // TODO: make this a waterfall?
+      await this.databaseManager.load()
+      await this.registerDir(`${__dirname}/default`, false)
+      await this.registerDir(this.directory, this.config.generateFolders)
+      this.userTable = await this.databaseManager.getTable(userTableInfo.name)
+      await this.commandManager.load()
+      this.commandManager.reloadCommands()
+      this.logger.log('Loaded.')
+      resolve()
+    })
+  }
+
+  /**
+   * @return {Promise}
+   */
   registerDir (directory, generateFolders) {
-    this.registerTools(`${directory}/tools`, generateFolders)
-    this.registerEvents(`${directory}/events`, generateFolders)
-    this.registerCommands(`${directory}/commands`, generateFolders)
+    // TODO: possibly move register tools & events?
+    return new Promise(async (resolve, reject) => {
+      await this.databaseManager.loadFile(`${directory}/database.js`)
+      this.registerTools(`${directory}/tools`, generateFolders)
+      this.registerEvents(`${directory}/events`, generateFolders)
+      this.commandManager.addDir(`${directory}/commands`, generateFolders)
+      resolve()
+    })
   }
 
   registerTools (directory, generateFolders) {
@@ -86,44 +86,29 @@ class Catbot {
     }
   }
 
-  registerCommands (directory, generateFolders) {
-    let commandFuncs = load(directory, generateFolders)
-    if (commandFuncs == null) return
-    for (let commandFunc in commandFuncs) {
-      try {
-        /** @type {Command} */
-        let command = commandFuncs[commandFunc](this)
-        command.prepare(this.logger)
-        this.commandManager.addCommand(command)
-      } catch (ex) {
-        this.logger.error(`Could not load command from file '${commandFunc}': ${ex.stack}`)
-      }
-    }
-  }
-
+  /**
+   * @return {Promise}
+   */
   connect () {
-    if (this.loaded) {
+    return new Promise((resolve, reject) => {
       this.logger.log('Connecting...')
       this.client.on('ready', () => {
         this.logger.log('Connected.')
+        resolve()
       })
       this.client.connect()
-    } else {
-      throw new Error('Bot could not connect: Bot not loaded!')
-    }
+    })
   }
 
   /**
-   * @return {Config}
+   * @param {string} file
    */
-  getConfig () {
-    let CONFIG_FILE = 'config.json'
-
+  loadConfig (file) {
     let writeConfig = (config) => {
-      fs.writeFileSync(`${this.directory}/${CONFIG_FILE}`, JSON.stringify(config, null, '\t'))
+      fs.writeFileSync(`${this.directory}/${file}`, JSON.stringify(config, null, '\t'))
     }
 
-    if (!fs.existsSync(`${this.directory}/${CONFIG_FILE}`)) {
+    if (!fs.existsSync(`${this.directory}/${file}`)) {
       this.logger.warn('No config file detected!\nCreating new config file...')
       let config = new Config()
       for (let key in config) {
@@ -131,15 +116,15 @@ class Catbot {
       }
       writeConfig(config)
       this.logger.log('Config file generated')
-      return config
+      this.config = config
     } else {
-      let config = require(`${this.directory}/${CONFIG_FILE}`)
+      let config = require(`${this.directory}/${file}`)
       let updated = false
       let neededConfig = new Config()
       for (let key in neededConfig) {
         if (config[key] == null && neededConfig[key] === undefined) {
-          this.logger.warn(`No ${key} found in config!`)
-          config[key] = this.getInput(`Enter ${key}`)
+          if (!updated) this.logger.warn(`Config is not completed! Please fill in the following values...`)
+          config[key] = this.getInput(key)
           updated = true
         }
       }
@@ -147,7 +132,7 @@ class Catbot {
         writeConfig(config)
         this.logger.log('Config file updated.')
       }
-      return config
+      this.config = config
     }
   }
 
@@ -157,6 +142,36 @@ class Catbot {
    */
   getInput (msg) {
     return readline.question(this.logger.getLogString(`${msg}: `))
+  }
+
+  /**
+   * @param {string} id
+   * @return {Promise<string[]>}
+   */
+  getUserPermTags (id) {
+    return new Promise((resolve, reject) => {
+      this.userTable.select([userTableInfo.cols.permTags.name], `${userTableInfo.cols.id.name} = ${id}`).then(rows => {
+        if (rows.length < 1) {
+          resolve([])
+        } else {
+          if (rows[0].permTags === '') resolve([])
+          else resolve(rows[0].permTags.split(','))
+        }
+      })
+    })
+  }
+
+  /**
+   * @param {string} id
+   * @param {string[]} tags
+   * @return {Promise<string[]>}
+   */
+  setUserPermTags (id, tags) {
+    return new Promise((resolve, reject) => {
+      this.userTable.insert([userTableInfo.cols.id.name, userTableInfo.cols.permTags.name], [id, tags.join(',')], true).then(() => {
+        resolve()
+      })
+    })
   }
 }
 

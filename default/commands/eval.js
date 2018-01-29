@@ -43,7 +43,7 @@ module.exports = (bot) => {
 
           let editOutput = async result => {
             let code = util.inspect(result, { depth }).replace(bot.config.token, '[TOKEN]')
-
+            if (result == null) result = '???'
             sent.then(msg2 => {
               msg2.edit({
                 embed: {

@@ -4,7 +4,7 @@
   "description": "the core code for cat16's discord bots; uses eris",
   "main": "core.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js --debug"
   },
   "repository": {
     "type": "git",

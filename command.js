@@ -2,10 +2,12 @@ const eris = require('eris')
 const Message = eris.Message // eslint-disable-line no-unused-vars
 
 const Logger = require('./logger.js')
+const Catbot = require('./bot.js') // eslint-disable-line no-unused-vars
+const Arg = require('./arg.js')
 
 /**
  * @param {Message} msg
- * @param {string} content
+ * @param {string | object} content
  * @param {Catbot} bot
  */
 const RunFunction = (msg, content, bot) => { } // eslint-disable-line no-unused-vars
@@ -17,6 +19,9 @@ class Command {
    * @property {RunFunction} run
    * @property {string[]} [aliases]
    * @property {Command[]} [subcommands]
+   * @property {boolean} [defaultPermission]
+   * @property {string[]} [defaultTags]
+   * @property {Arg[]} [args]
    */
 
   /**
@@ -24,13 +29,14 @@ class Command {
    */
   constructor (options) {
     this.name = options.name
+
     /**
      * @param {Message} msg
      * @param {string} content
      * @param {Catbot} bot
      * @return {Promise}
      */
-    this.run = (msg, content, bot) => {
+    this.run = options.run == null ? null : (msg, content, bot) => {
       return new Promise((resolve, reject) => {
         try {
           /** @type {Promise} */
@@ -51,6 +57,9 @@ class Command {
     }
     this.aliases = options.aliases || []
     this.subcommands = options.subcommands || false
+    this.defaultPermission = options.defaultPermission == null ? false : options.defaultPermission
+    this.defaultTags = options.defaultTags || []
+    this.args = options.args || []
   }
 
   getTriggers () {
@@ -64,5 +73,7 @@ class Command {
     this.logger = new Logger(`command::'${this.name}'`, logger)
   }
 }
+
+Command.Arg = Arg
 
 module.exports = Command

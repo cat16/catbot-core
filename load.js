@@ -37,6 +37,7 @@ let load = (directory, generateNew) => {
     if (file.endsWith('.js')) {
       try {
         obj[file.slice(0, -3)] = require(`${directory}/${file}`)
+        delete require.cache[require.resolve(`${directory}/${file}`)]
       } catch (ex) {
         log(`Failed to load file '${file}'! : ${ex.stack}`)
       }

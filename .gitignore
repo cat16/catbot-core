@@ -1,5 +1,6 @@
 node_modules
 *.bat
 *.sh
+*.db
 .vscode
 config.json

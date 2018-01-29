@@ -61,7 +61,8 @@ class Logger {
         console.error(send)
         break
       case Logger.DEBUG:
-        console.debug(send)
+        // console.debug(send)
+        console.log(send)
         break
     }
   }
