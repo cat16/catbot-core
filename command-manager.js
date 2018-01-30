@@ -38,7 +38,9 @@ class CommandManager {
    * @param {Catbot} bot
    */
   constructor (bot) {
+    /** @type {Catbot} */
     this.bot = bot
+    /** @type {Logger} */
     this.logger = new Logger('command manager', bot.logger)
     /** @type {Command[]} */
     this.commands = []

@@ -1,4 +1,5 @@
-const Eris = require('eris')
+const eris = require('eris')
+const { Client } = eris // eslint-disable-line no-unused-vars
 
 const fs = require('fs')
 const readline = require('readline-sync')
@@ -10,17 +11,24 @@ const DatabaseManager = require('./database-manager.js')
 const CommandManager = require('./command-manager.js')
 const Command = require('./command.js') // eslint-disable-line no-unused-vars
 const userTableInfo = require('./default/database.js').users
+const Util = require('./util.js')
 
 class Catbot {
   /**
    * @param {String} directory
    */
   constructor (directory) {
+    /** @type {string} */
     this.directory = directory
+    /** @type {Logger} */
     this.logger = new Logger('bot-core')
-    this.util = require('./default/util.js')(this)
+    /** @type {Util} */
+    this.util = new Util(this)
+    /** @type {DatabaseManager} */
     this.databaseManager = new DatabaseManager('storage')
+    /** @type {CommandManager} */
     this.commandManager = new CommandManager(this)
+    /** @type {Client} */
     this.client = null
     /** @type {Config} */
     this.config = null
@@ -33,7 +41,7 @@ class Catbot {
     return new Promise(async (resolve, reject) => {
       this.logger.log('Loading...')
       this.loadConfig('config.json')
-      this.client = new Eris.Client(this.config.token, {})
+      this.client = new eris.Client(this.config.token, {})
       // TODO: make this a waterfall?
       await this.databaseManager.load()
       await this.registerDir(`${__dirname}/default`, false)
