@@ -18,7 +18,7 @@ class Catbot {
   constructor (directory) {
     this.directory = directory
     this.logger = new Logger('bot-core')
-    this.tools = {}
+    this.util = require('./default/util.js')(this)
     this.databaseManager = new DatabaseManager('storage')
     this.commandManager = new CommandManager(this)
     this.client = null
@@ -50,23 +50,13 @@ class Catbot {
    * @return {Promise}
    */
   registerDir (directory, generateFolders) {
-    // TODO: possibly move register tools & events?
+    // TODO: possibly move register events?
     return new Promise(async (resolve, reject) => {
       await this.databaseManager.loadFile(`${directory}/database.js`)
-      this.registerTools(`${directory}/tools`, generateFolders)
       this.registerEvents(`${directory}/events`, generateFolders)
       this.commandManager.addDir(`${directory}/commands`, generateFolders)
       resolve()
     })
-  }
-
-  registerTools (directory, generateFolders) {
-    let tools = load(directory, generateFolders)
-    if (tools == null) return
-    for (let tool in tools) {
-      if (this.tools[tools] != null) this.logger.warn(`Conflicting tools found! There are 2 tools with the name '${tool}', ignoring the new one...`)
-      else this.tools[tools] = tools[tool]
-    }
   }
 
   registerEvents (directory, generateFolders) {

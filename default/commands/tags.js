@@ -15,10 +15,14 @@ module.exports = (bot) => {
             ],
             run: async (msg, args, bot) => {
               let tags = await bot.getUserPermTags(args.user.id)
-              tags.push(args.tag)
-              bot.setUserPermTags(args.user.id, tags).then(() => {
-                bot.client.createMessage(msg.channel.id, ':white_check_mark: Successfully added tag')
-              })
+              if (!tags.includes(args.tag)) {
+                tags.push(args.tag)
+                bot.setUserPermTags(args.user.id, tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave ${args.user.username} tag '${args.tag}'`)
+                })
+              } else {
+                bot.client.createMessage(msg.channel.id, `:x: ${args.user.username} already has tag '${args.tag}'`)
+              }
             }
           }),
           new Command({
@@ -29,10 +33,14 @@ module.exports = (bot) => {
             ],
             run: async (msg, args, bot) => {
               let tags = await bot.getUserPermTags(args.user.id)
-              tags = tags.filter((tag) => { return tag !== args.tag })
-              bot.setUserPermTags(args.user.id, tags).then(() => {
-                bot.client.createMessage(msg.channel.id, ':white_check_mark: Successfully removed tag')
-              })
+              if (tags.includes(args.tag)) {
+                tags = tags.filter((tag) => { return tag !== args.tag })
+                bot.setUserPermTags(args.user.id, tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from ${args.user.username}`)
+                })
+              } else {
+                bot.client.createMessage(msg.channel.id, `:x: ${args.user.username} doesn't have tag '${args.tag}'`)
+              }
             }
           }),
           new Command({
@@ -63,10 +71,14 @@ module.exports = (bot) => {
             ],
             run: async (msg, args, bot) => {
               let tags = await bot.commandManager.getCommandPermissions(args.command.name)
-              tags.push(args.tag)
-              bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
-                bot.client.createMessage(msg.channel.id, ':white_check_mark: Successfully added tag')
-              })
+              if (!tags.includes(args.tag)) {
+                tags.push(args.tag)
+                bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave command ${args.command.name} tag '${args.tag}'`)
+                })
+              } else {
+                bot.client.createMessage(msg.channel.id, `:x: Command ${args.command.name} already has tag '${args.tag}'`)
+              }
             }
           }),
           new Command({
@@ -77,10 +89,14 @@ module.exports = (bot) => {
             ],
             run: async (msg, args, bot) => {
               let tags = await bot.commandManager.getCommandPermissions(args.command.name)
-              tags = tags.filter((tag) => { return tag !== args.tag })
-              bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
-                bot.client.createMessage(msg.channel.id, ':white_check_mark: Successfully removed tag')
-              })
+              if (tags.includes(args.tag)) {
+                tags = tags.filter((tag) => { return tag !== args.tag })
+                bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from command ${args.command.name}`)
+                })
+              } else {
+                bot.client.createMessage(msg.channel.id, `:x: Command ${args.command.name} doesn't have tag '${args.tag}'`)
+              }
             }
           }),
           new Command({

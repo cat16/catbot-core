@@ -47,12 +47,33 @@ Arg.type = {
   user: new ArgType({
     validate: (text, bot) => {
       let parts = text.split(' ', 2)
-      text = parts[0]
-      if (!text.startsWith('<@') || !text.endsWith('>')) return new ArgResult(true, `'${text}' is not a user`)
-      text = text.slice(2, -1)
-      let user = bot.client.users.find(u => { return u.id === text })
+      let user = bot.util.getUser(parts[0])
       if (user) return new ArgResult(false, user, parts[1])
-      else return new ArgResult(true, `User ${text} does not exist or cannot be found`)
+      else return new ArgResult(true, `User ${parts[0]} does not exist or cannot be found`)
+    }
+  }),
+  text_channel: new ArgType({
+    validate: (text, bot) => {
+      let parts = text.split(' ', 2)
+      let channel = bot.util.getTextChannel(parts[0])
+      if (channel) return new ArgResult(false, channel, parts[1])
+      else return new ArgResult(true, `Text channel ${parts[0]} does not exist or cannot be found`)
+    }
+  }),
+  dm_channel: new ArgType({
+    validate: (text, bot) => {
+      let parts = text.split(' ', 2)
+      let channel = bot.util.getDMChannel(parts[0])
+      if (channel) return new ArgResult(false, channel, parts[1])
+      else return new ArgResult(true, `DM channel ${parts[0]} does not exist or cannot be found`)
+    }
+  }),
+  voice_channel: new ArgType({
+    validate: (text, bot) => {
+      let parts = text.split(' ', 2)
+      let channel = bot.util.getVoiceChannel(parts[0])
+      if (channel) return new ArgResult(false, channel, parts[1])
+      else return new ArgResult(true, `Voice channel ${parts[0]} does not exist or cannot be found`)
     }
   }),
   command: new ArgType({
