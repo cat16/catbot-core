@@ -46,7 +46,7 @@ class ArgType {
 Arg.type = {
   user: new ArgType({
     validate: (text, bot) => {
-      let parts = text.split(' ', 2)
+      let parts = text.split(/ (.+)/)
       let user = bot.util.getUser(parts[0])
       if (user) return new ArgResult(false, user, parts[1])
       else return new ArgResult(true, `User ${parts[0]} does not exist or cannot be found`)
@@ -54,7 +54,7 @@ Arg.type = {
   }),
   text_channel: new ArgType({
     validate: (text, bot) => {
-      let parts = text.split(' ', 2)
+      let parts = text.split(/ (.+)/)
       let channel = bot.util.getTextChannel(parts[0])
       if (channel) return new ArgResult(false, channel, parts[1])
       else return new ArgResult(true, `Text channel ${parts[0]} does not exist or cannot be found`)
@@ -62,7 +62,7 @@ Arg.type = {
   }),
   dm_channel: new ArgType({
     validate: (text, bot) => {
-      let parts = text.split(' ', 2)
+      let parts = text.split(/ (.+)/)
       let channel = bot.util.getDMChannel(parts[0])
       if (channel) return new ArgResult(false, channel, parts[1])
       else return new ArgResult(true, `DM channel ${parts[0]} does not exist or cannot be found`)
@@ -70,7 +70,7 @@ Arg.type = {
   }),
   voice_channel: new ArgType({
     validate: (text, bot) => {
-      let parts = text.split(' ', 2)
+      let parts = text.split(/ (.+)/)
       let channel = bot.util.getVoiceChannel(parts[0])
       if (channel) return new ArgResult(false, channel, parts[1])
       else return new ArgResult(true, `Voice channel ${parts[0]} does not exist or cannot be found`)

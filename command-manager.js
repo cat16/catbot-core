@@ -1,6 +1,8 @@
 const eris = require('eris')
 const Message = eris.Message // eslint-disable-line no-unused-vars
 
+const fs = require('fs')
+
 const load = require('./load.js')
 const Catbot = require('./bot.js') // eslint-disable-line no-unused-vars
 const Command = require('./command.js')
@@ -35,6 +37,12 @@ let startsWithAny = (str, arr) => {
 
 class CommandManager {
   /**
+   * @typedef Directory
+   * @prop {string} path
+   * @prop {boolean} generateFolders
+   */
+
+  /**
    * @param {Catbot} bot
    */
   constructor (bot) {
@@ -44,7 +52,7 @@ class CommandManager {
     this.logger = new Logger('command manager', bot.logger)
     /** @type {Command[]} */
     this.commands = []
-    /** @type {object[]} */
+    /** @type {Directory[]} */
     this.loadDirs = []
   }
 
@@ -64,28 +72,42 @@ class CommandManager {
    * @param {string} directory
    */
   addDir (directory, generateFolders) {
-    this.loadDirs.push({ directory, generateFolders })
+    this.loadDirs.push({ path: directory, generateFolders })
+  }
+
+  /**
+   * @param {Command} command
+   * @return {Promise}
+   */
+  addCommand (command) {
+    return new Promise(async (resolve, reject) => {
+      command.prepare(this.logger)
+      let commandPerms = await this.getCommandPermissions(command.name)
+      if (commandPerms == null) {
+        this.setCommandPermissions(command.name, command.defaultTags)
+      }
+      if (this.commands.find(cmd => { return cmd.name === command.name })) {
+        this.logger.warn(`Conflicting commands found! There are 2 commands with the name '${command.name}', ignoring the new one...`)
+      } else {
+        this.commands.push(command)
+      }
+    })
   }
 
   /**
    * @return {Promise}
    */
-  async reloadCommands () {
+  reloadCommands () {
     return new Promise(async (resolve, reject) => {
       this.logger.info('Reloading commands...')
       this.commands = []
       for (let dir of this.loadDirs) {
-        let commandFuncs = load(dir.directory, dir.generateFolders)
-        if (commandFuncs == null) return
+        let commandFuncs = load(dir.path, dir.generateFolders)
+        if (commandFuncs == null) resolve()
         for (let commandFunc in commandFuncs) {
           try {
             /** @type {Command} */
             let command = commandFuncs[commandFunc](this.bot)
-            command.prepare(this.logger)
-            let commandPerms = await this.getCommandPermissions(command.name)
-            if (commandPerms == null) {
-              this.setCommandPermissions(command.name, command.defaultTags)
-            }
             this.addCommand(command)
           } catch (ex) {
             this.logger.error(`Could not load command from file '${commandFunc}': ${ex.stack}`)
@@ -97,14 +119,31 @@ class CommandManager {
   }
 
   /**
-   * @param {Command} command
+   * @param {string} name
+   * @return {Promise}
    */
-  addCommand (command) {
-    if (this.commands.find(cmd => { return cmd.name === command.name })) {
-      this.logger.warn(`Conflicting commands found! There are 2 commands with the name '${command.name}', ignoring the new one...`)
-    } else {
-      this.commands.push(command)
-    }
+  reloadCommand (name) {
+    return new Promise(async (resolve, reject) => {
+      this.logger.info(`Attemping to reload command '${name}'...`)
+      for (let dir of this.loadDirs) {
+        let path = `${dir.path}/${name}.js`
+        if (fs.existsSync(path)) {
+          try {
+            /** @type {Command} */
+            let command = require(path)(this.bot)
+            delete require.cache[require.resolve(path)]
+            this.commands = this.commands.filter(c => c.name !== name)
+            this.addCommand(command)
+            resolve()
+            return
+          } catch (ex) {
+            reject(new Error(`Could not reload command '${name}':\n\`\`\`js\n${ex.stack}\n\`\`\``))
+            return
+          }
+        }
+      }
+      reject(new Error(`:x: No command named '${name}' found`))
+    })
   }
 
   /**
@@ -164,7 +203,7 @@ class CommandManager {
         let command = result.data
         if (sudo || await this.checkPerms(command, msg.author.id)) {
           command.run(msg, result.content, this.bot).then(() => {
-            this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' ran command '${result.name}'`)
+            if (!command.silent) this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' ran command '${result.name}'`)
           }, (err) => {
             this.logger.error(`Command '${result.name}' crashed: ${err.stack}`)
           })
@@ -221,50 +260,68 @@ class CommandManager {
    * @return {CommandResult}
    */
   parseContent (content, commands, parents = []) {
+    /**
+     * @param {Command} command
+     * @param {string} content
+     * @return {CommandResult}
+     */
+    let handleCommand = (command, content) => {
+      if (command.args.length > 0) {
+        let args = {}
+        for (let arg of command.args) {
+          let types = arg.type.split('|')
+          if (content != null && content.length > 0) {
+            let finalResult = null
+            let unknownArgType = false
+            for (let typeName of types) {
+              let type = Arg.type[typeName]
+              if (type) {
+                let result = type.validate(content, this.bot)
+                if (result.failed) {
+                  finalResult = types.length > 1
+                    ? new CommandResult(`No suitable arguement was provided for '${arg.name}'\nAcceptable types: [${types.join(', ')}]`, parents.join(' '))
+                    : new CommandResult(result.data, parents.join(' '))
+                } else {
+                  args[arg.name] = result.data
+                  if (result.subcontent == null) result.subcontent = ''
+                  content = result.subcontent.trim()
+                  finalResult = null
+                  break
+                }
+              } else {
+                if (typeName !== 'any') this.logger.warn(`Arguement '${arg.name}' in command '${parents.join(' ')}' uses type '${typeName}' which does not exist! Assuming any...`)
+                unknownArgType = true
+              }
+            }
+            if (finalResult) {
+              if (types.includes('any') || unknownArgType) {
+                let parts = content.split(/ (.+)/)
+                args[arg.name] = parts[0]
+                content = parts[1]
+              } else return finalResult
+            }
+          } else {
+            return new CommandResult(`Arguement ${arg.name} was not provided`, parents.join(' '))
+          }
+        }
+        return new CommandResult(command, parents.join(' '), args)
+      } else {
+        return new CommandResult(command, parents.join(' '), content)
+      }
+    }
+
     for (let command of commands) {
       let alias = startsWithAny(content, command.getTriggers())
       if (alias) {
         let subcontent = content.slice(alias.length)
         if (subcontent.charAt(0) === ' ') subcontent = subcontent.slice(1)
         parents.push(command.name)
-        if (command.run != null) {
-          if (command.args.length > 0) {
-            let args = {}
-            for (let arg of command.args) {
-              if (subcontent != null && subcontent.length > 0) {
-                let anyArg = () => {
-                  let parts = subcontent.split(' ', 2)
-                  args[arg.name] = parts[0]
-                  subcontent = parts[1]
-                }
-                if (arg.type === 'any') {
-                  anyArg()
-                } else {
-                  let type = Arg.type[arg.type]
-                  if (type) {
-                    let result = type.validate(subcontent, this.bot)
-                    if (result.failed) return new CommandResult(result.data, parents.join(' '))
-                    else {
-                      args[arg.name] = result.data
-                      if (result.subcontent == null) result.subcontent = ''
-                      subcontent = result.subcontent.trim()
-                    }
-                  } else {
-                    this.logger.warn(`Arguement '${arg.name}' in command '${parents.join(' ')}' uses type '${arg.type}' which does not exist! Assuming any...`)
-                    anyArg()
-                  }
-                }
-              } else {
-                return new CommandResult(`Arguement ${arg.name} was not provided`, parents.join(' '))
-              }
-            }
-            return new CommandResult(command, parents.join(' '), args)
-          } else {
-            return new CommandResult(command, parents.join(' '), subcontent)
-          }
-        } else if (command.subcommands.length > 0) {
+        if (command.subcommands.length > 0) {
           let result = this.parseContent(subcontent, command.subcommands, parents)
-          return result
+          if (result.error && command.run != null) return handleCommand(command, subcontent)
+          else return result
+        } else if (command.run != null) {
+          return handleCommand(command, subcontent)
         } else {
           this.logger.warn(`Command '${command.name}' has nothing to run!`)
         }

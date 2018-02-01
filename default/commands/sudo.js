@@ -4,10 +4,11 @@ module.exports = (bot) => {
   return new Command({
     name: 'sudo',
     defaultPermission: true,
+    silent: true,
     run: (msg, content, bot) => {
       if (msg.author.id === bot.config.ownerID) {
         bot.commandManager.run(
-          bot.commandManager.parseContent(content, bot.commandManager.commands, [this]),
+          bot.commandManager.parseContent(content, bot.commandManager.commands, ['sudo']),
           msg,
           true
         )
