@@ -25,7 +25,7 @@ class Catbot {
     /** @type {Util} */
     this.util = new Util(this)
     /** @type {DatabaseManager} */
-    this.databaseManager = new DatabaseManager('storage')
+    this.databaseManager = new DatabaseManager('storage', this.logger)
     /** @type {CommandManager} */
     this.commandManager = new CommandManager(this)
     /** @type {Client} */
@@ -48,7 +48,7 @@ class Catbot {
       await this.registerDir(this.directory, this.config.generateFolders)
       this.userTable = await this.databaseManager.getTable(userTableInfo.name)
       await this.commandManager.load()
-      this.commandManager.reloadCommands()
+      await this.commandManager.reloadCommands()
       this.logger.log('Loaded.')
       resolve()
     })

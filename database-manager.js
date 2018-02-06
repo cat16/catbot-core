@@ -2,13 +2,16 @@ let { Database } = require('sqlite3')
 
 const fs = require('fs')
 
+const Logger = require('./logger.js')
+
 class TableManager {
   /**
-   * @param {Database} database
+   * @param {DatabaseManager} manager
    * @param {string} name
    */
-  constructor (database, name) {
-    this.database = database
+  constructor (manager, name) {
+    this.database = manager.database
+    this.logger = new Logger(`table::${name}`, manager.logger)
     this.name = name
   }
 
@@ -95,9 +98,11 @@ class DatabaseManager {
 
   /**
    * @param {string} name
+   * @param {Logger} [logger]
    */
-  constructor (name) {
+  constructor (name, logger) {
     this.name = name
+    this.logger = new Logger('database-manager', logger)
   }
 
   /**
@@ -129,7 +134,7 @@ class DatabaseManager {
         await this.createTable(table.name, cols, true)
         let tablem = await this.getTable(table.name)
         for (let colName in table.cols) {
-          if (table.cols[colName].unique) tablem.setUnique(colName)
+          if (table.cols[colName].unique) await tablem.setUnique(colName)
         }
       }
       resolve()
@@ -186,7 +191,7 @@ class DatabaseManager {
   getTable (name) {
     return new Promise((resolve, reject) => {
       this.tableExists(name).then(exists => {
-        if (exists) resolve(new TableManager(this.database, name))
+        if (exists) resolve(new TableManager(this, name))
         else reject(new Error('Table does not exist'))
       })
     })

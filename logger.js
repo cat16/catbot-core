@@ -1,42 +1,60 @@
+/**
+ * @param {number} num
+ */
+let twoDigit = (num) => {
+  return num.toString().length === 1 ? `0${num}` : num.toString()
+}
+
 class Logger {
   /**
    * @param {string} name
    * @param {Logger} [parent]
+   * @param {string} [field]
    */
-  constructor (name, parent) {
-    this.name = parent == null ? name : `${parent.name}::${name}`
+  constructor (name, parent, field) {
+    this.name = parent == null ? name : `${parent.name}->${name}`
+    this.name = field == null ? name : `${name}::${field}`
   }
 
   getLogString (msg, type) {
     type = type || Logger.INFO
     let d = new Date()
-    let date = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}|${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`
+    let year = d.getFullYear()
+    let month = d.getMonth()
+    month = twoDigit(month)
+    let day = d.getDate()
+    day = twoDigit(day)
+    let hour = d.getHours()
+    hour = twoDigit(hour)
+    let min = d.getMinutes()
+    let sec = d.getSeconds()
+    let date = `${day}-${month}-${year}|${hour}:${min}:${sec}`
     return `[${date}] [${this.name}] [${type}] ${msg}`
   }
 
   /**
-   * warns the user with a message
+   * outputs info about what has happened or is going to happen
    */
   info (msg) {
     this.log(msg, Logger.INFO)
   }
 
   /**
-   * warns the user with a message
+   * outputs a warning about something that happened
    */
   warn (msg) {
     this.log(msg, Logger.WARN)
   }
 
   /**
-   * warns the user with a message
+   * outputs an error
    */
   error (msg) {
     this.log(msg, Logger.ERROR)
   }
 
   /**
-   * warns the user with a message
+   * outputs debug information
    */
   debug (msg) {
     this.log(msg, Logger.DEBUG)

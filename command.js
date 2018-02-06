@@ -62,17 +62,19 @@ class Command {
     this.defaultTags = options.defaultTags || []
     this.args = options.args || []
     this.silent = options.silent || false
+    this.test = ['a']
   }
 
   getTriggers () {
-    return this.aliases.concat(this.name)
+    console.log(this.name + ':' + this.aliases)
+    return [this.name].concat(this.aliases)
   }
 
   /**
    * @param {Logger} logger
    */
   prepare (logger) {
-    this.logger = new Logger(`command::'${this.name}'`, logger)
+    this.logger = new Logger(`command::${this.name}`, logger)
   }
 }
 

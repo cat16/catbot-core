@@ -49,7 +49,7 @@ class CommandManager {
     /** @type {Catbot} */
     this.bot = bot
     /** @type {Logger} */
-    this.logger = new Logger('command manager', bot.logger)
+    this.logger = new Logger('command-manager', bot.logger)
     /** @type {Command[]} */
     this.commands = []
     /** @type {Directory[]} */
@@ -84,12 +84,13 @@ class CommandManager {
       command.prepare(this.logger)
       let commandPerms = await this.getCommandPermissions(command.name)
       if (commandPerms == null) {
-        this.setCommandPermissions(command.name, command.defaultTags)
+        await this.setCommandPermissions(command.name, command.defaultTags)
       }
       if (this.commands.find(cmd => { return cmd.name === command.name })) {
-        this.logger.warn(`Conflicting commands found! There are 2 commands with the name '${command.name}', ignoring the new one...`)
+        reject(new Error(`Conflicting commands found: There are 2 commands with the name '${command.name}'`))
       } else {
         this.commands.push(command)
+        resolve()
       }
     })
   }
@@ -101,20 +102,32 @@ class CommandManager {
     return new Promise(async (resolve, reject) => {
       this.logger.info('Reloading commands...')
       this.commands = []
+      let loadedDirs = 0
       for (let dir of this.loadDirs) {
         let commandFuncs = load(dir.path, dir.generateFolders)
-        if (commandFuncs == null) resolve()
+        if (commandFuncs == null) {
+          loadedDirs++
+          continue
+        }
+        let unloaded = 0
+        let loaded = 0
         for (let commandFunc in commandFuncs) {
-          try {
-            /** @type {Command} */
-            let command = commandFuncs[commandFunc](this.bot)
-            this.addCommand(command)
-          } catch (ex) {
-            this.logger.error(`Could not load command from file '${commandFunc}': ${ex.stack}`)
-          }
+          unloaded++
+          /** @type {Command} */
+          let command = commandFuncs[commandFunc](this.bot)
+          this.addCommand(command).then(() => {
+            loaded++
+            if (loaded >= unloaded) {
+              this.logger.info(`Loaded ${loaded} commands from ${dir.path}`)
+              loadedDirs++
+              if (loadedDirs >= this.loadDirs.length) resolve()
+            }
+          }, (err) => {
+            this.logger.error(`Could not load command from file '${commandFunc}': ${err.stack}`)
+            unloaded--
+          })
         }
       }
-      resolve()
     })
   }
 
@@ -152,16 +165,15 @@ class CommandManager {
    * @return {Promise<string[]>}
    */
   getCommandPermissions (name, ignoreNone = false) {
-    return new Promise((resolve, reject) => {
-      this.commandTable.select([commandTableInfo.cols.permissions.name], `name = '${name}'`).then(rows => {
-        if (rows.length < 1) {
-          if (ignoreNone) resolve([])
-          else resolve(undefined)
-        } else {
-          if (rows[0][commandTableInfo.cols.permissions.name] === '') resolve([])
-          else resolve(rows[0][commandTableInfo.cols.permissions.name].split(','))
-        }
-      })
+    return new Promise(async (resolve, reject) => {
+      let rows = await this.commandTable.select([commandTableInfo.cols.permissions.name], `name = '${name}'`)
+      if (rows.length < 1) {
+        if (ignoreNone) resolve([])
+        else resolve(undefined)
+      } else {
+        if (rows[0][commandTableInfo.cols.permissions.name] === '') resolve([])
+        else resolve(rows[0][commandTableInfo.cols.permissions.name].split(','))
+      }
     })
   }
 

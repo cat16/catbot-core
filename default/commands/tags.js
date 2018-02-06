@@ -65,11 +65,13 @@ module.exports = (bot) => {
         subcommands: [
           new Command({
             name: 'add',
+            aliases: ['give'],
             args: [
               new Command.Arg({ name: 'command', type: 'command' }),
               new Command.Arg({ name: 'tag' })
             ],
             run: async (msg, args, bot) => {
+              bot.logger.debug(args.tag)
               let tags = await bot.commandManager.getCommandPermissions(args.command.name)
               if (!tags.includes(args.tag)) {
                 tags.push(args.tag)
