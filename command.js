@@ -57,7 +57,7 @@ class Command {
       })
     }
     this.aliases = options.aliases || []
-    this.subcommands = options.subcommands || false
+    this.subcommands = options.subcommands || []
     this.defaultPermission = options.defaultPermission == null ? false : options.defaultPermission
     this.defaultTags = options.defaultTags || []
     this.args = options.args || []
@@ -66,7 +66,6 @@ class Command {
   }
 
   getTriggers () {
-    console.log(this.name + ':' + this.aliases)
     return [this.name].concat(this.aliases)
   }
 

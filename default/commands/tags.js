@@ -9,6 +9,7 @@ module.exports = (bot) => {
         subcommands: [
           new Command({
             name: 'add',
+            aliases: ['give'],
             args: [
               new Command.Arg({ name: 'user', type: 'user' }),
               new Command.Arg({ name: 'tag' })
@@ -27,6 +28,7 @@ module.exports = (bot) => {
           }),
           new Command({
             name: 'remove',
+            aliases: ['take'],
             args: [
               new Command.Arg({ name: 'user', type: 'user' }),
               new Command.Arg({ name: 'tag' })
@@ -85,6 +87,7 @@ module.exports = (bot) => {
           }),
           new Command({
             name: 'remove',
+            aliases: ['take'],
             args: [
               new Command.Arg({ name: 'command', type: 'command' }),
               new Command.Arg({ name: 'tag' })

@@ -283,16 +283,14 @@ class CommandManager {
         for (let arg of command.args) {
           let types = arg.type.split('|')
           if (content != null && content.length > 0) {
-            let finalResult = null
+            let finalResult = new CommandResult(`No suitable arguement was provided for '${arg.name}'\nAcceptable types: [${types.join(', ')}]`, parents.join(' '))
             let unknownArgType = false
             for (let typeName of types) {
               let type = Arg.type[typeName]
               if (type) {
                 let result = type.validate(content, this.bot)
                 if (result.failed) {
-                  finalResult = types.length > 1
-                    ? new CommandResult(`No suitable arguement was provided for '${arg.name}'\nAcceptable types: [${types.join(', ')}]`, parents.join(' '))
-                    : new CommandResult(result.data, parents.join(' '))
+                  if (types.length === 1) finalResult = new CommandResult(result.data, parents.join(' '))
                 } else {
                   args[arg.name] = result.data
                   if (result.subcontent == null) result.subcontent = ''
@@ -316,6 +314,7 @@ class CommandManager {
             return new CommandResult(`Arguement ${arg.name} was not provided`, parents.join(' '))
           }
         }
+        args.extra = content
         return new CommandResult(command, parents.join(' '), args)
       } else {
         return new CommandResult(command, parents.join(' '), content)
