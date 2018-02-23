@@ -106,16 +106,7 @@ class Catbot {
       fs.writeFileSync(`${this.directory}/${file}`, JSON.stringify(config, null, '\t'))
     }
 
-    if (!fs.existsSync(`${this.directory}/${file}`)) {
-      this.logger.warn('No config file detected!\nCreating new config file...')
-      let config = new Config()
-      for (let key in config) {
-        if (config[key] == null) config[key] = this.getInput(`Enter ${key}`)
-      }
-      writeConfig(config)
-      this.logger.log('Config file generated')
-      this.config = config
-    } else {
+    if (fs.existsSync(`${this.directory}/${file}`)) {
       let config = require(`${this.directory}/${file}`)
       let updated = false
       let neededConfig = new Config()
@@ -130,6 +121,15 @@ class Catbot {
         writeConfig(config)
         this.logger.log('Config file updated.')
       }
+      this.config = config
+    } else {
+      this.logger.warn('No config file detected!\nCreating new config file...')
+      let config = new Config()
+      for (let key in config) {
+        if (config[key] == null) config[key] = this.getInput(`Enter ${key}`)
+      }
+      writeConfig(config)
+      this.logger.log('Config file generated')
       this.config = config
     }
   }

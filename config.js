@@ -5,6 +5,7 @@ class Config {
    * @prop {String} ownerID
    * @prop {String} defaultPrefix
    * @prop {boolean} [generateFolders]
+   * @prop {boolean} [silent]
    */
 
   /**
@@ -16,6 +17,7 @@ class Config {
     this.ownerID = options.ownerID
     this.defaultPrefix = options.defaultPrefix
     this.generateFolders = options.generateFolders || true
+    this.silent = false
     // TODO: responses maybe?
   }
 }

@@ -210,7 +210,7 @@ class CommandManager {
   run (result, msg, sudo = false) {
     return new Promise(async (resolve, reject) => {
       if (result.error) {
-        this.bot.client.createMessage(msg.channel.id, result.data)
+        if (!this.bot.config.silent) this.bot.client.createMessage(msg.channel.id, result.data)
       } else if (result.data instanceof Command) {
         let command = result.data
         if (sudo || await this.checkPerms(command, msg.author.id)) {
@@ -221,7 +221,7 @@ class CommandManager {
           })
         } else {
           this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' did not have permission to run command '${result.name}'`)
-          this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
+          if (!this.bot.config.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
       }
     })
@@ -235,13 +235,10 @@ class CommandManager {
   checkPerms (command, userId) {
     return new Promise(async (resolve, reject) => {
       let userTags = await this.bot.getUserPermTags(userId)
-
       if (userTags.includes('blacklist')) {
         return resolve(false)
       }
-
       let commandTags = await this.getCommandPermissions(command.name, true)
-
       if (commandTags.find(tag => { return userTags.includes(tag) })) {
         if (!command.defaultPermission) return resolve(true)
         else resolve(false)
