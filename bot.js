@@ -4,14 +4,24 @@ const { Client } = eris // eslint-disable-line no-unused-vars
 const fs = require('fs')
 const readline = require('readline-sync')
 
-const Logger = require('./logger.js')
-const load = require('./load.js')
-const Config = require('./config.js')
-const DatabaseManager = require('./database-manager.js')
-const CommandManager = require('./command-manager.js')
-const Command = require('./command.js') // eslint-disable-line no-unused-vars
-const userTableInfo = require('./default/database.js').users
-const Util = require('./util.js')
+let Logger = require('./util/logger.js')
+let load = require('./util/load.js')
+let DatabaseManager = require('./util/database-manager.js')
+let Config = require('./config.js')
+let CommandManager = require('./command/command-manager.js')
+let UserManager = require('./user-manager.js')
+let Util = require('./util/util.js')
+
+let reloadModules = () => {
+  Object.keys(require.cache).forEach(function (key) { if (!key.includes('node_modules')) delete require.cache[key] })
+  Logger = require('./util/logger.js')
+  load = require('./util/load.js')
+  DatabaseManager = require('./util/database-manager.js')
+  Config = require('./config.js')
+  CommandManager = require('./command/command-manager.js')
+  UserManager = require('./user-manager.js')
+  Util = require('./util/util.js')
+}
 
 class Catbot {
   /**
@@ -21,13 +31,15 @@ class Catbot {
     /** @type {string} */
     this.directory = directory
     /** @type {Logger} */
-    this.logger = new Logger('bot-core')
+    this.logger = null
     /** @type {Util} */
-    this.util = new Util(this)
+    this.util = null
     /** @type {DatabaseManager} */
-    this.databaseManager = new DatabaseManager('storage', this.logger)
+    this.databaseManager = null
     /** @type {CommandManager} */
-    this.commandManager = new CommandManager(this)
+    this.commandManager = null
+    /** @type {UserManager} */
+    this.userManager = null
     /** @type {Client} */
     this.client = null
     /** @type {Config} */
@@ -39,14 +51,18 @@ class Catbot {
    */
   load () {
     return new Promise(async (resolve, reject) => {
+      this.logger = new Logger('bot-core')
       this.logger.log('Loading...')
+      this.util = new Util(this)
+      this.databaseManager = new DatabaseManager('storage', this.logger)
+      this.commandManager = new CommandManager(this)
       this.loadConfig('config.json')
       this.client = new eris.Client(this.config.token, {})
       // TODO: make this a waterfall?
       await this.databaseManager.load()
-      await this.registerDir(`${__dirname}/default`, false)
-      await this.registerDir(this.directory, this.config.generateFolders)
-      this.userTable = await this.databaseManager.getTable(userTableInfo.name)
+      await this.registerDir(`${__dirname}/default`, false, true)
+      await this.registerDir(this.directory, this.config.generateFolders, false)
+      this.userManager = new UserManager(await this.databaseManager.getTable('users'))
       await this.commandManager.load()
       await this.commandManager.reloadCommands()
       this.logger.log('Loaded.')
@@ -55,14 +71,17 @@ class Catbot {
   }
 
   /**
+   * @param {string} directory
+   * @param {boolean} generateFolders
+   * @param {boolean} defaultFolder
    * @return {Promise}
    */
-  registerDir (directory, generateFolders) {
+  registerDir (directory, generateFolders, defaultFolder) {
     // TODO: possibly move register events?
     return new Promise(async (resolve, reject) => {
       await this.databaseManager.loadFile(`${directory}/database.js`)
       this.registerEvents(`${directory}/events`, generateFolders)
-      this.commandManager.addDir(`${directory}/commands`, generateFolders)
+      this.commandManager.addDir(`${directory}/commands`, generateFolders, defaultFolder)
       resolve()
     })
   }
@@ -143,32 +162,26 @@ class Catbot {
   }
 
   /**
-   * @param {string} id
-   * @return {Promise<string[]>}
+   * @return {Promise}
    */
-  getUserPermTags (id) {
+  start () {
     return new Promise((resolve, reject) => {
-      this.userTable.select([userTableInfo.cols.permTags.name], `${userTableInfo.cols.id.name} = ${id}`).then(rows => {
-        if (rows.length < 1) {
-          resolve([])
-        } else {
-          if (rows[0].permTags === '') resolve([])
-          else resolve(rows[0].permTags.split(','))
-        }
-      })
+      this.load().then(() => {
+        this.connect().then(resolve, reject)
+      }, reject)
     })
   }
 
   /**
-   * @param {string} id
-   * @param {string[]} tags
-   * @return {Promise<string[]>}
+   * restarts the bot
+   * @return {Promise}
    */
-  setUserPermTags (id, tags) {
-    return new Promise((resolve, reject) => {
-      this.userTable.insert([userTableInfo.cols.id.name, userTableInfo.cols.permTags.name], [id, tags.join(',')], true).then(() => {
-        resolve()
-      })
+  restart () {
+    return new Promise(async (resolve, reject) => {
+      this.logger.info('Restarting...')
+      this.client.disconnect()
+      reloadModules()
+      this.start().then(resolve, reject)
     })
   }
 }

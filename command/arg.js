@@ -1,4 +1,4 @@
-const Catbot = require('./bot.js') // eslint-disable-line no-unused-vars
+const Catbot = require('../bot.js') // eslint-disable-line no-unused-vars
 
 class Arg {
   /**
@@ -78,16 +78,9 @@ Arg.type = {
   }),
   command: new ArgType({
     validate: (text, bot) => {
-      let command = bot.commandManager.commands.find(c => {
-        return c.getTriggers().find(alias => {
-          if (text.startsWith(alias)) {
-            text = text.slice(alias.length)
-            return true
-          }
-        }) !== undefined
-      })
-      if (command) {
-        return new ArgResult(false, command, text)
+      let commandResult = bot.commandManager.findCommand(text)
+      if (commandResult) {
+        return new ArgResult(false, commandResult.command, commandResult.content)
       } else {
         return new ArgResult(true, `'${text}' is not a command`)
       }

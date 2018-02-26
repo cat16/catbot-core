@@ -1,4 +1,4 @@
-const Command = require('../../core.js').Command
+const { Command } = require('../../core.js')
 const util = require('util')
 
 module.exports = (bot) => {
@@ -17,6 +17,7 @@ module.exports = (bot) => {
           output = util.inspect(output, { depth })
         }
         let type = typeof (evaled) === 'object' ? 'object - ' + evaled.constructor.name : typeof (evaled)
+        let promise = output === 'Promise { <pending> }'
         let sent = bot.client.createMessage(msg.channel.id, {
           embed: {
             fields: [
@@ -33,11 +34,12 @@ module.exports = (bot) => {
                 value: '```js\n' + type + '```'
               }
             ],
-            timestamp: new Date()
+            timestamp: new Date(),
+            color: promise ? 0xffff00 : 0x00ff00
           }
         })
 
-        if (output === 'Promise { <pending> }') {
+        if (promise) {
           /** @type {Promise} */
           let promise = evaled
 
@@ -61,7 +63,8 @@ module.exports = (bot) => {
                       value: '```js\n' + result.constructor.name + '```'
                     }
                   ],
-                  timestamp: new Date()
+                  timestamp: new Date(),
+                  color: 0x00ff00
                 }
               })
             })
@@ -90,7 +93,8 @@ module.exports = (bot) => {
                 value: '```js\n' + ex.name + '```'
               }
             ],
-            timestamp: new Date()
+            timestamp: new Date(),
+            color: 0xff0000
           }
         })
       }

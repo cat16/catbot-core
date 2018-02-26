@@ -4,6 +4,4 @@ process.on('unhandledRejection', (reason, p) => {
 
 let Bot = require('./bot.js')
 let bot = new Bot(__dirname)
-bot.load().then(() => {
-  bot.connect()
-})
+bot.start()

@@ -1,5 +1,5 @@
 const eris = require('eris')
-const Catbot = require('./bot.js') // eslint-disable-line no-unused-vars
+const Catbot = require('../bot.js') // eslint-disable-line no-unused-vars
 const { User, Channel, TextChannel, PrivateChannel, VoiceChannel } = eris // eslint-disable-line no-unused-vars
 
 class Util {

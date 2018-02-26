@@ -1,4 +1,4 @@
-const Command = require('../../core.js').Command
+const { Command, Arg } = require('../../core.js')
 
 module.exports = (bot) => {
   return new Command({
@@ -11,14 +11,14 @@ module.exports = (bot) => {
             name: 'add',
             aliases: ['give'],
             args: [
-              new Command.Arg({ name: 'user', type: 'user' }),
-              new Command.Arg({ name: 'tag' })
+              new Arg({ name: 'user', type: 'user' }),
+              new Arg({ name: 'tag' })
             ],
             run: async (msg, args, bot) => {
-              let tags = await bot.getUserPermTags(args.user.id)
+              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
               if (!tags.includes(args.tag)) {
                 tags.push(args.tag)
-                bot.setUserPermTags(args.user.id, tags).then(() => {
+                bot.userManager.setUserPermTags(args.user.id, tags).then(() => {
                   bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave ${args.user.username} tag '${args.tag}'`)
                 })
               } else {
@@ -30,14 +30,14 @@ module.exports = (bot) => {
             name: 'remove',
             aliases: ['take'],
             args: [
-              new Command.Arg({ name: 'user', type: 'user' }),
-              new Command.Arg({ name: 'tag' })
+              new Arg({ name: 'user', type: 'user' }),
+              new Arg({ name: 'tag' })
             ],
             run: async (msg, args, bot) => {
-              let tags = await bot.getUserPermTags(args.user.id)
+              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
               if (tags.includes(args.tag)) {
                 tags = tags.filter((tag) => { return tag !== args.tag })
-                bot.setUserPermTags(args.user.id, tags).then(() => {
+                bot.userManager.setUserPermTags(args.user.id, tags).then(() => {
                   bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from ${args.user.username}`)
                 })
               } else {
@@ -47,12 +47,14 @@ module.exports = (bot) => {
           }),
           new Command({
             name: 'get',
+            aliases: ['list'],
+            permMode: Command.PermMode.OVERRIDE,
             args: [
-              new Command.Arg({ name: 'user', type: 'user' })
+              new Arg({ name: 'user', type: 'user' })
             ],
             defaultPermission: true,
             run: async (msg, args, bot) => {
-              let tags = await bot.getUserPermTags(args.user.id)
+              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
               if (tags.length < 1) {
                 bot.client.createMessage(msg.channel.id, `${args.user.username} does not have any tags`)
               } else {
@@ -69,18 +71,20 @@ module.exports = (bot) => {
             name: 'add',
             aliases: ['give'],
             args: [
-              new Command.Arg({ name: 'command', type: 'command' }),
-              new Command.Arg({ name: 'tag' })
+              new Arg({ name: 'command', type: 'command' }),
+              new Arg({ name: 'tag' })
             ],
             run: async (msg, args, bot) => {
-              let tags = await bot.commandManager.getCommandPermissions(args.command.name)
+              /** @type {Command} */
+              let command = args.command
+              let tags = await command.getPermissions(true)
               if (!tags.includes(args.tag)) {
                 tags.push(args.tag)
-                bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
-                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave command ${args.command.name} tag '${args.tag}'`)
+                command.setPermissions(tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave command \`${command.getFullName()}\` tag '${args.tag}'`)
                 })
               } else {
-                bot.client.createMessage(msg.channel.id, `:x: Command ${args.command.name} already has tag '${args.tag}'`)
+                bot.client.createMessage(msg.channel.id, `:x: Command \`${command.getFullName()}\` already has tag '${args.tag}'`)
               }
             }
           }),
@@ -88,34 +92,48 @@ module.exports = (bot) => {
             name: 'remove',
             aliases: ['take'],
             args: [
-              new Command.Arg({ name: 'command', type: 'command' }),
-              new Command.Arg({ name: 'tag' })
+              new Arg({ name: 'command', type: 'command' }),
+              new Arg({ name: 'tag' })
             ],
             run: async (msg, args, bot) => {
-              let tags = await bot.commandManager.getCommandPermissions(args.command.name)
+              /** @type {Command} */
+              let command = args.command
+              let tags = await command.getPermissions(true)
               if (tags.includes(args.tag)) {
                 tags = tags.filter((tag) => { return tag !== args.tag })
-                bot.commandManager.setCommandPermissions(args.command.name, tags).then(() => {
-                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from command ${args.command.name}`)
+                command.setPermissions(tags).then(() => {
+                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from command \`${command.getFullName()}\``)
                 })
               } else {
-                bot.client.createMessage(msg.channel.id, `:x: Command ${args.command.name} doesn't have tag '${args.tag}'`)
+                bot.client.createMessage(msg.channel.id, `:x: Command \`${command.getFullName()}\` doesn't have tag '${args.tag}'`)
               }
             }
           }),
           new Command({
             name: 'get',
+            aliases: ['list'],
+            permMode: Command.PermMode.OVERRIDE,
             args: [
-              new Command.Arg({ name: 'command', type: 'command' })
+              new Arg({ name: 'command', type: 'command' })
             ],
             defaultPermission: true,
             run: async (msg, args, bot) => {
-              let tags = await bot.commandManager.getCommandPermissions(args.command.name)
-              if (tags.length < 1) {
-                bot.client.createMessage(msg.channel.id, `${args.command.name} does not have any tags`)
+              /** @type {Command} */
+              let command = args.command
+              let baseTags = await command.getPermissions(true, true)
+              let tags = await command.getPermissions(true)
+              let send = ''
+              if (baseTags.length === 0) {
+                send += `\`${command.getFullName()}\` does not have any tags\n`
               } else {
-                bot.client.createMessage(msg.channel.id, `${args.command.name} has the following tags: [${tags.join(', ')}]`)
+                send += `\`${command.getFullName()}\` has the following tags: [${baseTags.join(', ')}]\n`
               }
+              if (tags.length === 0) {
+                send += `With perm mode \`${await command.getPermMode(true)}\`, it does not have any tags`
+              } else {
+                send += `With perm mode \`${await command.getPermMode(true)}\`, it has the following tags: [${tags.join(', ')}]`
+              }
+              bot.client.createMessage(msg.channel.id, send)
             }
           })
         ]

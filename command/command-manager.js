@@ -3,24 +3,22 @@ const Message = eris.Message // eslint-disable-line no-unused-vars
 
 const fs = require('fs')
 
-const load = require('./load.js')
-const Catbot = require('./bot.js') // eslint-disable-line no-unused-vars
 const Command = require('./command.js')
-const Logger = require('./logger.js')
 const Arg = require('./arg.js')
-const commandTableInfo = require('./default/database.js').commands
+const load = require('../util/load.js')
+const Catbot = require('../bot.js') // eslint-disable-line no-unused-vars
+const Logger = require('../util/logger.js')
+const CTI = require('../default/database.js').commands
 
 class CommandResult {
   /**
    * @param {string | Command} data
-   * @param {string} [name]
    * @param {string} [content]
    */
-  constructor (data, name, content) {
+  constructor (data, content) {
     this.error = typeof (data) === 'boolean' ? data : !(data instanceof Command)
     this.data = data
     this.content = content
-    this.name = name
   }
 }
 
@@ -40,6 +38,7 @@ class CommandManager {
    * @typedef Directory
    * @prop {string} path
    * @prop {boolean} generateFolders
+   * @prop {boolean} defaultCommands
    */
 
   /**
@@ -63,16 +62,17 @@ class CommandManager {
   load () {
     return new Promise(async (resolve, reject) => {
       this.prefixes = [this.bot.config.defaultPrefix]
-      this.commandTable = await this.bot.databaseManager.getTable(commandTableInfo.name)
+      this.commandTable = await this.bot.databaseManager.getTable(CTI.name)
       resolve()
     })
   }
 
   /**
    * @param {string} directory
+   * @param {boolean} generateFolders
    */
-  addDir (directory, generateFolders) {
-    this.loadDirs.push({ path: directory, generateFolders })
+  addDir (directory, generateFolders, defaultCommands) {
+    this.loadDirs.push({ path: directory, generateFolders, defaultCommands })
   }
 
   /**
@@ -81,17 +81,19 @@ class CommandManager {
    */
   addCommand (command) {
     return new Promise(async (resolve, reject) => {
-      command.prepare(this.logger)
-      let commandPerms = await this.getCommandPermissions(command.name)
-      if (commandPerms == null) {
-        await this.setCommandPermissions(command.name, command.defaultTags)
-      }
-      if (this.commands.find(cmd => { return cmd.name === command.name })) {
-        reject(new Error(`Conflicting commands found: There are 2 commands with the name '${command.name}'`))
-      } else {
-        this.commands.push(command)
-        resolve()
-      }
+      await command.load(this.logger, this.commandTable)
+      if (!this.commands.find((cmd, index) => {
+        if (cmd.name === command.name) {
+          if (cmd.defaultCommand) {
+            this.commands.splice(index, 1)
+          } else {
+            reject(new Error(`Conflicting commands found: There are 2 commands with the name '${command.name}'`))
+            return true
+          }
+        }
+        return false
+      })) this.commands.push(command)
+      resolve()
     })
   }
 
@@ -115,6 +117,7 @@ class CommandManager {
           unloaded++
           /** @type {Command} */
           let command = commandFuncs[commandFunc](this.bot)
+          if (dir.defaultCommands) command.defaultCommand = true
           this.addCommand(command).then(() => {
             loaded++
             if (loaded >= unloaded) {
@@ -146,6 +149,7 @@ class CommandManager {
             let command = require(path)(this.bot)
             delete require.cache[require.resolve(path)]
             this.commands = this.commands.filter(c => c.name !== name)
+            if (dir.defaultCommands) command.defaultCommand = true
             this.addCommand(command)
             resolve()
             return
@@ -160,44 +164,13 @@ class CommandManager {
   }
 
   /**
-   * @param {string} name - the name of the command
-   * @param {boolean} [ignoreNone] - whether to return an empty array if permissions don't exist or not
-   * @return {Promise<string[]>}
-   */
-  getCommandPermissions (name, ignoreNone = false) {
-    return new Promise(async (resolve, reject) => {
-      let rows = await this.commandTable.select([commandTableInfo.cols.permissions.name], `name = '${name}'`)
-      if (rows.length < 1) {
-        if (ignoreNone) resolve([])
-        else resolve(undefined)
-      } else {
-        if (rows[0][commandTableInfo.cols.permissions.name] === '') resolve([])
-        else resolve(rows[0][commandTableInfo.cols.permissions.name].split(','))
-      }
-    })
-  }
-
-  /**
-   * @param {string} name - the name of the command
-   * @param {string[]} permissions - the permissions to give the command
-   * @return {Promise}
-   */
-  setCommandPermissions (name, permissions) {
-    return new Promise((resolve, reject) => {
-      this.commandTable.insert(['name', commandTableInfo.cols.permissions.name], [name, permissions.join(',')], true).then(() => {
-        resolve()
-      })
-    })
-  }
-
-  /**
    * @param {Message} msg
    * @return {Promise<boolean>}
    */
-  handle (msg) {
+  handleMessage (msg) {
     return new Promise(async (resolve, reject) => {
       let result = this.parseFull(msg.content)
-      await this.run(result, msg)
+      await this.runResult(result, msg)
       resolve()
     })
   }
@@ -207,7 +180,7 @@ class CommandManager {
    * @param {Message} msg
    * @param {boolean} [sudo]
    */
-  run (result, msg, sudo = false) {
+  runResult (result, msg, sudo = false) {
     return new Promise(async (resolve, reject) => {
       if (result.error) {
         if (!this.bot.config.silent) this.bot.client.createMessage(msg.channel.id, result.data)
@@ -215,36 +188,14 @@ class CommandManager {
         let command = result.data
         if (sudo || await this.checkPerms(command, msg.author.id)) {
           command.run(msg, result.content, this.bot).then(() => {
-            if (!command.silent) this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' ran command '${result.name}'`)
+            if (!command.silent) this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' ran command '${command.getFullName()}'`)
           }, (err) => {
-            this.logger.error(`Command '${result.name}' crashed: ${err.stack}`)
+            this.logger.error(`Command '${command.getFullName()}' crashed: ${err.stack}`)
           })
         } else {
-          this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' did not have permission to run command '${result.name}'`)
+          this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' did not have permission to run command '${command.getFullName()}'`)
           if (!this.bot.config.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
-      }
-    })
-  }
-
-  /**
-   * @param {Command} command
-   * @param {string} userId
-   * @return {Promise<boolean>}
-   */
-  checkPerms (command, userId) {
-    return new Promise(async (resolve, reject) => {
-      let userTags = await this.bot.getUserPermTags(userId)
-      if (userTags.includes('blacklist')) {
-        return resolve(false)
-      }
-      let commandTags = await this.getCommandPermissions(command.name, true)
-      if (commandTags.find(tag => { return userTags.includes(tag) })) {
-        if (!command.defaultPermission) return resolve(true)
-        else resolve(false)
-      } else {
-        if (command.defaultPermission) return resolve(true)
-        else resolve(false)
       }
     })
   }
@@ -265,10 +216,10 @@ class CommandManager {
   /**
    * @param {string} content
    * @param {Command[]} commands
-   * @param {Command[]} [parents]
+   * @param {Command[]} [parent]
    * @return {CommandResult}
    */
-  parseContent (content, commands, parents = []) {
+  parseContent (content, commands, parent) {
     /**
      * @param {Command} command
      * @param {string} content
@@ -280,14 +231,14 @@ class CommandManager {
         for (let arg of command.args) {
           let types = arg.type.split('|')
           if (content != null && content.length > 0) {
-            let finalResult = new CommandResult(`No suitable arguement was provided for '${arg.name}'\nAcceptable types: [${types.join(', ')}]`, parents.join(' '))
+            let finalResult = new CommandResult(`No suitable arguement was provided for '${arg.name}'\nAcceptable types: [${types.join(', ')}]`)
             let unknownArgType = false
             for (let typeName of types) {
               let type = Arg.type[typeName]
               if (type) {
                 let result = type.validate(content, this.bot)
                 if (result.failed) {
-                  if (types.length === 1) finalResult = new CommandResult(result.data, parents.join(' '))
+                  if (types.length === 1) finalResult = new CommandResult(result.data)
                 } else {
                   args[arg.name] = result.data
                   if (result.subcontent == null) result.subcontent = ''
@@ -296,7 +247,7 @@ class CommandManager {
                   break
                 }
               } else {
-                if (typeName !== 'any') this.logger.warn(`Arguement '${arg.name}' in command '${parents.join(' ')}' uses type '${typeName}' which does not exist! Assuming any...`)
+                if (typeName !== 'any') this.logger.warn(`Arguement '${arg.name}' in command '${command.name}' uses type '${typeName}' which does not exist! Assuming any...`)
                 unknownArgType = true
               }
             }
@@ -308,35 +259,85 @@ class CommandManager {
               } else return finalResult
             }
           } else {
-            return new CommandResult(`Arguement ${arg.name} was not provided`, parents.join(' '))
+            return new CommandResult(`Arguement ${arg.name} was not provided`)
           }
         }
         args.extra = content
-        return new CommandResult(command, parents.join(' '), args)
+        return new CommandResult(command, args)
       } else {
-        return new CommandResult(command, parents.join(' '), content)
+        return new CommandResult(command, content)
       }
     }
 
     for (let command of commands) {
       let alias = startsWithAny(content, command.getTriggers())
       if (alias) {
-        let subcontent = content.slice(alias.length)
-        if (subcontent.charAt(0) === ' ') subcontent = subcontent.slice(1)
-        parents.push(command.name)
+        let subcontent = content.slice(alias.length).trimLeft()
         if (command.subcommands.length > 0) {
-          let result = this.parseContent(subcontent, command.subcommands, parents)
-          if (result.error && command.run != null) return handleCommand(command, subcontent)
+          let result = this.parseContent(subcontent, command.subcommands, command)
+          if (result.error && command.runFunc != null) return handleCommand(command, subcontent)
           else return result
-        } else if (command.run != null) {
+        } else if (command.runFunc != null) {
           return handleCommand(command, subcontent)
         } else {
           this.logger.warn(`Command '${command.name}' has nothing to run!`)
         }
       }
     }
-    if (content === '') return parents.length === 0 ? new CommandResult('No command was provided') : new CommandResult(`No subcommand was provided for '${parents[parents.length - 1]}'`, parents.join(' '))
+    if (content === '') return parent === null ? new CommandResult('No command was provided') : new CommandResult(`No subcommand was provided for '${parent.name}'`)
     else return new CommandResult(`I'm not sure what you meant by "${content.split(' ')[0]}"`)
+  }
+
+  /**
+   * @param {Command} command
+   * @param {string} userId
+   * @return {Promise<boolean>}
+   */
+  checkPerms (command, userId) {
+    return new Promise(async (resolve, reject) => {
+      let userTags = await this.bot.userManager.getUserPermTags(userId, true)
+      if (userTags.includes('blacklist')) {
+        return resolve(false)
+      }
+      let commandTags = await command.getPermissions(true)
+      if (commandTags.find(tag => { return userTags.includes(tag) })) {
+        if (!(await command.getDefaultPermission(true))) return resolve(true)
+        else resolve(false)
+      } else {
+        if (await command.getDefaultPermission(true)) return resolve(true)
+        else resolve(false)
+      }
+    })
+  }
+
+  /**
+   * @typedef CommandSearchResult
+   * @prop {Command} command
+   * @prop {string} content
+   */
+
+  /**
+   * searches a string for a command
+   * @param {string} content
+   * @param {boolean} [complete]
+   * @param {Command[]} [commands]
+   * @return {CommandSearchResult}
+   */
+  findCommand (content, complete = false, commands = this.commands) {
+    let result = null
+    commands.find(c => {
+      return c.getTriggers().find(alias => {
+        if (content.startsWith(alias)) {
+          content = content.slice(alias.length).trimLeft()
+          if (c.subcommands.length > 0) {
+            result = this.findCommand(content, complete, c.subcommands)
+            if (result == null && (!complete || c.runFunc != null)) result = { command: c, content }
+          } else result = { command: c, content }
+          return true
+        }
+      }) !== undefined
+    })
+    return result
   }
 }
 

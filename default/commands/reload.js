@@ -1,4 +1,4 @@
-const Command = require('../../core.js').Command
+const { Command } = require('../../core.js')
 
 module.exports = (bot) => {
   return new Command({
