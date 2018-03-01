@@ -49,6 +49,8 @@ class Command {
     })
 
     this.defaultCommand = false
+    /** @type {string} */
+    this.path = null
   }
 
   /**
@@ -120,6 +122,15 @@ class Command {
         resolve()
       }
     })
+  }
+
+  /**
+   * @return {Command[]}
+   */
+  getAllCommands () {
+    let commands = this.subcommands.map(sc => sc.getAllCommands())
+    if (this.runFunc != null) commands.push(this)
+    return commands
   }
 
   // Database functions

@@ -20,7 +20,7 @@ class Logger {
     type = type || Logger.INFO
     let d = new Date()
     let year = d.getFullYear()
-    let month = d.getMonth()
+    let month = d.getMonth() + 1
     month = twoDigit(month)
     let day = d.getDate()
     day = twoDigit(day)
@@ -28,6 +28,7 @@ class Logger {
     hour = twoDigit(hour)
     let min = d.getMinutes()
     let sec = d.getSeconds()
+    sec = twoDigit(sec)
     let date = `${day}-${month}-${year}|${hour}:${min}:${sec}`
     return `[${date}] [${this.name}] [${type}] ${msg}`
   }

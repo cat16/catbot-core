@@ -113,15 +113,18 @@ class CommandManager {
         }
         let unloaded = 0
         let loaded = 0
+        let totalLoaded = 0
         for (let commandFunc in commandFuncs) {
           unloaded++
           /** @type {Command} */
           let command = commandFuncs[commandFunc](this.bot)
+          command.path = `${dir.path}/${commandFunc}.js`
           if (dir.defaultCommands) command.defaultCommand = true
           this.addCommand(command).then(() => {
             loaded++
+            totalLoaded += command.getAllCommands().length
             if (loaded >= unloaded) {
-              this.logger.info(`Loaded ${loaded} commands from ${dir.path}`)
+              this.logger.info(`Loaded ${totalLoaded} commands from ${dir.path}`)
               loadedDirs++
               if (loadedDirs >= this.loadDirs.length) resolve()
             }
@@ -147,6 +150,7 @@ class CommandManager {
           try {
             /** @type {Command} */
             let command = require(path)(this.bot)
+            command.path = path
             delete require.cache[require.resolve(path)]
             this.commands = this.commands.filter(c => c.name !== name)
             if (dir.defaultCommands) command.defaultCommand = true
@@ -179,6 +183,7 @@ class CommandManager {
    * @param {CommandResult} result
    * @param {Message} msg
    * @param {boolean} [sudo]
+   * @return {Promise}
    */
   runResult (result, msg, sudo = false) {
     return new Promise(async (resolve, reject) => {
@@ -197,17 +202,18 @@ class CommandManager {
           if (!this.bot.config.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
       }
+      resolve()
     })
   }
 
   /**
-   * @param {string} msg
+   * @param {string} msgContent
    * @return {CommandResult}
    */
-  parseFull (msg) {
-    let prefix = startsWithAny(msg, this.prefixes)
+  parseFull (msgContent) {
+    let prefix = startsWithAny(msgContent, this.prefixes)
     if (prefix) {
-      let result = this.parseContent(msg.slice(prefix.length), this.commands)
+      let result = this.parseContent(msgContent.slice(prefix.length), this.commands)
       return result
     }
     return new CommandResult(false)
@@ -301,10 +307,10 @@ class CommandManager {
       }
       let commandTags = await command.getPermissions(true)
       if (commandTags.find(tag => { return userTags.includes(tag) })) {
-        if (!(await command.getDefaultPermission(true))) return resolve(true)
+        if (!(await command.getDefaultPermission(true) && !this.bot.config.private)) return resolve(true)
         else resolve(false)
       } else {
-        if (await command.getDefaultPermission(true)) return resolve(true)
+        if (await command.getDefaultPermission(true) && !this.bot.config.private) return resolve(true)
         else resolve(false)
       }
     })

@@ -2,70 +2,32 @@ const { Command, Arg } = require('../../core.js')
 
 module.exports = (bot) => {
   return new Command({
-    name: 'tag',
+    name: 'command',
     subcommands: [
       new Command({
-        name: 'user',
+        name: 'reload',
+        run: async (msg, content, bot) => {
+          let sentp = bot.client.createMessage(msg.channel.id, `Reloading command ${content}...`)
+          bot.commandManager.reloadCommand(content).then(() => {
+            sentp.then(sent => sent.edit(`:white_check_mark: Command ${content} reloaded`))
+          }, (err) => {
+            sentp.then(sent => sent.edit(err.message))
+          })
+        },
         subcommands: [
           new Command({
-            name: 'add',
-            aliases: ['give'],
-            args: [
-              new Arg({ name: 'user', type: 'user' }),
-              new Arg({ name: 'tag' })
-            ],
-            run: async (msg, args, bot) => {
-              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
-              if (!tags.includes(args.tag)) {
-                tags.push(args.tag)
-                bot.userManager.setUserPermTags(args.user.id, tags).then(() => {
-                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully gave ${args.user.username} tag '${args.tag}'`)
-                })
-              } else {
-                bot.client.createMessage(msg.channel.id, `:x: ${args.user.username} already has tag '${args.tag}'`)
-              }
-            }
-          }),
-          new Command({
-            name: 'remove',
-            aliases: ['take'],
-            args: [
-              new Arg({ name: 'user', type: 'user' }),
-              new Arg({ name: 'tag' })
-            ],
-            run: async (msg, args, bot) => {
-              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
-              if (tags.includes(args.tag)) {
-                tags = tags.filter((tag) => { return tag !== args.tag })
-                bot.userManager.setUserPermTags(args.user.id, tags).then(() => {
-                  bot.client.createMessage(msg.channel.id, `:white_check_mark: Successfully removed tag '${args.tag}' from ${args.user.username}`)
-                })
-              } else {
-                bot.client.createMessage(msg.channel.id, `:x: ${args.user.username} doesn't have tag '${args.tag}'`)
-              }
-            }
-          }),
-          new Command({
-            name: 'get',
-            aliases: ['list'],
-            permMode: Command.PermMode.OVERRIDE,
-            args: [
-              new Arg({ name: 'user', type: 'user' })
-            ],
-            defaultPermission: true,
-            run: async (msg, args, bot) => {
-              let tags = await bot.userManager.getUserPermTags(args.user.id, true)
-              if (tags.length < 1) {
-                bot.client.createMessage(msg.channel.id, `${args.user.username} does not have any tags`)
-              } else {
-                bot.client.createMessage(msg.channel.id, `${args.user.username} has the following tags: [${tags.join(', ')}]`)
-              }
+            name: 'all',
+            run: async (msg, content, bot) => {
+              let sentp = bot.client.createMessage(msg.channel.id, 'Reloading all commands...')
+              await bot.commandManager.reloadCommands()
+              sentp.then(sent => sent.edit(':white_check_mark: Commands reloaded'))
             }
           })
         ]
       }),
       new Command({
-        name: 'command',
+        name: 'permission',
+        aliases: ['perm', 'perms', 'permissions'],
         subcommands: [
           new Command({
             name: 'add',
@@ -137,6 +99,29 @@ module.exports = (bot) => {
             }
           })
         ]
+      }),
+      new Command({
+        name: 'reset',
+        args: [new Arg({name: 'command', type: 'command'})],
+        run: async (msg, args, bot) => {
+          /** @type {Command} */
+          let command = args.command
+          let sentp = bot.client.createMessage(msg.channel.id, `Resetting command \`${command.getFullName()}\`...`)
+          await command.load(bot.logger, command.commandTable, true)
+          sentp.then(sent => sent.edit(`:white_check_mark: Successfully reset command \`${command.getFullName()}\``))
+        }
+      }),
+      new Command({
+        name: 'share',
+        args: [new Arg({name: 'command', type: 'command'})],
+        run: (msg, args, bot) => {
+          /** @type {Command} */
+          let command = args.command
+          let code = require(command.path).toString()
+          for (let i = 0; i < code.length; i += 1900) {
+            bot.client.createMessage(msg.channel.id, `\`\`\`js\n${code.substring(i, i + 1900)}\n\`\`\``)
+          }
+        }
       })
     ]
   })

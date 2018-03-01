@@ -95,7 +95,11 @@ class Catbot {
       if (eventFunc instanceof Function) {
         let logger = new Logger(`event::${event}`, this.logger)
         this.client.on(event, (data) => {
-          eventFunc.call({ logger }, data, this)
+          try {
+            eventFunc.call({ logger }, data, this)
+          } catch (ex) {
+            this.logger.error(`Event '${event}' crashed! : ${ex.stack}`)
+          }
         })
       } else {
         this.logger.warn(`Could not load event '${event}': No function was exported`)
