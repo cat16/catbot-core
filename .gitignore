@@ -3,4 +3,5 @@ node_modules
 *.sh
 *.db
 .vscode
-config.json
+lib/dev
+*config.json
