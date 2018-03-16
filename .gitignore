@@ -2,6 +2,6 @@ node_modules
 *.bat
 *.sh
 *.db
+*.json
 .vscode
-lib/dev
-*config.json
+src

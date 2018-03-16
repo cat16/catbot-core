@@ -1,0 +1,34 @@
+import { Client } from 'eris';
+import Logger from './util/logger';
+import DatabaseManager from './database/database-manager';
+import TableManager from './database/table-manager';
+import Config from './config';
+import CommandManager from './command/command-manager';
+import EventManager from './event/event-manager';
+import UserManager from './user-manager';
+import Util from './util/util';
+export default class Catbot {
+    directory: string;
+    logger: Logger;
+    util: Util;
+    databaseManager: DatabaseManager;
+    commandManager: CommandManager;
+    eventManager: EventManager;
+    table: TableManager;
+    userManager: UserManager;
+    client: Client;
+    config: Config;
+    temp: any;
+    constructor(directory: string);
+    onrestart(bot: Catbot, err?: Error): void;
+    load(): Promise<void>;
+    registerDir(directory: string, generateFolders: boolean, defaultFolder: boolean): Promise<void>;
+    connect(): Promise<void>;
+    loadConfig(file: string): void;
+    getInput(msg: string): string;
+    start(): Promise<void>;
+    restart(reloadFiles?: boolean): Promise<Catbot>;
+    stop(): void;
+    get(key: any, defaultValue?: any): Promise<any>;
+    set(key: any, value: any): Promise<void>;
+}
