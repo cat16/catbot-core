@@ -3,5 +3,6 @@ node_modules
 *.sh
 *.db
 *.json
+!tsconfig.json
 .vscode
 dist
