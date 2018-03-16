@@ -24,14 +24,14 @@ export default class DatabaseManager {
   tables: object
   database: Database
 
-  constructor (name: string, logger?: Logger) {
+  constructor(name: string, logger?: Logger) {
     this.name = name
     this.logger = new Logger('database-manager', logger)
     this.tableInfos = {}
     this.tables = {}
   }
 
-  load (directory: string): Promise<void> {
+  load(directory: string): Promise<void> {
     return new Promise((resolve, reject) => {
       let errBase = new SQLError()
       this.database = new Database(`${directory}/${this.name}.db`, (err) => {
@@ -41,12 +41,12 @@ export default class DatabaseManager {
     })
   }
 
-  loadFile (file: string): Promise<void> {
+  loadFile(file: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       if (!fs.existsSync(file)) return resolve()
       this.logger.log(`Loading database structure from '${file.substring(file.lastIndexOf('/') + 1)}'...`)
       let tables = require(file)
-      if(tables.default !== undefined) tables = tables.default
+      if (tables.default !== undefined) tables = tables.default
       Object.assign(this.tableInfos, tables)
       let tablesLoaded = 0
       for (let tableName in tables) {
@@ -75,7 +75,7 @@ export default class DatabaseManager {
     })
   }
 
-  createTable (name: string, cols: ColumnInfo[], ifNotExists: boolean = false): Promise<void> {
+  createTable(name: string, cols: ColumnInfo[], ifNotExists: boolean = false): Promise<void> {
     return new Promise((resolve, reject) => {
       let ifNotExistsStr: string = ifNotExists ? ' IF NOT EXISTS' : ''
       let colsStrs = cols.map(c => `${c.name} ${c.type}`)
@@ -89,7 +89,7 @@ export default class DatabaseManager {
     })
   }
 
-  updateTable (name: string, cols: ColumnInfo[]): Promise<void> {
+  updateTable(name: string, cols: ColumnInfo[]): Promise<void> {
     return new Promise(async (resolve, reject) => {
       this.createTable(name, cols, true).catch(err => { return reject(err) })
       let tableInfo = await this.tableInfo(name)
@@ -104,11 +104,14 @@ export default class DatabaseManager {
         await new Promise((resolve, reject) => {
           let colNames = tableInfo.map(c => c.name).filter(c => !toDrop.find(c2 => c2.name === c)).join()
           let errBase = new SQLError()
-          console.log(`INSERT INTO ${name} (${colNames}) SELECT ${colNames} FROM ${tempName}`)
-          this.database.run(`INSERT INTO ${name} (${colNames}) SELECT ${colNames} FROM ${tempName}`, (err) => {
-            if (err) reject(errBase.addSQLMsg(new Error(err.message)))
-            else resolve()
-          })
+          if (colNames.length > 0) {
+            this.database.run(`INSERT INTO ${name} (${colNames}) SELECT ${colNames} FROM ${tempName}`, (err) => {
+              if (err) reject(errBase.addSQLMsg(new Error(err.message)))
+              else resolve()
+            })
+          } else {
+            resolve()
+          }
         }).catch(err => { return reject(err) })
         await this.dropTable(tempName).catch(err => { return reject(err) })
         this.logger.info(`Added ${toAdd.length} and dropped ${toDrop.length} columns from table '${name}'`)
@@ -117,7 +120,7 @@ export default class DatabaseManager {
     })
   }
 
-  tableInfo (name: string): Promise<Table[]> {
+  tableInfo(name: string): Promise<Table[]> {
     return new Promise(async (resolve, reject) => {
       this.database.all(`pragma table_info('${name}')`, async (err, infos) => {
         if (err) reject(err)
@@ -126,7 +129,7 @@ export default class DatabaseManager {
     })
   }
 
-  renameTable (name: string, newName: string): Promise<void> {
+  renameTable(name: string, newName: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.database.run(`ALTER TABLE ${name} RENAME TO ${newName}`, (err) => {
         if (err) reject(err)
@@ -135,7 +138,7 @@ export default class DatabaseManager {
     })
   }
 
-  tableExists (name: string): Promise<boolean> {
+  tableExists(name: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       this.database.all(`SELECT name FROM sqlite_master WHERE type='table' AND name='${name}'`, (err, rows) => {
         if (err) reject(err)
@@ -144,7 +147,7 @@ export default class DatabaseManager {
     })
   }
 
-  dropTable (name: string): Promise<void> {
+  dropTable(name: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.database.run(`DROP TABLE ${name}`, (err) => {
         if (err) reject(err)
@@ -156,7 +159,7 @@ export default class DatabaseManager {
     })
   }
 
-  getTable (name: string): Promise<TableManager> {
+  getTable(name: string): Promise<TableManager> {
     return new Promise((resolve, reject) => {
       this.tableExists(name).then(exists => {
         if (exists) resolve(new TableManager(this, name))

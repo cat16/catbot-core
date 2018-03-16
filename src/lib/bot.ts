@@ -63,8 +63,10 @@ export default class Catbot {
       this.table = this.databaseManager.tables[BTI.name]
       this.userManager = new UserManager(this.databaseManager)
       this.commandManager.load()
-      await this.commandManager.reload().catch(err => { return reject(err) })
-      await this.eventManager.reload().catch(err => { return reject(err) })
+      await this.util.multiPromise([
+        this.commandManager.reload().catch(err => { return reject(err) }),
+        this.eventManager.reload().catch(err => { return reject(err) })
+      ])
       this.logger.log('Successfully loaded.')
       resolve()
     })

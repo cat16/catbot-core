@@ -62,6 +62,15 @@ export default abstract class Handler<T extends Element> {
       this.logger.info(`Reloading ${this.elementName}s...`)
       this.elements = []
       let loadedDirs = 0
+
+      let dirCheck = () => {
+        loadedDirs++
+        if (loadedDirs === this.loadDirs.length) {
+          this.logger.info(`Successfully reloaded all ${this.elementName}s.`)
+          resolve()
+        }
+      }
+
       for (let dir of this.loadDirs) {
         let elementFuncs: ElementFunc<T>[] = load(dir.path, dir.generateFolders)
         if (elementFuncs == null) {
@@ -71,24 +80,30 @@ export default abstract class Handler<T extends Element> {
         let unloaded = 0
         let loaded = 0
         let totalLoaded = 0
-        for (let elementFunc in elementFuncs) {
-          unloaded++
-          let element = elementFuncs[elementFunc](this.bot)
-          this.add(element, `${dir.path}/${elementFunc}`, dir.isDefault).then(() => {
-            loaded++
-            totalLoaded += element.getAllElements().length
-            if (loaded >= unloaded) {
-              this.logger.info(`Loaded ${totalLoaded} ${this.elementName}${totalLoaded === 1 ? '' : 's'} from ${dir.path}`)
-              loadedDirs++
-              if (loadedDirs >= this.loadDirs.length) {
-                this.logger.info(`Successfully reloaded all ${this.elementName}s.`)
-                resolve()
-              }
-            }
-          }, (err) => {
-            this.logger.error(`Could not load ${this.elementName} from file '${elementFunc}': ${err.stack}`)
-            unloaded--
-          })
+
+        let elementCheck = () => {
+          if (loaded === unloaded) {
+            this.logger.info(`Loaded ${totalLoaded} ${this.elementName}${totalLoaded === 1 ? '' : 's'} from ${dir.path}`)
+            dirCheck()
+          }
+        }
+
+        if (Object.keys(elementFuncs).length === 0) {
+          dirCheck()
+        } else {
+          for (let elementFunc in elementFuncs) {
+            unloaded++
+            let element = elementFuncs[elementFunc](this.bot)
+            this.add(element, `${dir.path}/${elementFunc}`, dir.isDefault).then(() => {
+              loaded++
+              totalLoaded += element.getAllElements().length
+              elementCheck()
+            }, (err) => {
+              this.logger.error(`Could not load ${this.elementName} from file '${elementFunc}': ${err.stack}`)
+              unloaded--
+              elementCheck()
+            })
+          }
         }
       }
     })
