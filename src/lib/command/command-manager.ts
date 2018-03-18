@@ -12,6 +12,14 @@ import TableManager from '../database/table-manager'
 import TABLES from '../default/database'
 const CTI = TABLES.commands
 
+let startsWithAny = (str: string, arr: string[]): string => {
+  let longest = ''
+  arr.forEach(str2 => {
+    if (str2.length > longest.length && str.startsWith(str2)) longest = str2
+  })
+  return longest.length === 0 ? null : longest
+}
+
 export class CommandResult {
 
   error: boolean
@@ -25,12 +33,9 @@ export class CommandResult {
   }
 }
 
-let startsWithAny = (str: string, arr: string[]): string => {
-  let longest = ''
-  arr.forEach(str2 => {
-    if (str2.length > longest.length && str.startsWith(str2)) longest = str2
-  })
-  return longest.length === 0 ? null : longest
+interface Trigger {
+  time: number
+  alreadyTold: boolean
 }
 
 export default class CommandManager extends Handler<Command> {
@@ -72,29 +77,67 @@ export default class CommandManager extends Handler<Command> {
 
   prefixes: string[]
   commandTable: TableManager
+  lastTriggered: object
 
   constructor(bot: Catbot) {
     super(bot, new Logger('command-manager', bot.logger), 'command')
     this.prefixes = [bot.config.defaultPrefix]
+    this.lastTriggered = {}
   }
 
   load() {
     this.commandTable = this.bot.databaseManager.tables[CTI.name]
   }
 
-  handleMessage(msg: Message): Promise<void> {
+  handleMessage(msg: Message): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       let result = this.parseFull(msg.content)
-      await this.runResult(result, msg)
-      resolve()
+      if ((result.error || result.data instanceof Command) && await this.shouldRespond(result)) {
+        let cooldown: number = await this.bot.get('commandCooldown')
+        if (cooldown != null) {
+          let lastTriggered: Trigger = this.lastTriggered[msg.author.id]
+          if (lastTriggered != null) {
+            let now = new Date().getTime()
+            if (now - lastTriggered.time < cooldown) {
+              if (lastTriggered.alreadyTold) {
+                return resolve(false)
+              } else {
+                this.bot.client.createMessage(msg.channel.id,
+                  `:clock1: Please wait before using another command (${Math.ceil((cooldown - (now - lastTriggered.time)) / 1000)} seconds left)`
+                )
+                this.lastTriggered[msg.author.id] = {
+                  time: lastTriggered.time,
+                  alreadyTold: true
+                }
+                return resolve(true)
+              }
+            }
+          }
+        }
+        this.runResult(result, msg).then(resolve, reject)
+        this.lastTriggered[msg.author.id] = {
+          time: new Date().getTime(),
+          alreadyTold: false
+        }
+      }
+      resolve(false)
     })
   }
 
-  runResult(result: CommandResult, msg: Message, sudo: boolean = false): Promise<void> {
+  shouldRespond(result: CommandResult): Promise<boolean> {
+    return new Promise(async(resolve, reject) => {
+      let silent = await this.bot.get('silent', false)
+      let respondToUnknownCommands = await this.bot.get('respondToUnknownCommands', false)
+      resolve(!silent && (result.content != null || respondToUnknownCommands))
+    })
+  }
+
+  runResult(result: CommandResult, msg: Message, sudo: boolean = false): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      let silent = await this.bot.table.getBoolean('silent', 'value', true)
       if (result.error) {
-        if (!silent) this.bot.client.createMessage(msg.channel.id, <string> result.data)
+        if (await this.shouldRespond(result))
+          this.bot.client.createMessage(msg.channel.id, <string>result.data)
+        resolve(true)
       } else if (result.data instanceof Command) {
         let command = result.data
         if (sudo || await this.checkPerms(command, msg.author.id)) {
@@ -107,8 +150,10 @@ export default class CommandManager extends Handler<Command> {
           this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' did not have permission to run command '${command.getFullName()}'`)
           if (!command.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
+        resolve(true)
+      } else {
+        resolve(false)
       }
-      resolve()
     })
   }
 
@@ -134,7 +179,7 @@ export default class CommandManager extends Handler<Command> {
             for (let type of types) {
               let result = type.validate(content, this.bot)
               if (result.failed) {
-                if (types.length === 1) finalResult = new CommandResult(<string> result.data)
+                if (types.length === 1) finalResult = new CommandResult(<string>result.data, command)
               } else {
                 args[arg.name] = result.data
                 if (result.subcontent == null) result.subcontent = ''
@@ -151,7 +196,7 @@ export default class CommandManager extends Handler<Command> {
               } else return finalResult
             }
           } else {
-            return new CommandResult(`Arguement ${arg.name} was not provided`)
+            return new CommandResult(`Arguement ${arg.name} was not provided`, command)
           }
         }
         args.extra = content
@@ -176,8 +221,11 @@ export default class CommandManager extends Handler<Command> {
         }
       }
     }
-    if (content === '') return parent === null ? new CommandResult('No command was provided') : new CommandResult(`No subcommand was provided for '${parent.name}'`)
-    else return new CommandResult(`I'm not sure what you meant by "${content.split(' ')[0]}"`)
+    return content === '' ?
+      parent === null
+        ? new CommandResult('No command was provided')
+        : new CommandResult(`No subcommand was provided for '${parent.name}'`, parent)
+      : new CommandResult(`I'm not sure what you meant by "${content.split(' ')[0]}"`)
   }
 
   checkPerms(command: Command, userId: string): Promise<boolean> {

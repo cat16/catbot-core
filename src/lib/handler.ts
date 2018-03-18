@@ -12,7 +12,7 @@ export interface Directory {
 
 export interface Element {
   fileName: string
-  getAllElements(): Element[]
+  getAllElements(includeEmpty?: boolean): Element[]
   path: string
   isDefault: boolean
 }
@@ -49,7 +49,7 @@ export default abstract class Handler<T extends Element> {
 
   add(element: T, path: string, isDefault: boolean = false): Promise<void> {
     let fileName = path.split('/').pop().split('.')[0]
-    element.getAllElements().forEach(e => {
+    element.getAllElements(true).forEach(e => {
       e.path = path
       e.fileName = fileName
       if (isDefault) e.isDefault = true
@@ -96,7 +96,7 @@ export default abstract class Handler<T extends Element> {
             let element = elementFuncs[elementFunc](this.bot)
             this.add(element, `${dir.path}/${elementFunc}`, dir.isDefault).then(() => {
               loaded++
-              totalLoaded += element.getAllElements().length
+              totalLoaded += element.getAllElements(false).length
               elementCheck()
             }, (err) => {
               this.logger.error(`Could not load ${this.elementName} from file '${elementFunc}': ${err.stack}`)

@@ -69,6 +69,7 @@ export default class Logger {
     let send = this.getLogString(msg, type)
     switch (type) {
       default:
+      case MsgType.DEBUG:
       case MsgType.INFO:
         console.log(send)
         break
@@ -77,10 +78,6 @@ export default class Logger {
         break
       case MsgType.ERROR:
         console.error(send)
-        break
-      case MsgType.DEBUG:
-        // console.debug(send)
-        console.log(send)
         break
     }
   }

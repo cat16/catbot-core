@@ -39,8 +39,8 @@ export default class Command implements Element {
   isDefault: boolean
   fileName: string
 
-  getAllElements() {
-    return this.getAllCommands()
+  getAllElements(includeEmpty: boolean = false) {
+    return this.getAllCommands(includeEmpty)
   }
 
   name: string
@@ -129,9 +129,9 @@ export default class Command implements Element {
     })
   }
 
-  getAllCommands(): Command[] {
+  getAllCommands(includeEmpty: boolean = false): Command[] {
     let commands = [].concat.apply([], this.subcommands.map(sc => sc.getAllCommands()))
-    if (this.runFunc != null) commands.push(this)
+    if (this.runFunc != null || includeEmpty) commands.push(this)
     return commands
   }
 

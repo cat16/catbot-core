@@ -3,6 +3,10 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+import Logger from './logger'
+
+let logger = new Logger('load.js')
+
 let isFile = (source: string): boolean => fs.lstatSync(source).isFile()
 
 let getFiles = (directory: string): string[] => {
@@ -11,10 +15,6 @@ let getFiles = (directory: string): string[] => {
     files[file] = files[file].slice(directory.length + 1)
   }
   return files
-}
-
-let log = msg => {
-  console.log(`[load.js] ${msg}`)
 }
 
 export default function load(directory: string, generateNew: boolean): any {
@@ -31,7 +31,7 @@ export default function load(directory: string, generateNew: boolean): any {
         obj[file.slice(0, -3)] = required.default === null ? required : required.default
         delete require.cache[require.resolve(`${directory}/${file}`)]
       } catch (ex) {
-        log(`Failed to load file '${file}'! : ${ex.stack}`)
+        logger.error(`Failed to load file '${file}'! : ${ex.stack}`)
       }
     }
   }
