@@ -28,7 +28,7 @@ export default function load(directory: string, generateNew: boolean): any {
     if (file.endsWith('.js')) {
       try {
         let required = require(`${directory}/${file}`)
-        obj[file.slice(0, -3)] = required.default === null ? required : required.default
+        obj[file.slice(0, -3)] = required.default == null ? required : required.default
         delete require.cache[require.resolve(`${directory}/${file}`)]
       } catch (ex) {
         logger.error(`Failed to load file '${file}'! : ${ex.stack}`)
