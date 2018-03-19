@@ -14,7 +14,9 @@ enum BOOLEAN_STRING {
  * @return {any}
  */
 let formatValue = (value) => {
-  return typeof (value) === 'string' ? `'${value}'` : value
+  if (typeof (value) === 'string') return `'${value}'`
+  if (value == null) return 'NULL'
+  return value
 }
 
 export interface TableInfo {
