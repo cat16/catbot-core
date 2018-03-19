@@ -1,6 +1,6 @@
 {
   "name": "cat16-bot-core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "the core code for cat16's discord bots; uses eris",
   "main": "dist/index",
   "scripts": {
