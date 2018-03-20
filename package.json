@@ -19,8 +19,8 @@
   },
   "homepage": "https://github.com/cat16/bot-core#readme",
   "dependencies": {
+    "chalk": "^2.3.2",
     "eris": "^0.8.3",
-    "npm": "^5.7.1",
     "readline-sync": "^1.4.7",
     "sqlite3": "^3.1.13"
   },

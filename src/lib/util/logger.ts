@@ -1,9 +1,12 @@
+import chalk from 'chalk'
+
 let twoDigit = (num: string) => {
   return num.length === 1 ? `0${num}` : num
 }
 
 export enum MsgType {
   INFO = 'info',
+  SUCCESS = 'success',
   WARN = 'warn',
   ERROR = 'error',
   DEBUG = 'debug'
@@ -14,8 +17,10 @@ export default class Logger {
   name: string
 
   constructor(name: string, parent?: Logger, field?: string) {
-    this.name = parent == null ? name : `${parent.name}->${name}`
-    this.name = field == null ? name : `${name}::${field}`
+    name = chalk.cyan(name)
+    name = parent == null ? name : `${parent.name}${chalk.gray('->')}${name}`
+    name = field == null ? name : `${name}::${field}`
+    this.name = name
   }
 
   getLogString(msg: string, type: MsgType = MsgType.INFO) {
@@ -31,34 +36,59 @@ export default class Logger {
     hour = twoDigit(hour)
     sec = twoDigit(sec)
     let date = `${day}-${month}-${year}|${hour}:${min}:${sec}`
-    return `[${date}] [${this.name}] [${type}] ${msg}`
+    let typestr = `${type}`
+    switch (type) {
+      case MsgType.INFO:
+        typestr = chalk.blue(typestr)
+        break
+      case MsgType.SUCCESS:
+        typestr = chalk.green(typestr)
+        break
+      case MsgType.WARN:
+        typestr = chalk.yellow(typestr)
+        break
+      case MsgType.ERROR:
+        typestr = chalk.red(typestr)
+        break
+      case MsgType.DEBUG:
+        typestr = chalk.yellow(typestr)
+        break
+    }
+    return `[${chalk.gray(date)}] [${this.name}] [${typestr}] ${msg}`
   }
 
   /**
-   * outputs info about what has happened or is going to happen
+   * prints general information to the console
    */
-  info(msg) {
+  info(msg: string) {
     this.log(msg, MsgType.INFO)
   }
 
   /**
-   * outputs a warning about something that happened
+   * prints a success to the console
    */
-  warn(msg) {
+  success(msg) {
+    this.log(msg, MsgType.SUCCESS)
+  }
+
+  /**
+   * prints a warning to the console
+   */
+  warn(msg: string) {
     this.log(msg, MsgType.WARN)
   }
 
   /**
-   * outputs an error
+   * prints an error to the console
    */
-  error(msg) {
+  error(msg: string) {
     this.log(msg, MsgType.ERROR)
   }
 
   /**
-   * outputs debug information
+   * prints debug information to the console
    */
-  debug(msg) {
+  debug(msg: string) {
     this.log(msg, MsgType.DEBUG)
   }
 

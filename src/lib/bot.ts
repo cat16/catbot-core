@@ -67,7 +67,7 @@ export default class Catbot {
         this.commandManager.reload().catch(err => { return reject(err) }),
         this.eventManager.reload().catch(err => { return reject(err) })
       ])
-      this.logger.log('Successfully loaded.')
+      this.logger.success('Successfully loaded.')
       resolve()
     })
   }
@@ -105,7 +105,7 @@ export default class Catbot {
     return new Promise((resolve, reject) => {
       this.logger.log('Connecting...')
       this.client.on('ready', () => {
-        this.logger.log('Successfully connected.')
+        this.logger.success('Successfully connected.')
         resolve()
       })
       this.client.connect()
@@ -130,7 +130,7 @@ export default class Catbot {
       }
       if (updated) {
         writeConfig(config)
-        this.logger.log('Config file updated.')
+        this.logger.success('Config file updated.')
       }
       this.config = config
     } else {
@@ -140,7 +140,7 @@ export default class Catbot {
         if (config[key] == null) config[key] = this.getInput(`Enter ${key}`)
       }
       writeConfig(config)
-      this.logger.log('Config file generated')
+      this.logger.success('Config file generated')
       this.config = config
     }
   }

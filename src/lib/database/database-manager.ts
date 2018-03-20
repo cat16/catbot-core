@@ -66,7 +66,7 @@ export default class DatabaseManager {
             }
             this.tables[tableInfo.name] = table
             if (++tablesLoaded === Object.keys(tables).length) {
-              this.logger.log('Database successfully loaded.')
+              this.logger.success('Database successfully loaded.')
               resolve()
             }
           }, reject)

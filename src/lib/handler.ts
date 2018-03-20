@@ -1,3 +1,5 @@
+import chalk from 'chalk'
+
 import * as fs from 'fs'
 
 import load from './util/load'
@@ -66,7 +68,7 @@ export default abstract class Handler<T extends Element> {
       let dirCheck = () => {
         loadedDirs++
         if (loadedDirs === this.loadDirs.length) {
-          this.logger.info(`Successfully reloaded all ${this.elementName}s.`)
+          this.logger.success(`Successfully reloaded all ${this.elementName}s.`)
           resolve()
         }
       }
@@ -83,7 +85,7 @@ export default abstract class Handler<T extends Element> {
 
         let elementCheck = () => {
           if (loaded === unloaded) {
-            this.logger.info(`Loaded ${totalLoaded} ${this.elementName}${totalLoaded === 1 ? '' : 's'} from ${dir.path}`)
+            this.logger.info(`Loaded ${chalk.magenta(`${totalLoaded} ${this.elementName}${totalLoaded === 1 ? '' : 's'}`)} from ${chalk.gray(dir.path)}`)
             dirCheck()
           }
         }
