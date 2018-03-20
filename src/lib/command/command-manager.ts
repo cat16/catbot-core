@@ -1,4 +1,5 @@
 import { Message } from 'eris'
+import chalk from 'chalk'
 
 import * as fs from 'fs'
 
@@ -142,12 +143,12 @@ export default class CommandManager extends Handler<Command> {
         let command = result.data
         if (sudo || await this.checkPerms(command, msg.author.id)) {
           command.run(msg, result.content, this.bot).then(() => {
-            if (!command.silent) this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' ran command '${command.getFullName()}'`)
+            if (!command.silent) this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' ran command '${chalk.magenta(command.getFullName())}'`)
           }, (err) => {
             this.logger.error(`Command '${command.getFullName()}' crashed: ${err.stack}`)
           })
         } else {
-          this.logger.log(`'${msg.author.username}#${msg.author.discriminator}' did not have permission to run command '${command.getFullName()}'`)
+          this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' did not have permission to run command '${chalk.magenta(command.getFullName())}'`)
           if (!command.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
         resolve(true)
