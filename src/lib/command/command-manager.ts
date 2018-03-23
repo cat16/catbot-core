@@ -236,7 +236,7 @@ export default class CommandManager extends Handler<Command> {
         return resolve(false)
       }
       let commandTags = await command.getPermissions(true)
-      let isPrivate = await this.bot.table.getBoolean('private', 'value', true)
+      let isPrivate = await this.bot.table.getBoolean('private', 'value', true) && command.getFullName() !== 'sudo'
       if (commandTags.find(tag => { return userTags.some(tag2 => tag2 === tag) })) {
         if (!(await command.getDefaultPermission(true) && !isPrivate)) return resolve(true)
         else resolve(false)
