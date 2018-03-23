@@ -115,8 +115,8 @@ export default class TableManager {
     return new Promise((resolve, reject) => {
       key = { name: this.tableInfo.key.name, value: formatValue(key) }
       val.value = formatValue(val.value)
-      if (val.value === true) val.value = BOOLEAN_STRING.TRUE
-      if (val.value === false) val.value = BOOLEAN_STRING.FALSE
+      if (val.value === true) val.value = formatValue(BOOLEAN_STRING.TRUE)
+      if (val.value === false) val.value = formatValue(BOOLEAN_STRING.FALSE)
       let cols = [key.name, val.name]
       for (let i in this.tableInfo.cols) {
         let info = this.tableInfo.cols[i]

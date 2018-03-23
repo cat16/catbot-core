@@ -129,7 +129,7 @@ export default class CommandManager extends Handler<Command> {
     return new Promise(async(resolve, reject) => {
       let silent = await this.bot.get('silent', false)
       let respondToUnknownCommands = await this.bot.get('respondToUnknownCommands', false)
-      resolve(!silent && (result.content != null || respondToUnknownCommands))
+      resolve(!(silent && result.error) && (result.content != null || respondToUnknownCommands))
     })
   }
 
