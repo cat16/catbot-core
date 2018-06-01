@@ -1,6 +1,6 @@
 import DatabaseManager from './database/database-manager'
 import TableManager from './database/table-manager'
-import TABLES from './default/database'
+import TABLES from './default-modules/core/database'
 const UTI = TABLES.users
 const UTIcols = UTI.cols
 

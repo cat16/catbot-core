@@ -1,15 +1,6 @@
-import Catbot from './lib/bot'
-import Command, { PermMode } from './lib/command/command'
-import Arg, { ArgType } from './lib/command/arg'
-import Event from './lib/event/event'
-import Logger from './lib/util/logger'
-
-export {
-  Catbot,
-  Command,
-  PermMode,
-  Arg,
-  ArgType,
-  Event,
-  Logger
-}
+export { default as Catbot } from './lib/bot'
+export { default as Module, ModuleConstructionData } from './lib/module/module'
+export { RunnableCommand as Command, CommandContext, CommandConstructionData, ModuleData } from './lib/module/command/command'
+export { default as Event, EventType, EventConstructionData } from './lib/module/event/event'
+export { default as Arg, ArgType } from './lib/module/command/arg'
+export { default as Logger } from './lib/util/logger'
