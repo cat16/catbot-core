@@ -9,7 +9,7 @@ A bot core designed to cover all basic needs
  - Very extendable feature such as an abstract handler class
  - Some preloaded commands to make internal systems managable and testing easier
  - Typescript support
-## Dependancies
+## Dependencies
  - [eris](https://github.com/abalabahaha/eris) for a discord API
  - [sqlite3](https://github.com/mapbox/node-sqlite3) for databases
  - [chalk](https://github.com/chalk/chalk) for colors!

@@ -12,12 +12,12 @@ export abstract class RecursiveElement extends Element {
   private manager?: ElementManager<this>
   private elements: ElementManager<this>
 
-  getElements(): ElementManager<this> {
-    return this.elements
+  constructor(manager?: ElementManager<this>) {
+    super()
   }
 
-  setParent(parent: this): void {
-    if(parent === undefined) parent = this
+  getElements(): ElementManager<this> {
+    return this.elements
   }
 
   getManager(): ElementManager<this> {
@@ -85,18 +85,24 @@ export class ElementManager<T extends Element> {
     return null
   }
 
+  clear(): void {
+    this.elementData = []
+  }
+
   load(recursive: boolean): void {
     let path: string = this.name
     if(this.parent && this.parent.getManager()) {
       path = `${this.parent.getManager().name}/${path}`
     }
     let loadedDir = requireDirectory(path, recursive)
-    loadedDir.files.forEach((elementClass, name) => {
+    loadedDir.files.forEach((ElementClass, name) => {
       try {
-        let element = new elementClass()
-        if(element instanceof Element) {
+        let element: T = new ElementClass()
+        if(element instanceof T) {
           this.add(element, `${path}/${name}`)
         }
+      } catch (err) {
+        
       }
     })
     if (recursive) {
@@ -112,6 +118,7 @@ export class ElementManager<T extends Element> {
 export interface LoadOptions<T extends Element> {
   recursive?: boolean
   generateFolders?: boolean
+  manager?: ElementManager<T>
 }
 
 export interface LoadedDirectory<T extends Element> {
@@ -168,7 +175,7 @@ export abstract class ElementHandler<T extends Element> {
 
   reload(): void {
     this.logger.info(`Reloading ${this.elementName}s...`)
-    this.elements = []
+    this.manager.clear()
     for (let directory of this.loadedDirectories) {
       this.loadDirectory(directory.path, directory.options)
     }
@@ -221,6 +228,8 @@ export abstract class ElementHandler<T extends Element> {
 
 export class FlatElementHandler extends ElementHandler {
 
-  constructor()
+  constructor() {
+
+  }
 
 }
