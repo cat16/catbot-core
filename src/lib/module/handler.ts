@@ -1,7 +1,5 @@
-import chalk from 'chalk'
 import { requireDirectory, pathExists, createDirectory, DirectoryContents, loadFile } from '../util/util'
 import Logger from '../util/logger'
-import Catbot from '../bot'
 
 export abstract class Element {
   abstract getTriggers(): string[]
@@ -12,7 +10,7 @@ export abstract class RecursiveElement extends Element {
   private manager?: ElementManager<this>
   private elements: ElementManager<this>
 
-  constructor(manager?: ElementManager<this>) {
+  constructor() {
     super()
   }
 
@@ -22,6 +20,11 @@ export abstract class RecursiveElement extends Element {
 
   getManager(): ElementManager<this> {
     return this.manager
+  }
+
+  setManager(manager: ElementManager<this>): void { 
+    if(this.manager === undefined) this.manager = manager
+    else throw new Error('Manager is already set!')
   }
 }
 
@@ -41,7 +44,7 @@ export interface ElementMatch<T extends Element> {
   index: number
 }
 
-export class ElementManager<T extends Element> {
+export abstract class ElementManager<T extends Element> {
 
   private parent?: RecursiveElement
   private name: string
@@ -50,10 +53,6 @@ export class ElementManager<T extends Element> {
   constructor(parent?: RecursiveElement) {
     this.elementData = []
     this.parent = parent
-  }
-
-  add(element: T, path: string): void {
-    this.elementData.push(new ElementData(element, path))
   }
 
   remove(index: number): ElementData<T> {
@@ -89,29 +88,32 @@ export class ElementManager<T extends Element> {
     this.elementData = []
   }
 
-  load(recursive: boolean): void {
-    let path: string = this.name
-    if(this.parent && this.parent.getManager()) {
-      path = `${this.parent.getManager().name}/${path}`
-    }
-    let loadedDir = requireDirectory(path, recursive)
-    loadedDir.files.forEach((ElementClass, name) => {
+  load(recursive: boolean, generateFunction): Error[] {
+    let errors = []
+    let loadedDir = requireDirectory(this.getPath(), recursive)
+    loadedDir.files.forEach((rawElement, name) => {
       try {
-        let element: T = new ElementClass()
-        if(element instanceof T) {
-          this.add(element, `${path}/${name}`)
-        }
+        let element: T = this.generateElement(rawElement)
+        this.elementData.push(new ElementData<T>(element, `${this.getPath()}/${name}`))
       } catch (err) {
-        
+        errors.push(err)
       }
     })
+    errors.push(loadedDir.errors)
     if (recursive) {
       
     }
+    return errors
   }
+
+  abstract generateElement(rawElement: any): T
 
   getParent(): RecursiveElement {
     return this.parent
+  }
+
+  getPath(): string {
+    return this.parent && this.parent.getManager() ? `${this.parent.getManager().name}/${this.name}` : this.name
   }
 }
 
@@ -133,9 +135,9 @@ export abstract class ElementHandler<T extends Element> {
   elementName: string
   loadedDirectories: LoadedDirectory<T>[]
 
-  constructor(logger: Logger, elementName: string, recursive: boolean = false) {
+  constructor(logger: Logger, elementName: string) {
     this.logger = logger
-    this.manager = new ElementManager()
+    this.manager = new ElementManager<T>()
     this.elementName = elementName
     this.loadedDirectories = []
   }
@@ -187,30 +189,18 @@ export abstract class ElementHandler<T extends Element> {
   }
 
   reloadElement(trigger: string): boolean {
-    let reload = (path): void => {
-      try {
-        let element: T = loadFile(path)
-        this.elements = this.elements.filter(e => !e.equals(element))
-        this.add(element, path)
-        this.logger.info(`Successfully reloaded file for ${this.elementName} '${element.getName()}'`)
-      } catch (err) {
-        this.logger.error(`Failed to reload file for ${this.elementName} at '${path}': ${err.stack}`)
-        throw err
-      }
-    }
-
     let match = this.manager.find(trigger)
     if(match) {
-      match.manager.set(match.index)
+      match.manager.set(match.index, match.manager.)
     }
 
     this.logger.info(`Attemping to reload ${this.elementName} '${name}'...`)
-    let result = this.find(name)
+    let result = this.manager.find(name)
     if (result) {
       let element = loadFile(result.data.path)
     }
     if (result !== null) {
-      let path = result.element.path
+      let path = result.data.path
       reload(path)
       return true
     } else {
@@ -224,12 +214,4 @@ export abstract class ElementHandler<T extends Element> {
       return false
     }
   }
-}
-
-export class FlatElementHandler extends ElementHandler {
-
-  constructor() {
-
-  }
-
 }
