@@ -44,15 +44,20 @@ export interface ElementMatch<T extends Element> {
   index: number
 }
 
-export abstract class ElementManager<T extends Element> {
+export type ElementGenerationFunction<T extends Element> = (rawElement: any) => T
+export type GroupGenerationFunction<T extends Element> = (name: string) => T
+
+export class ElementManager<T extends Element> {
 
   private parent?: RecursiveElement
   private name: string
   private elementData: ElementData<T>[]
+  private generateElement: ElementGenerationFunction<T>
 
-  constructor(parent?: RecursiveElement) {
+  constructor(generateElement, parent?: RecursiveElement) {
     this.elementData = []
     this.parent = parent
+    this.generateElement = generateElement
   }
 
   remove(index: number): ElementData<T> {
@@ -88,10 +93,9 @@ export abstract class ElementManager<T extends Element> {
     this.elementData = []
   }
 
-  load(recursive: boolean, generateFunction): Error[] {
-    let errors = []
-    let loadedDir = requireDirectory(this.getPath(), recursive)
-    loadedDir.files.forEach((rawElement, name) => {
+  private loadFiles(files: Map<string, any>, recursive: boolean, generateGroup?: GroupGenerationFunction<T>): Error[] {
+    let errors: Error[] = []
+    files.forEach((rawElement, name) => {
       try {
         let element: T = this.generateElement(rawElement)
         this.elementData.push(new ElementData<T>(element, `${this.getPath()}/${name}`))
@@ -99,14 +103,27 @@ export abstract class ElementManager<T extends Element> {
         errors.push(err)
       }
     })
-    errors.push(loadedDir.errors)
+    if(recursive)
+    return errors
+  }
+
+  load(recursive: boolean, generateGroup?: GroupGenerationFunction<T>): Map<string, Error> {
+    let errors: Map<string, Error> = new Map<string, Error>()
+    let loadedDir = requireDirectory(this.getPath(), recursive)
+    loadedDir.files.forEach((rawElement, name) => {
+      try {
+        let element: T = this.generateElement(rawElement)
+        this.elementData.push(new ElementData<T>(element, `${this.getPath()}/${name}`))
+      } catch (err) {
+        errors.set(name, err)
+      }
+    })
+    errors = new Map<string, Error>([...errors, ...loadedDir.errors])
     if (recursive) {
       
     }
     return errors
   }
-
-  abstract generateElement(rawElement: any): T
 
   getParent(): RecursiveElement {
     return this.parent

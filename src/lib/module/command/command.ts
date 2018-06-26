@@ -34,7 +34,7 @@ export class CommandContext {
   }
 
   say(msg: MessageContent): Promise<Message> {
-    return this.bot.client.createMessage(this.msg.channel.id, msg)
+    return this.msg.channel.createMessage(msg)
   }
 }
 
