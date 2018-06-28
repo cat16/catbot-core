@@ -1,7 +1,6 @@
 // TODO: if microsoft decides to fix issue 5863 for typescipt change T to this in some places
 
 import { requireDirectory, pathExists, createDirectory, DirectoryContents, loadFile } from '../util/util'
-import Logger from '../util/logger'
 
 export interface Element {
 
@@ -17,7 +16,7 @@ export type ElementGenerationFunction<T extends Element> = (rawElement: any) => 
 
 export interface RecursiveElement extends Element {
 
-  getSubelements(): ElementManager<this>
+  getElementManager(): ElementManager<this>
 
 }
 
@@ -27,16 +26,16 @@ let isRecursiveElement = (obj): obj is RecursiveElement => {
 
 export class ElementCategory<T extends RecursiveElement> implements Element {
 
-  private elements: ElementManager<T | ElementCategory<T>>
+  private elementManager: ElementManager<T | ElementCategory<T>>
   public triggers: string[]
 
   constructor(directory: string, generateElement: ElementGenerationFunction<T>) {
-    this.elements = new RecursiveElementManager<T>(directory, generateElement, this)
+    this.elementManager = new RecursiveElementManager<T>(directory, generateElement, this)
     this.triggers.push(...directory.split('.'))
   }
 
-  getElements(): ElementManager<T | ElementCategory<T>> {
-    return this.elements
+  getElementManager(): ElementManager<T | ElementCategory<T>> {
+    return this.elementManager
   }
 
   getTriggers(): string[] {
@@ -69,19 +68,26 @@ export abstract class ElementManager<T extends Element> {
 
   constructor(
     directory: string,
-    recursive: boolean,
+    recursive: boolean
   ) {
     this.directory = directory
     this.elementData = []
     this.recursive = recursive
   }
 
+  abstract loadContents(contents: DirectoryContents): Map<string, Error>
+  abstract generateElement(rawElement: any): T
+
   add(data: ElementData<T>): void {
-    this.getElementData().push(data)
+    this.elementData.push(data)
   }
 
   remove(index: number): ElementData<T> {
     return this.elementData.splice(index, 1)[0]
+  }
+
+  get(index: number): ElementData<T> {
+    return this.elementData[index]
   }
 
   set(index: number, data: ElementData<T>)
@@ -94,9 +100,9 @@ export abstract class ElementManager<T extends Element> {
       let element = this.elementData[i].element
       let triggerFound = element.getTriggers().find(t => trigger.startsWith(t))
       if (triggerFound) {
-        let r = trigger.slice(triggerFound.length)
-        if (isRecursiveElement(element)) {
-          let match = element.getSubelements().find(r)
+        let r = trigger.slice(triggerFound.length).trim()
+        if (isRecursiveElement(element) || element instanceof ElementCategory) {
+          let match = element.getElementManager().find(r)
           if (match) return match
         }
         return {
@@ -114,36 +120,62 @@ export abstract class ElementManager<T extends Element> {
     this.elementData = []
   }
 
-  abstract loadContents(contents: DirectoryContents): Map<string, Error>
-
   load(): Map<string, Error> {
     return this.loadContents(requireDirectory(this.getPath(), this.recursive))
   }
 
-  getPath(): string {
+  reloadElement(index: number): boolean {
+    let elementData = this.get(index)
+    if(elementData == null) return false
+    let path = elementData.path
+    this.set(
+      index,
+      new ElementData<T>(
+        this.generateElement(
+          loadFile(path)
+        ), path
+      )
+    )
+  }
+
+  loadElement(file: string, rawElement?: any): boolean {
+    let match = this.find(file)
+    if (match) {
+      return false
+    } else {
+      if(rawElement == null) {
+        if(pathExists(`${this.getPath()}/${file}`)) rawElement = loadFile(`${this.getPath()}/${file}`)
+        else return false
+      }
+      let element: T = this.generateElement(rawElement)
+      this.add(new ElementData<T>(element, `${this.getPath()}/${file}`))
+      return true
+    }
+  }
+
+  getDirectory(): string {
     return this.directory
   }
 
-  getElementData(): ElementData<T>[] {
-    return this.elementData
+  getPath(): string {
+    return `./${this.getDirectory()}`
   }
 }
 
 export class FlatElementManager<T extends Element> extends ElementManager<T> {
 
-  private generateElement: ElementGenerationFunction<T>
+  private generateElementFunc: ElementGenerationFunction<T>
 
-  constructor(directory: string, recursive: boolean, generateElement: ElementGenerationFunction<T>) {
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, recursive: boolean) {
     super(directory, recursive)
-    this.generateElement = generateElement
+    this.generateElementFunc = generateElement
   }
 
   loadContents(contents: DirectoryContents): Map<string, Error> {
     let errors: Map<string, Error> = new Map<string, Error>()
     contents.files.forEach((rawElement, file) => {
       try {
-        let element: T = this.generateElement(rawElement)
-        this.add(new ElementData<T>(element, `${this.getPath()}/${file}`))
+        this.loadElement(file, rawElement)
       } catch (err) {
         errors.set(file, err)
       }
@@ -151,16 +183,20 @@ export class FlatElementManager<T extends Element> extends ElementManager<T> {
     errors = new Map<string, Error>([...errors, ...contents.errors])
     return errors
   }
+
+  generateElement(rawElement: any): T {
+    return this.generateElementFunc(rawElement)
+  }
 }
 
 export class RecursiveElementManager<T extends RecursiveElement> extends ElementManager<T | ElementCategory<T>> {
 
-  private generateElement: ElementGenerationFunction<T>
+  private generateElementFunc: ElementGenerationFunction<T>
   private parent?: ElementCategory<T>
 
   constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: ElementCategory<T>) {
     super(directory, true)
-    this.generateElement = generateElement
+    this.generateElementFunc = generateElement
     this.parent = parent
   }
 
@@ -168,10 +204,9 @@ export class RecursiveElementManager<T extends RecursiveElement> extends Element
     let errors: Map<string, Error> = new Map<string, Error>()
     let rawRecursiveElements: Map<string, any> = new Map<string, any>()
     contents.files.forEach((rawElement, file) => {
-      if (!(this.generateElement && contents.directories.get(file))) {
+      if (!contents.directories.get(file)) {
         try {
-          let element: T = this.generateElement(rawElement)
-          this.add(new ElementData<T>(element, `${this.getPath()}/${file}`))
+          this.loadElement(file, rawElement)
         } catch (err) {
           errors.set(file, err)
         }
@@ -186,97 +221,95 @@ export class RecursiveElementManager<T extends RecursiveElement> extends Element
       this.add(new ElementData(new ElementCategory(path, this.generateElement), path))
     })
     rawRecursiveElements.forEach((rawElement, file) => {
-      let element = this.generateElement(rawElement)
-      this.add(new ElementData<T>(element, `${this.getPath()}/${file}`))
+      this.loadElement(file, rawElement)
     })
     return errors
+  }
+
+  generateElement(rawElement: any): T {
+    return this.generateElementFunc(rawElement)
   }
 
   getParent(): ElementCategory<T> {
     return this.parent
   }
 
-  getPath(): string {
+  getDirectory(): string {
     return this.parent
-      ? `${this.parent.getElements().getPath()}/${super.getPath()}`
-      : super.getPath()
+      ? `${this.parent.getElementManager().getDirectory()}/${super.getDirectory()}`
+      : super.getDirectory()
   }
-
 }
 
-export interface LoadOptions<T extends Element> {
-  recursive?: boolean
-  generateFolders?: boolean
-  manager?: ElementManager<T>
-}
+export abstract class ElementLoader<T extends Element> {
 
-export interface LoadedDirectory<T extends Element> {
-  path: string
-  options: LoadOptions<T>
-}
+  managers: ElementManager<T>[]
 
-export abstract class ElementLoader<T extends Element, MT extends ElementManager<T>> {
-
-  logger: Logger
-  manager: MT
-  elementName: string
-  loadedDirectories: LoadedDirectory<T>[]
-
-  constructor(manager: MT, logger: Logger, elementName: string) {
-    this.logger = logger
-    this.manager = manager
-    this.elementName = elementName
-    this.loadedDirectories = []
+  constructor() {
+    this.managers = []
   }
 
-  loadDirectory(path: string, options: LoadOptions<T> = {}): void {
-    options.manager = options.manager || this.manager
-    options.generateFolders = options.generateFolders || false
-    if (options.generateFolders && !pathExists(path)) createDirectory(path)
-    
-    this.loadedDirectories.push({
-      path: path,
-      options: options
-    })
+  loadDirectory(manager: ElementManager<T>, generateFolders: boolean = false): Map<string, Error> {
+    if (generateFolders && !pathExists(manager.getDirectory())) createDirectory(manager.getDirectory())
+    let errors = manager.load()
+    this.managers.push(manager)
+    return errors
   }
 
-  reload(): void {
-    this.logger.info(`Reloading ${this.elementName}s...`)
-    this.manager.clear()
-    for (let directory of this.loadedDirectories) {
-      this.loadDirectory(directory.path, directory.options)
+  reload(): Map<string, Error> {
+    let errors: Map<string, Error> = new Map<string, Error>()
+    for (let manager of this.managers) {
+      manager.clear()
+      errors = new Map<string, Error>([...manager.load(), ...errors])
     }
-    this.logger.success(`Successfully reloaded all ${this.elementName}s.`)
+    return errors
   }
 
-  loadElement(name: string) {
+  find(trigger: string): ElementMatch<T> {
+    let manager = this.managers.find(m => trigger.startsWith(m.getDirectory()))
+    if (manager) {
+      return manager.find(trigger.slice(manager.getDirectory().length).trim())
+    }
+    for (let manager of this.managers) {
+      let match = manager.find(trigger)
+      if (match) return match
+    }
+    return null
+  }
 
+  loadElement(trigger: string): boolean {
+    let match = this.find(trigger)
+    if (match) {
+      if (match.remaining) {
+        let element = match.data.element
+        let manager = isRecursiveElement(element) || element instanceof ElementCategory
+          ? element.getElementManager()
+          : match.manager
+        return manager.loadElement(match.remaining)
+      } else {
+        return false
+      }
+    } else {
+      let manager = this.managers.find(m => trigger.startsWith(m.getDirectory()))
+      if(manager) {
+        return manager.loadElement(trigger.slice(manager.getDirectory().length).trim())
+      } else {
+        for(let manager of this.managers) {
+          if(manager.loadElement(trigger)) return true
+        }
+        return false
+      }
+    }
   }
 
   reloadElement(trigger: string): boolean {
-    let match = this.manager.find(trigger)
+    let match = this.find(trigger)
     if (match) {
-      match.manager.set(match.index, match.data.path)
-    }
-
-    this.logger.info(`Attemping to reload ${this.elementName} '${name}'...`)
-    let result = this.manager.find(name)
-    if (result) {
-      let element = loadFile(result.data.path)
-    }
-    if (result !== null) {
-      let path = result.data.path
-      reload(path)
-      return true
-    } else {
-      for (let directory of this.loadedDirectories) {
-        let path = `${directory.path}/${name}`
-        if (pathExists(path)) {
-          reload(path)
-          return true
-        }
+      if (match.remaining) {
+        return false
+      } else {
+        match.manager.reloadElement(match.index)
       }
-      return false
     }
   }
 }
