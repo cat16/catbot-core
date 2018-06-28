@@ -215,16 +215,16 @@ export interface LoadedDirectory<T extends Element> {
   options: LoadOptions<T>
 }
 
-export abstract class ElementHandler<T extends ElementManager<T extends Element>> {
+export abstract class ElementLoader<T extends Element, MT extends ElementManager<T>> {
 
   logger: Logger
-  manager: ElementManager<T>
+  manager: MT
   elementName: string
   loadedDirectories: LoadedDirectory<T>[]
 
-  constructor(logger: Logger, elementName: string) {
+  constructor(manager: MT, logger: Logger, elementName: string) {
     this.logger = logger
-    this.manager = new ElementManager<T>()
+    this.manager = manager
     this.elementName = elementName
     this.loadedDirectories = []
   }
@@ -233,7 +233,7 @@ export abstract class ElementHandler<T extends ElementManager<T extends Element>
     options.manager = options.manager || this.manager
     options.generateFolders = options.generateFolders || false
     if (options.generateFolders && !pathExists(path)) createDirectory(path)
-
+    
     this.loadedDirectories.push({
       path: path,
       options: options
@@ -256,7 +256,7 @@ export abstract class ElementHandler<T extends ElementManager<T extends Element>
   reloadElement(trigger: string): boolean {
     let match = this.manager.find(trigger)
     if (match) {
-      match.manager.set(match.index, match.manager.)
+      match.manager.set(match.index, match.data.path)
     }
 
     this.logger.info(`Attemping to reload ${this.elementName} '${name}'...`)

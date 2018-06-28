@@ -1,9 +1,9 @@
-import { ElementHandler, ElementSearchResult } from '../handler'
+import { ElementLoader, ElementSearchResult } from '../handler'
 import Logger from '../../util/logger'
 import Event from './event'
 import { Catbot } from '../../..';
 
-export default class EventManager extends ElementHandler<Event> {
+export default class EventManager extends ElementLoader<Event> {
 
   bot: Catbot
 
