@@ -1,4 +1,4 @@
-import Catbot from '../bot' // eslint-disable-line no-unused-vars
+import Bot from '../../bot'
 
 export class ArgOptions {
   name: string
@@ -29,7 +29,7 @@ export class ArgResult {
   }
 }
 
-export type ValidateFunction = (text: string, bot: Catbot) => ArgResult
+export type ValidateFunction = (text: string, bot: Bot) => ArgResult
 
 export class ArgTypeOptions {
   validate: ValidateFunction

@@ -6,23 +6,25 @@ import Logger from './util/logger'
 import DatabaseManager from './database/database-manager'
 import TableManager from './database/table-manager'
 import Config from './config'
-import CommandManager from './module/command/command-manager'
-import ModuleManager from './module/module-manager'
+import CommandLoader from './module/command/command-manager'
+import ModuleLoader from './module/module-manager'
 import Module from './module/module'
-import EventManager from './module/event/event-manager'
+import EventLoader from './module/event/event-manager'
 import UserManager from './user-manager'
 import BotUtil, { multiPromise } from './util/util'
 
 import TABLES from './default-modules/core/database'
 const BTI = TABLES.bot
 
-export default class Catbot {
+export default class Bot {
 
-  directory: string
-  logger: Logger
+  private directory: string
+  private logger: Logger
   util: BotUtil
-  databaseManager: DatabaseManager
-  moduleManager: ModuleManager
+  private databaseManager: DatabaseManager
+  private moduleLoader: ModuleLoader
+  private commandLoader: CommandLoader
+  eventLoader: EventLoader
   mainModuleID: number
   table: TableManager
   client: Client
@@ -40,7 +42,7 @@ export default class Catbot {
     this.temp = {}
   }
 
-  onrestart(bot: Catbot, err?: Error) { }
+  onrestart(bot: Bot, err?: Error) { }
 
   load(): Promise<void> {
     return new Promise(async (resolve, reject) => {
@@ -50,15 +52,15 @@ export default class Catbot {
       this.loadConfig('config.json')
       this.client = new Client(this.config.token, {})
       this.databaseManager = new DatabaseManager('storage', this.logger)
-      this.moduleManager = new ModuleManager(this)
+      this.moduleLoader = new ModuleLoader(this)
       // load database
       await this.databaseManager.load(this.directory).catch(err => { return reject(err) })
       await multiPromise([
-        this.loadModule(`${__dirname}/default-modules`, false, true).catch(err => { return reject(err) }),
-        this.loadModule(this.directory, this.config.generateFolders, false).catch(err => { return reject(err) })
+        this.loadModule(`${__dirname}/default-modules`, false).catch(err => { return reject(err) }),
+        this.loadModule(this.directory, this.config.generateFolders).catch(err => { return reject(err) })
       ])
       this.table = this.databaseManager.tables[BTI.name]
-      this.moduleManager.reload()
+      this.moduleLoader.reload()
       this.logger.success('Successfully loaded.')
       resolve()
     })
@@ -67,7 +69,7 @@ export default class Catbot {
   loadModule(directory: string, generateFolders: boolean): Promise<void> {
     return new Promise(async (resolve, reject) => {
       await this.databaseManager.loadFile(`${directory}/database.js`).catch(err => { return reject(err) })
-      this.moduleManager.addDir(directory, generateFolders)
+      this.moduleLoader.loadManager(directory, generateFolders)
       resolve()
     })
   }
@@ -136,7 +138,8 @@ export default class Catbot {
     })
   }
 
-  restart(reloadFiles: boolean = false): Promise<Catbot> {
+  //replace with an exit dummy, and find a way to make stop actually stop it
+  restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
       this.logger.info('Restarting...')
       this.client.disconnect({ reconnect: false })
@@ -161,6 +164,10 @@ export default class Catbot {
   stop() {
     this.logger.info('Stopping...')
     this.client.disconnect({ reconnect: false })
+  }
+
+  getLogger(): Logger {
+    return this.logger
   }
 
   // Database Functions

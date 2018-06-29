@@ -1,4 +1,4 @@
-import { Command, Catbot } from '../../../index'
+import { Command, Bot } from '../../../index'
 import TABLES from './database'
 import TableManager from '../../database/table-manager'
 const CTICols = TABLES.commands.cols
@@ -12,10 +12,10 @@ export enum PermMode {
 
 export default class PermissionManager {
 
-    bot: Catbot
+    bot: Bot
     table: TableManager
 
-    constructor(bot: Catbot, table: TableManager) {
+    constructor(bot: Bot, table: TableManager) {
         this.bot = bot
         this.table = table
     }

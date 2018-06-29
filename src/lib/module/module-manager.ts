@@ -1,10 +1,24 @@
-import { ElementLoader, ElementSearchResult } from './handler'
+import { ElementLoader, ElementManager, FlatElementManager } from './handler'
 import Module from './module'
-import { Catbot, Logger } from '../..';
+import { Bot } from '../..';
 
-export default class ModuleManager extends ElementLoader<Module> {
+export default class ModuleLoader extends ElementLoader<Module> {
 
-    constructor(bot: Catbot) {
-        super(new Logger('module-manager', bot.logger), 'module')
+    bot: Bot
+
+    constructor(bot: Bot) {
+        super()
+        this.bot = bot
     }
+
+    loadDirectory(directory: string) {
+        this.loadManager(new FlatElementManager<Module>(
+            directory,
+            (rawElement) => {
+                return new rawElement(this.bot)
+            },
+            false
+        ))
+    }
+
 }

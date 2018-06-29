@@ -1,42 +1,28 @@
-import { Message } from 'eris'
-import Catbot from '../../bot'
-import { Element, ElementConstructionData } from '../element'
-
-export interface EventConstructionData extends ElementConstructionData {
-  bot: Catbot
-}
+import Bot from '../../bot'
+import { Element } from '../handler'
 
 export enum EventType {
-  Bot
+  Client
 }
 
 export interface EventOptions {
-  event: string
+  name: string
   type: EventType
 }
 
-export default abstract class Event extends Element {
-
-  getAllElements() {
-    return [this]
-  }
-
-  getAliases() {
-    return []
-  }
-
-  getName() {
-    return this.path.split('/').pop().split('.')[0]
-  }
-
-  abstract run(bot: Catbot, ...args): void
+export default abstract class Event implements Element {
 
   name: string
   type: EventType
 
-  constructor (data: EventConstructionData, options: EventOptions) {
-    super(data)
-    this.name = options.event
+  constructor (options: EventOptions) {
+    this.name = options.name
     this.type = options.type
+  }
+
+  abstract run(bot: Bot, ...args): void
+
+  getTriggers(): string[] {
+    return [name]
   }
 }

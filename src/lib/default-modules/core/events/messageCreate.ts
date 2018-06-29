@@ -1,4 +1,4 @@
-import { Event, Catbot, EventType, EventConstructionData } from '../../../../index'
+import { Event, Bot, EventType, EventConstructionData } from '../../../../index'
 import { Message } from 'eris'
 
 export default class extends Event {
@@ -8,7 +8,7 @@ export default class extends Event {
       type: EventType.Bot
     })
   }
-  run (bot: Catbot, msg: Message) {
+  run (bot: Bot, msg: Message) {
     if (msg.author.id === bot.client.user.id) return
     if (msg.author.bot && !bot.get('disableBotInput', false)) return
     bot.getMainModule().commandManager.handleMessage(msg)

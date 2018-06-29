@@ -1,14 +1,28 @@
-import { ElementLoader, ElementSearchResult } from '../handler'
+import { ElementLoader, FlatElementManager } from '../handler'
 import Logger from '../../util/logger'
 import Event from './event'
-import { Catbot } from '../../..';
+import { Bot } from '../../..';
 
-export default class EventManager extends ElementLoader<Event> {
+export default class EventLoader extends ElementLoader<Event> {
 
-  bot: Catbot
+  bot: Bot
 
-  constructor(bot: Catbot, logger?: Logger) {
-    super(new Logger('event-manager', logger), 'event')
+  constructor(bot: Bot) {
+    super()
     this.bot = bot
   }
+}
+
+export class EventManager extends FlatElementManager<Event> {
+
+  constructor(directory: string) {
+    super(
+      directory,
+      (rawElement) => {
+        return new rawElement()
+      },
+      true
+    )
+  }
+
 }

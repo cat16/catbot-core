@@ -1,9 +1,9 @@
 import { Message, MessageContent } from 'eris'
 
-import { RecursiveElement, ElementConstructionData } from '../element'
+import { RecursiveElement, RecursiveElementManager, ElementGroup } from '../handler'
 import Arg from './arg'
 import Logger from '../../util/logger'
-import Catbot from '../../bot'
+import Bot from '../../bot'
 import Module from '../module';
 
 export class ArgList {
@@ -23,7 +23,7 @@ export class ArgList {
 
 export class CommandContext {
 
-  public bot: Catbot
+  public bot: Bot
   public msg: Message
   public args: ArgList
 
@@ -45,10 +45,6 @@ export abstract class ModuleData {
   }
 }
 
-export interface CommandConstructionData extends ElementConstructionData {
-  logger?: Logger
-}
-
 export interface CommandOptions {
   name: string
   aliases?: string[]
@@ -56,51 +52,59 @@ export interface CommandOptions {
   silent?: boolean
 }
 
-export default abstract class Command extends RecursiveElement {
+export interface CommandConstructionData {
+  bot: Bot,
+  manager: RecursiveElementManager<Command>,
+  parent?: Command
+}
+
+export default abstract class Command implements RecursiveElement {
 
   name: string
 
   aliases: string[]
-  subcommands: this[]
+  manager: RecursiveElementManager<Command>
   args: Arg[]
   silent: boolean
   module: Module
 
   logger: Logger
-  parent: Command
+  parent?: Command
 
   private currentMsg: Message
 
   constructor(data: CommandConstructionData, options: CommandOptions) {
-    super(data)
     this.name = options.name
 
     this.aliases = options.aliases || []
-    this.subcommands = []
+    this.manager = data.manager
     this.args = options.args || []
     this.silent = options.silent || false
+    this.parent = data.parent
     this.module = null
 
-    this.logger = new Logger(`command::${this.getName()}`, data.logger)
-    this.subcommands.forEach(sc => {
-      sc.parent = this
-    })
+    this.logger = new Logger(`command::${this.getName()}`, data.bot.getLogger())
   }
 
-  getAllElements(includeEmpty: boolean = false) {
-    return this.getAllCommands(includeEmpty)
+  abstract run(data: CommandContext): void
+  async hasPermission(context: CommandContext): Promise<boolean> {
+    return false
+  }
+
+  getElementManager(): RecursiveElementManager<Command> {
+    return this.manager
+  }
+
+  getParent(): Command {
+    return this.parent
   }
 
   getName(): string {
     return this.parent == null ? this.name : `${this.parent.getName()} ${this.name}`
   }
 
-  addSubElement(element: this) {
-    this.subcommands.push(element)
-  }
-
-  getSubElements(): this[] {
-    return this.subcommands
+  getSubcommands(): (Command | ElementGroup<Command>)[] {
+    return this.manager.getAllElements()
   }
 
   getAliases(): string[] {
@@ -110,31 +114,4 @@ export default abstract class Command extends RecursiveElement {
   getTriggers(): string[] {
     return [this.name].concat(this.aliases)
   }
-
-  getAllCommands(includeEmpty: boolean = false): Command[] {
-    let commands = [].concat.apply([], this.subcommands.map(sc => sc.getAllCommands()))
-    if (includeEmpty) commands.push(this)
-    return commands
-  }
-}
-
-export abstract class RunnableCommand extends Command {
-  abstract run(data: CommandContext): void
-  async hasPermission(context: CommandContext): Promise<boolean> {
-    return false
-  }
-}
-
-export class CommandGroup extends Command {
-
-  constructor(name: string, data: ElementConstructionData) {
-    super(data, {
-      name: name
-    })
-  }
-
-  getAliases() {
-    return [this.name]
-  }
-
 }

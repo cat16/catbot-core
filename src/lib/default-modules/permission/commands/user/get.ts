@@ -1,4 +1,4 @@
-import { Command, Arg, ArgType, Catbot, CommandContext, CommandConstructionData } from '../../../../../index'
+import { Command, Arg, ArgType, Bot, CommandContext, CommandConstructionData } from '../../../../../index'
 import { User } from 'eris'
 import { PermMode } from '../../module'
 

@@ -1,13 +1,13 @@
 import { User, AnyChannel, TextChannel, PrivateChannel, VoiceChannel } from 'eris'
-import Catbot from '../bot'
+import Bot from '../bot'
 import * as fs from 'fs'
 import * as path from 'path'
 
 export default class BotUtil {
 
-  bot: Catbot
+  bot: Bot
 
-  constructor(bot: Catbot) {
+  constructor(bot: Bot) {
     this.bot = bot
   }
 

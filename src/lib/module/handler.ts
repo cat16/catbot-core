@@ -3,9 +3,7 @@
 import { requireDirectory, pathExists, createDirectory, DirectoryContents, loadFile } from '../util/util'
 
 export interface Element {
-
   getTriggers(): string[]
-
 }
 
 let isElement = (obj): obj is Element => {
@@ -15,27 +13,36 @@ let isElement = (obj): obj is Element => {
 export type ElementGenerationFunction<T extends Element> = (rawElement: any) => T
 
 export interface RecursiveElement extends Element {
-
-  getElementManager(): ElementManager<this>
-
+  getElementManager(): RecursiveElementManager<RecursiveElement>
+  getParent(): RecursiveElement | null
 }
 
 let isRecursiveElement = (obj): obj is RecursiveElement => {
-  return 'getSubelements' in obj && isElement(obj)
+  return (
+    'getSubelements' in obj
+    && 'getParent' in obj
+    && isElement(obj)
+  )
 }
 
-export class ElementCategory<T extends RecursiveElement> implements Element {
+export class ElementGroup<T extends RecursiveElement> implements RecursiveElement {
 
-  private elementManager: ElementManager<T | ElementCategory<T>>
+  private elementManager: RecursiveElementManager<T>
+  private parent?: RecursiveElement
   public triggers: string[]
 
-  constructor(directory: string, generateElement: ElementGenerationFunction<T>) {
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: RecursiveElement) {
     this.elementManager = new RecursiveElementManager<T>(directory, generateElement, this)
     this.triggers.push(...directory.split('.'))
+    this.parent = parent
   }
 
-  getElementManager(): ElementManager<T | ElementCategory<T>> {
+  getElementManager(): RecursiveElementManager<T> {
     return this.elementManager
+  }
+
+  getParent(): RecursiveElement {
+    return this.parent
   }
 
   getTriggers(): string[] {
@@ -95,13 +102,17 @@ export abstract class ElementManager<T extends Element> {
     return this.elementData.splice(index, 1, data)[0]
   }
 
+  getAllElements(): T[] {
+    return this.elementData.map(d => d.element)
+  }
+
   find(trigger: string): ElementMatch<T> {
     for (let i = 0; i < this.elementData.length; i++) {
       let element = this.elementData[i].element
       let triggerFound = element.getTriggers().find(t => trigger.startsWith(t))
       if (triggerFound) {
         let r = trigger.slice(triggerFound.length).trim()
-        if (isRecursiveElement(element) || element instanceof ElementCategory) {
+        if (isRecursiveElement(element) || element instanceof ElementGroup) {
           let match = element.getElementManager().find(r)
           if (match) return match
         }
@@ -126,7 +137,7 @@ export abstract class ElementManager<T extends Element> {
 
   reloadElement(index: number): boolean {
     let elementData = this.get(index)
-    if(elementData == null) return false
+    if (elementData == null) return false
     let path = elementData.path
     this.set(
       index,
@@ -143,8 +154,8 @@ export abstract class ElementManager<T extends Element> {
     if (match) {
       return false
     } else {
-      if(rawElement == null) {
-        if(pathExists(`${this.getPath()}/${file}`)) rawElement = loadFile(`${this.getPath()}/${file}`)
+      if (rawElement == null) {
+        if (pathExists(`${this.getPath()}/${file}`)) rawElement = loadFile(`${this.getPath()}/${file}`)
         else return false
       }
       let element: T = this.generateElement(rawElement)
@@ -189,12 +200,12 @@ export class FlatElementManager<T extends Element> extends ElementManager<T> {
   }
 }
 
-export class RecursiveElementManager<T extends RecursiveElement> extends ElementManager<T | ElementCategory<T>> {
+export class RecursiveElementManager<T extends RecursiveElement> extends ElementManager<T | ElementGroup<T>> {
 
   private generateElementFunc: ElementGenerationFunction<T>
-  private parent?: ElementCategory<T>
+  private parent?: ElementGroup<T> | T
 
-  constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: ElementCategory<T>) {
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: ElementGroup<T> | T) {
     super(directory, true)
     this.generateElementFunc = generateElement
     this.parent = parent
@@ -218,7 +229,7 @@ export class RecursiveElementManager<T extends RecursiveElement> extends Element
     errors = new Map<string, Error>([...errors, ...contents.errors])
     contents.directories.forEach((contents2, name) => {
       let path = `${this.getPath()}/${name}`
-      this.add(new ElementData(new ElementCategory(path, this.generateElement), path))
+      this.add(new ElementData(new ElementGroup(path, this.generateElement), path))
     })
     rawRecursiveElements.forEach((rawElement, file) => {
       this.loadElement(file, rawElement)
@@ -230,7 +241,7 @@ export class RecursiveElementManager<T extends RecursiveElement> extends Element
     return this.generateElementFunc(rawElement)
   }
 
-  getParent(): ElementCategory<T> {
+  getParent(): ElementGroup<T> | T {
     return this.parent
   }
 
@@ -249,7 +260,7 @@ export abstract class ElementLoader<T extends Element> {
     this.managers = []
   }
 
-  loadDirectory(manager: ElementManager<T>, generateFolders: boolean = false): Map<string, Error> {
+  loadManager(manager: ElementManager<T>, generateFolders: boolean = false): Map<string, Error> {
     if (generateFolders && !pathExists(manager.getDirectory())) createDirectory(manager.getDirectory())
     let errors = manager.load()
     this.managers.push(manager)
@@ -263,6 +274,10 @@ export abstract class ElementLoader<T extends Element> {
       errors = new Map<string, Error>([...manager.load(), ...errors])
     }
     return errors
+  }
+
+  getAllElements(): T[] {
+    return [].concat(...this.managers.map(m => m.getAllElements()))
   }
 
   find(trigger: string): ElementMatch<T> {
@@ -282,7 +297,7 @@ export abstract class ElementLoader<T extends Element> {
     if (match) {
       if (match.remaining) {
         let element = match.data.element
-        let manager = isRecursiveElement(element) || element instanceof ElementCategory
+        let manager = isRecursiveElement(element) || element instanceof ElementGroup
           ? element.getElementManager()
           : match.manager
         return manager.loadElement(match.remaining)
@@ -291,11 +306,11 @@ export abstract class ElementLoader<T extends Element> {
       }
     } else {
       let manager = this.managers.find(m => trigger.startsWith(m.getDirectory()))
-      if(manager) {
+      if (manager) {
         return manager.loadElement(trigger.slice(manager.getDirectory().length).trim())
       } else {
-        for(let manager of this.managers) {
-          if(manager.loadElement(trigger)) return true
+        for (let manager of this.managers) {
+          if (manager.loadElement(trigger)) return true
         }
         return false
       }

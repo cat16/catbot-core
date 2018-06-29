@@ -1,4 +1,4 @@
-import { Command, CommandConstructionData, CommandContext, Catbot } from '../../../../index'
+import { Command, CommandConstructionData, CommandContext, Bot } from '../../../../index'
 import { Message } from 'eris'
 
 export default class extends Command {

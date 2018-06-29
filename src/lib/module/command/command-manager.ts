@@ -1,15 +1,26 @@
 import { Message, User } from 'eris'
 import chalk from 'chalk'
 
-import * as fs from 'fs'
-
-import { ElementSearchResult, RecursiveHandler } from '../handler'
-import Command, { ArgList, CommandContext, RunnableCommand, CommandGroup, CommandConstructionData } from './command'
-import Arg, { ArgType } from './arg'
-import Catbot from '../../bot'
+import { ElementLoader, ElementManager, RecursiveElementManager, ElementGroup } from '../handler'
+import Command, { ArgList, CommandContext } from './command'
+import { ArgType } from './arg'
+import Bot from '../../bot'
 import Logger from '../../util/logger'
 import TableManager from '../../database/table-manager'
-import { ElementConstructionData } from '../element';
+
+export class CommandManager extends RecursiveElementManager<Command> {
+
+  constructor(directory: string, parent?: Command) {
+    super(
+      directory,
+      (rawElement) => {
+        return new rawElement()
+      },
+      parent
+    )
+  }
+
+}
 
 let startsWithAny = (str: string, arr: string[]): string => {
   let longest = ''
@@ -20,9 +31,9 @@ let startsWithAny = (str: string, arr: string[]): string => {
 }
 
 export class CommandResult {
-  command: RunnableCommand
+  command: Command
   args: ArgList
-  constructor(command: RunnableCommand, args: ArgList) {
+  constructor(command: Command, args: ArgList) {
     this.command = command
     this.args = args
   }
@@ -30,8 +41,8 @@ export class CommandResult {
 
 export class CommandError {
   message: string
-  command?: Command
-  constructor(message: string, command?: Command) {
+  command?: Command | ElementGroup<Command>
+  constructor(message: string, command?: Command | ElementGroup<Command>) {
     this.message = message
     this.command = command
   }
@@ -44,24 +55,26 @@ interface Trigger {
 
 export type PermCheck = (command: Command, user: User) => boolean
 
-export default class CommandManager extends RecursiveHandler<Command> {
+export default class CommandLoader extends ElementLoader<Command | ElementGroup<Command>> {
 
   permChecks: PermCheck[]
-  bot: Catbot
-
-  createParent(name: string, data: ElementConstructionData): Command {
-    return new CommandGroup(name, data)
-  }
+  bot: Bot
 
   prefixes: string[]
   commandTable: TableManager
   lastTriggered: object
+  logger: Logger
 
-  constructor(bot: Catbot, logger?: Logger) {
-    super(new Logger('command-manager', logger), 'command')
+  constructor(bot: Bot) {
+    super()
     this.prefixes = [bot.config.defaultPrefix]
     this.lastTriggered = {}
     this.bot = bot
+    this.logger = new Logger('command-manager', bot.getLogger())
+  }
+
+  createManager(directory: string, parent?: Command): RecursiveElementManager<Command> {
+    return new CommandManager(directory, parent)
   }
 
   handleMessage(msg: Message): Promise<boolean> {
@@ -119,7 +132,7 @@ export default class CommandManager extends RecursiveHandler<Command> {
           try {
             await command.run(new CommandContext(this.bot, msg, result.args))
             if (!command.silent) this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' ran command '${chalk.magenta(command.getName())}'`)
-          } catch(err) {
+          } catch (err) {
             this.logger.error(`Command '${command.getName()}' crashed: ${err.stack}`)
           }
         } else {
@@ -142,8 +155,8 @@ export default class CommandManager extends RecursiveHandler<Command> {
     return null
   }
 
-  parseContent(content: string, commands: Command[] = this.elements, parent?: Command): CommandResult | CommandError {
-    let handleCommand = (command: RunnableCommand, content: string): CommandResult | CommandError => {
+  parseContent(content: string, commands: (Command | ElementGroup<Command>)[] = this.getAllElements(), parent?: Command | ElementGroup<Command>): CommandResult | CommandError {
+    let handleCommand = (command: Command, content: string): CommandResult | CommandError => {
       let args = new Map<string, any>()
       if (command.args.length > 0) {
         for (let arg of command.args) {
@@ -181,21 +194,21 @@ export default class CommandManager extends RecursiveHandler<Command> {
       let alias = startsWithAny(content, command.getTriggers())
       if (alias) {
         let subcontent = content.slice(alias.length).trimLeft()
-        if (command.subcommands.length > 0) {
-          let result = this.parseContent(subcontent, command.subcommands, command)
-          if (!(result instanceof CommandError) && command instanceof RunnableCommand) return handleCommand(command, subcontent)
+        if (command.getElementManager().getAllElements().length > 0) {
+          let result = this.parseContent(subcontent, command.getElementManager().getAllElements(), command)
+          if (!(result instanceof CommandError) && command instanceof Command) return handleCommand(command, subcontent)
           else return result
-        } else if (command instanceof RunnableCommand) {
+        } else if (command instanceof Command) {
           return handleCommand(command, subcontent)
         } else {
-          this.logger.warn(`Command '${command.getName()}' has nothing to run!`)
+          this.logger.warn(`Command '${command.getTriggers()[0]}' has nothing to run!`)
         }
       }
     }
     return content === '' ?
       parent === null
         ? new CommandError('No command was provided')
-        : new CommandError(`No subcommand was provided for '${parent.getName()}'`, parent)
+        : new CommandError(`No subcommand was provided for '${parent.getTriggers()[0]}'`, parent)
       : new CommandError(`I'm not sure what you meant by "${content.split(' ')[0]}"`)
   }
 
