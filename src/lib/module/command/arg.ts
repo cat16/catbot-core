@@ -83,9 +83,9 @@ export class ArgType {
   })
   static COMMAND = new ArgType({
     validate: (text, bot) => {
-      let result = bot.commandManager.find(text)
+      let result = bot.getCommandLoader().find(text)
       if (result) {
-        return new ArgResult(false, result.element, result.content)
+        return new ArgResult(false, result.data.element, result.remaining)
       } else {
         return new ArgResult(true, `'${text}' is not a command`)
       }

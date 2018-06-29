@@ -22,7 +22,7 @@ export default class PermissionManager {
 
     load(): Promise<void> {
         return new Promise(async (resolve, reject) => {
-            for (let command of this.bot.commandManager.elements) {
+            for (let command of this.bot.getCommandLoader()) {
                 this.loadCommandPerms(command)
             }
         })

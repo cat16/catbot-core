@@ -260,8 +260,7 @@ export abstract class ElementLoader<T extends Element> {
     this.managers = []
   }
 
-  loadManager(manager: ElementManager<T>, generateFolders: boolean = false): Map<string, Error> {
-    if (generateFolders && !pathExists(manager.getDirectory())) createDirectory(manager.getDirectory())
+  loadManager(manager: ElementManager<T>): Map<string, Error> {
     let errors = manager.load()
     this.managers.push(manager)
     return errors

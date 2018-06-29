@@ -3,7 +3,7 @@ import Logger from '../../util/logger'
 import Event from './event'
 import { Bot } from '../../..';
 
-export default class EventLoader extends ElementLoader<Event> {
+export class EventLoader extends ElementLoader<Event> {
 
   bot: Bot
 

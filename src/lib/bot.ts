@@ -6,12 +6,12 @@ import Logger from './util/logger'
 import DatabaseManager from './database/database-manager'
 import TableManager from './database/table-manager'
 import Config from './config'
-import CommandLoader from './module/command/command-manager'
+import { CommandLoader } from './module/command/command-manager'
 import ModuleLoader from './module/module-manager'
 import Module from './module/module'
-import EventLoader from './module/event/event-manager'
+import { EventLoader } from './module/event/event-manager'
 import UserManager from './user-manager'
-import BotUtil, { multiPromise } from './util/util'
+import BotUtil, { multiPromise, pathExists, createDirectory } from './util/util'
 
 import TABLES from './default-modules/core/database'
 const BTI = TABLES.bot
@@ -24,7 +24,7 @@ export default class Bot {
   private databaseManager: DatabaseManager
   private moduleLoader: ModuleLoader
   private commandLoader: CommandLoader
-  eventLoader: EventLoader
+  private eventLoader: EventLoader
   mainModuleID: number
   table: TableManager
   client: Client
@@ -53,11 +53,13 @@ export default class Bot {
       this.client = new Client(this.config.token, {})
       this.databaseManager = new DatabaseManager('storage', this.logger)
       this.moduleLoader = new ModuleLoader(this)
-      // load database
       await this.databaseManager.load(this.directory).catch(err => { return reject(err) })
+      if(this.config.generateFolders) {
+        if (!pathExists(this.directory)) createDirectory(this.directory)
+      }
       await multiPromise([
-        this.loadModule(`${__dirname}/default-modules`, false).catch(err => { return reject(err) }),
-        this.loadModule(this.directory, this.config.generateFolders).catch(err => { return reject(err) })
+        this.loadModule(`${__dirname}/default-modules`).catch(err => { return reject(err) }),
+        this.loadModule(this.directory).catch(err => { return reject(err) })
       ])
       this.table = this.databaseManager.tables[BTI.name]
       this.moduleLoader.reload()
@@ -66,20 +68,16 @@ export default class Bot {
     })
   }
 
-  loadModule(directory: string, generateFolders: boolean): Promise<void> {
+  loadModule(directory: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       await this.databaseManager.loadFile(`${directory}/database.js`).catch(err => { return reject(err) })
-      this.moduleLoader.loadManager(directory, generateFolders)
+      this.moduleLoader.loadDirectory(directory)
       resolve()
     })
   }
 
   getModule(name: string): Module {
-    return this.moduleManager.find(name).element
-  }
-
-  getMainModule() {
-    return this.moduleManager.get(this.mainModuleID)
+    return this.moduleLoader.find(name).data.element
   }
 
   connect(): Promise<void> {
@@ -138,7 +136,7 @@ export default class Bot {
     })
   }
 
-  //replace with an exit dummy, and find a way to make stop actually stop it
+  //replace with an exit, dummy, and find a way to make stop actually stop it
   restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
       this.logger.info('Restarting...')
@@ -164,6 +162,14 @@ export default class Bot {
   stop() {
     this.logger.info('Stopping...')
     this.client.disconnect({ reconnect: false })
+  }
+
+  getCommandLoader(): CommandLoader {
+    return this.commandLoader
+  }
+
+  getEventLoader(): EventLoader {
+    return this.eventLoader
   }
 
   getLogger(): Logger {

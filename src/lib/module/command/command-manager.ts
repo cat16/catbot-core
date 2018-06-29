@@ -9,7 +9,6 @@ import Logger from '../../util/logger'
 import TableManager from '../../database/table-manager'
 
 export class CommandManager extends RecursiveElementManager<Command> {
-
   constructor(directory: string, parent?: Command) {
     super(
       directory,
@@ -19,7 +18,6 @@ export class CommandManager extends RecursiveElementManager<Command> {
       parent
     )
   }
-
 }
 
 let startsWithAny = (str: string, arr: string[]): string => {
@@ -55,7 +53,7 @@ interface Trigger {
 
 export type PermCheck = (command: Command, user: User) => boolean
 
-export default class CommandLoader extends ElementLoader<Command | ElementGroup<Command>> {
+export class CommandLoader extends ElementLoader<Command | ElementGroup<Command>> {
 
   permChecks: PermCheck[]
   bot: Bot
@@ -67,14 +65,10 @@ export default class CommandLoader extends ElementLoader<Command | ElementGroup<
 
   constructor(bot: Bot) {
     super()
-    this.prefixes = [bot.config.defaultPrefix]
+    this.prefixes = [bot.client.user.mention]
     this.lastTriggered = {}
     this.bot = bot
     this.logger = new Logger('command-manager', bot.getLogger())
-  }
-
-  createManager(directory: string, parent?: Command): RecursiveElementManager<Command> {
-    return new CommandManager(directory, parent)
   }
 
   handleMessage(msg: Message): Promise<boolean> {
