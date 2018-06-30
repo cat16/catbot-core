@@ -1,20 +1,9 @@
-import { ElementLoader, FlatElementManager } from '../handler'
+import { ElementManager, FlatElementLoader } from '../handler'
 import Logger from '../../util/logger'
 import Event from './event'
 import { Bot } from '../../..';
 
-export class EventLoader extends ElementLoader<Event> {
-
-  bot: Bot
-
-  constructor(bot: Bot) {
-    super()
-    this.bot = bot
-  }
-}
-
-export class EventManager extends FlatElementManager<Event> {
-
+export class EventLoader extends FlatElementLoader<Event> {
   constructor(directory: string) {
     super(
       directory,
@@ -24,5 +13,14 @@ export class EventManager extends FlatElementManager<Event> {
       true
     )
   }
+}
 
+export class EventManager extends ElementManager<Event> {
+
+  bot: Bot
+
+  constructor(bot: Bot) {
+    super()
+    this.bot = bot
+  }
 }

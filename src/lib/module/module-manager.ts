@@ -1,8 +1,8 @@
-import { ElementLoader, ElementManager, FlatElementManager } from './handler'
+import { ElementManager, ElementLoader, FlatElementLoader } from './handler'
 import Module from './module'
 import { Bot } from '../..';
 
-export default class ModuleLoader extends ElementLoader<Module> {
+export class ModuleManager extends ElementManager<Module> {
 
     bot: Bot
 
@@ -12,10 +12,13 @@ export default class ModuleLoader extends ElementLoader<Module> {
     }
 
     loadDirectory(directory: string) {
-        this.loadManager(new FlatElementManager<Module>(
+        this.addManager(new FlatElementLoader<Module>(
             directory,
             (rawElement) => {
-                return new rawElement(this.bot)
+                return new rawElement({
+                    bot: this.bot,
+                    directory: directory
+                })
             },
             false
         ))

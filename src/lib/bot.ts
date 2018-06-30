@@ -6,12 +6,12 @@ import Logger from './util/logger'
 import DatabaseManager from './database/database-manager'
 import TableManager from './database/table-manager'
 import Config from './config'
-import { CommandLoader } from './module/command/command-manager'
-import ModuleLoader from './module/module-manager'
+import { CommandManager } from './module/command/command-manager'
+import { ModuleManager } from './module/module-manager'
 import Module from './module/module'
-import { EventLoader } from './module/event/event-manager'
+import { EventManager } from './module/event/event-manager'
 import UserManager from './user-manager'
-import BotUtil, { multiPromise, pathExists, createDirectory } from './util/util'
+import BotUtil, { multiPromise, pathExists, createDirectory, getInput } from './util/util'
 
 import TABLES from './default-modules/core/database'
 const BTI = TABLES.bot
@@ -22,9 +22,9 @@ export default class Bot {
   private logger: Logger
   util: BotUtil
   private databaseManager: DatabaseManager
-  private moduleLoader: ModuleLoader
-  private commandLoader: CommandLoader
-  private eventLoader: EventLoader
+  private moduleManager: ModuleManager
+  private commandManager: CommandManager
+  private eventManager: EventManager
   mainModuleID: number
   table: TableManager
   client: Client
@@ -52,7 +52,7 @@ export default class Bot {
       this.loadConfig('config.json')
       this.client = new Client(this.config.token, {})
       this.databaseManager = new DatabaseManager('storage', this.logger)
-      this.moduleLoader = new ModuleLoader(this)
+      this.moduleManager = new ModuleManager(this)
       await this.databaseManager.load(this.directory).catch(err => { return reject(err) })
       if(this.config.generateFolders) {
         if (!pathExists(this.directory)) createDirectory(this.directory)
@@ -62,7 +62,7 @@ export default class Bot {
         this.loadModule(this.directory).catch(err => { return reject(err) })
       ])
       this.table = this.databaseManager.tables[BTI.name]
-      this.moduleLoader.reload()
+      this.moduleManager.reload()
       this.logger.success('Successfully loaded.')
       resolve()
     })
@@ -71,13 +71,13 @@ export default class Bot {
   loadModule(directory: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       await this.databaseManager.loadFile(`${directory}/database.js`).catch(err => { return reject(err) })
-      this.moduleLoader.loadDirectory(directory)
+      this.moduleManager.loadDirectory(directory)
       resolve()
     })
   }
 
   getModule(name: string): Module {
-    return this.moduleLoader.find(name).data.element
+    return this.moduleManager.find(name).data.element
   }
 
   connect(): Promise<void> {
@@ -91,7 +91,7 @@ export default class Bot {
     })
   }
 
-  loadConfig(file: string) {
+  async loadConfig(file: string): Promise<void> {
     let writeConfig = (config) => {
       fs.writeFileSync(`${this.directory}/${file}`, JSON.stringify(config, null, '\t'))
     }
@@ -103,7 +103,8 @@ export default class Bot {
       for (let key in neededConfig) {
         if (config[key] == null && neededConfig[key] === undefined) {
           if (!updated) this.logger.warn(`Config is not completed! Please fill in the following values...`)
-          config[key] = this.getInput(key)
+          process.stdout.write(this.logger.getLogString(key))
+          config[key] = await getInput()
           updated = true
         }
       }
@@ -116,16 +117,13 @@ export default class Bot {
       this.logger.warn('No config file detected!\nCreating new config file...')
       let config = new Config()
       for (let key in config) {
-        if (config[key] == null) config[key] = this.getInput(`Enter ${key}`)
+        process.stdout.write(this.logger.getLogString(`Enter ${key}: `))
+        if (config[key] == null) config[key] = await getInput()
       }
       writeConfig(config)
       this.logger.success('Config file generated')
       this.config = config
     }
-  }
-
-  getInput(msg: string): string {
-    return readline.question(this.logger.getLogString(`${msg}: `))
   }
 
   start(): Promise<void> {
@@ -164,12 +162,12 @@ export default class Bot {
     this.client.disconnect({ reconnect: false })
   }
 
-  getCommandLoader(): CommandLoader {
-    return this.commandLoader
+  getCommandManager(): CommandManager {
+    return this.commandManager
   }
 
-  getEventLoader(): EventLoader {
-    return this.eventLoader
+  getEventManager(): EventManager {
+    return this.eventManager
   }
 
   getLogger(): Logger {

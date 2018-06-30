@@ -1,6 +1,6 @@
 import { Message, MessageContent } from 'eris'
 
-import { RecursiveElement, RecursiveElementManager, ElementGroup } from '../handler'
+import { RecursiveElement, RecursiveElementLoader, ElementGroup } from '../handler'
 import Arg from './arg'
 import Logger from '../../util/logger'
 import Bot from '../../bot'
@@ -54,7 +54,7 @@ export interface CommandOptions {
 
 export interface CommandConstructionData {
   bot: Bot,
-  manager: RecursiveElementManager<Command>,
+  manager: RecursiveElementLoader<Command>,
   parent?: Command
 }
 
@@ -63,7 +63,7 @@ export default abstract class Command implements RecursiveElement {
   name: string
 
   aliases: string[]
-  manager: RecursiveElementManager<Command>
+  manager: RecursiveElementLoader<Command>
   args: Arg[]
   silent: boolean
   module: Module
@@ -87,11 +87,11 @@ export default abstract class Command implements RecursiveElement {
   }
 
   abstract run(data: CommandContext): void
-  async hasPermission(context: CommandContext): Promise<boolean> {
+  hasPermission(context: CommandContext): Promise<boolean> | boolean {
     return false
   }
 
-  getElementManager(): RecursiveElementManager<Command> {
+  getElementManager(): RecursiveElementLoader<Command> {
     return this.manager
   }
 

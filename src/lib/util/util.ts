@@ -136,3 +136,12 @@ export function requireDirectory(directory: string, recursive: boolean = false):
   }
   return loaded
 }
+
+export async function getInput(): Promise<any> {
+  return new Promise<any>((resolve, reject) => {
+    process.stdin.once('readable', () => {
+      const chunk = process.stdin.read();
+      resolve(chunk)
+    });
+  })
+}

@@ -1,14 +1,14 @@
 import { Message, User } from 'eris'
 import chalk from 'chalk'
 
-import { ElementLoader, ElementManager, RecursiveElementManager, ElementGroup } from '../handler'
+import { ElementManager, ElementLoader, RecursiveElementLoader, ElementGroup } from '../handler'
 import Command, { ArgList, CommandContext } from './command'
 import { ArgType } from './arg'
 import Bot from '../../bot'
 import Logger from '../../util/logger'
 import TableManager from '../../database/table-manager'
 
-export class CommandManager extends RecursiveElementManager<Command> {
+export class CommandLoader extends RecursiveElementLoader<Command> {
   constructor(directory: string, parent?: Command) {
     super(
       directory,
@@ -53,7 +53,7 @@ interface Trigger {
 
 export type PermCheck = (command: Command, user: User) => boolean
 
-export class CommandLoader extends ElementLoader<Command | ElementGroup<Command>> {
+export class CommandManager extends ElementManager<Command | ElementGroup<Command>> {
 
   permChecks: PermCheck[]
   bot: Bot

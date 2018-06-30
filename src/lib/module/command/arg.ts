@@ -83,7 +83,7 @@ export class ArgType {
   })
   static COMMAND = new ArgType({
     validate: (text, bot) => {
-      let result = bot.getCommandLoader().find(text)
+      let result = bot.getCommandManager().find(text)
       if (result) {
         return new ArgResult(false, result.data.element, result.remaining)
       } else {

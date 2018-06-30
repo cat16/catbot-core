@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node dist/test/main",
     "test": "node dist/test/main --debug",
-    "pretest": "tsc",
+    "pretest": "npm run build",
     "build": "tsc",
     "prepublish": "npm run build"
   },
@@ -24,13 +24,13 @@
   "dependencies": {
     "chalk": "^2.3.2",
     "eris": "^0.8.3",
-    "readline-sync": "^1.4.7",
-    "sqlite3": "^3.1.13"
+    "mongodb": "~3.0.8",
+    "readline-sync": "^1.4.7"
   },
   "devDependencies": {
+    "@types/mongodb": "^3.0.23",
     "@types/node": "^9.4.7",
     "@types/readline-sync": "^1.4.3",
-    "@types/sqlite3": "^3.1.1",
     "typescript": "^2.7.2"
   }
 }

@@ -13,7 +13,7 @@ let isElement = (obj): obj is Element => {
 export type ElementGenerationFunction<T extends Element> = (rawElement: any) => T
 
 export interface RecursiveElement extends Element {
-  getElementManager(): RecursiveElementManager<RecursiveElement>
+  getElementManager(): RecursiveElementLoader<RecursiveElement>
   getParent(): RecursiveElement | null
 }
 
@@ -27,17 +27,17 @@ let isRecursiveElement = (obj): obj is RecursiveElement => {
 
 export class ElementGroup<T extends RecursiveElement> implements RecursiveElement {
 
-  private elementManager: RecursiveElementManager<T>
+  private elementManager: RecursiveElementLoader<T>
   private parent?: RecursiveElement
   public triggers: string[]
 
   constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: RecursiveElement) {
-    this.elementManager = new RecursiveElementManager<T>(directory, generateElement, this)
+    this.elementManager = new RecursiveElementLoader<T>(directory, generateElement, this)
     this.triggers.push(...directory.split('.'))
     this.parent = parent
   }
 
-  getElementManager(): RecursiveElementManager<T> {
+  getElementManager(): RecursiveElementLoader<T> {
     return this.elementManager
   }
 
@@ -63,11 +63,11 @@ export class ElementData<T extends Element> {
 export interface ElementMatch<T extends Element> {
   data: ElementData<T>
   remaining: string
-  manager: ElementManager<T>
+  manager: ElementLoader<T>
   index: number
 }
 
-export abstract class ElementManager<T extends Element> {
+export abstract class ElementLoader<T extends Element> {
 
   private directory: string
   private elementData: ElementData<T>[]
@@ -173,7 +173,7 @@ export abstract class ElementManager<T extends Element> {
   }
 }
 
-export class FlatElementManager<T extends Element> extends ElementManager<T> {
+export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
 
   private generateElementFunc: ElementGenerationFunction<T>
 
@@ -200,7 +200,7 @@ export class FlatElementManager<T extends Element> extends ElementManager<T> {
   }
 }
 
-export class RecursiveElementManager<T extends RecursiveElement> extends ElementManager<T | ElementGroup<T>> {
+export class RecursiveElementLoader<T extends RecursiveElement> extends ElementLoader<T | ElementGroup<T>> {
 
   private generateElementFunc: ElementGenerationFunction<T>
   private parent?: ElementGroup<T> | T
@@ -252,15 +252,15 @@ export class RecursiveElementManager<T extends RecursiveElement> extends Element
   }
 }
 
-export abstract class ElementLoader<T extends Element> {
+export abstract class ElementManager<T extends Element> {
 
-  managers: ElementManager<T>[]
+  managers: ElementLoader<T>[]
 
   constructor() {
     this.managers = []
   }
 
-  loadManager(manager: ElementManager<T>): Map<string, Error> {
+  addManager(manager: ElementLoader<T>): Map<string, Error> {
     let errors = manager.load()
     this.managers.push(manager)
     return errors
