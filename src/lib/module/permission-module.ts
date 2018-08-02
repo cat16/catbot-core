@@ -1,5 +1,6 @@
-import Module from './module';
+import Module from './module'
+import Command from './command/command'
 
-export default class PermissionModule extends Module {
-    
+export default abstract class PermissionModule extends Module {
+  abstract hasPermission(command: Command)
 }

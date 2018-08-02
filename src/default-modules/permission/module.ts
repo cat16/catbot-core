@@ -1,5 +1,5 @@
 import PermissionManager, { PermMode } from './permission-manager'
-import { Module, ModuleConstructionData, ModuleData } from '../../..'
+import { Module, ModuleConstructionData, ModuleData } from '../../../dist'
 
 export class PermissionModule extends Module {
 

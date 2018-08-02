@@ -1,17 +1,15 @@
-import { Command, CommandConstructionData, CommandContext } from '../../index'
+import { Command, CommandConstructionData, CommandContext } from '../../..'
 
 const CODE_LENGTH = 1900
 
 export default class extends Command {
   constructor(data: CommandConstructionData) {
     super(data, {
-      name: 'show code',
-      aliases: ['share', 'share code']
+      name: 'show code'
     })
   }
   async run (context: CommandContext) {
     let path = context.args.content
-    /** @type {string} */
     let code = require(path).toString()
     for (let i = 0; i < code.length; i += CODE_LENGTH) {
       let start = i

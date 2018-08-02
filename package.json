@@ -22,15 +22,13 @@
   },
   "homepage": "https://github.com/cat16/bot-core#readme",
   "dependencies": {
-    "chalk": "^2.3.2",
-    "eris": "^0.8.3",
-    "mongodb": "~3.0.8",
-    "readline-sync": "^1.4.7"
+    "@types/mongodb": "^3.1.2",
+    "chalk": "^2.4.1",
+    "eris": "^0.8.6",
+    "mongodb": "^3.1.1"
   },
   "devDependencies": {
-    "@types/mongodb": "^3.0.23",
-    "@types/node": "^9.4.7",
-    "@types/readline-sync": "^1.4.3",
-    "typescript": "^2.7.2"
+    "@types/node": "^9.6.25",
+    "typescript": "^2.9.2"
   }
 }

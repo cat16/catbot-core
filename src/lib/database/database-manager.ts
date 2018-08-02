@@ -1,4 +1,4 @@
-import { MongoClient, Db } from 'mongodb'
+import { MongoClient } from 'mongodb'
 
 import Logger from '../util/logger'
 
@@ -8,37 +8,31 @@ export interface ConnectionOptions {
   password?: string
 }
 
-export default class DatabaseManager {
+export default class DatabaseManager extends MongoClient {
 
+  private connectionInfo: ConnectionOptions
   private logger: Logger
-  private client: MongoClient
 
   constructor(options: ConnectionOptions, logger?: Logger) {
-    this.client = new MongoClient(options.uri, {
+    super(options.uri, {
       auth: {
         user: options.user,
         password: options.password
       }
     })
     this.logger = new Logger('database-manager', logger)
+    this.connectionInfo = options
   }
 
   connect(): Promise<DatabaseManager> {
     return new Promise<DatabaseManager>((resolve, reject) => {
-      this.client.connect((err, client) => {
+      super.connect((err, client) => {
         if(err) reject(err)
-        resolve(this)
+        else {
+          this.logger.success(`Successfully connected to ${this.connectionInfo.uri} as ${this.connectionInfo.user}`)
+          resolve(this)
+        }
       })
-    })
-  }
-  
-  getDatabase(name: string): Db {
-    return this.client.db(name)
-  }
-
-  deleteDatabase(name: string): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      return this.getDatabase(name).dropDatabase()
     })
   }
 }

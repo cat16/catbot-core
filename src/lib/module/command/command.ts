@@ -1,6 +1,6 @@
 import { Message, MessageContent } from 'eris'
 
-import { RecursiveElement, RecursiveElementLoader, ElementGroup } from '../handler'
+import { RecursiveElement, RecursiveElementLoader, ElementGroup } from '../../handler'
 import Arg from './arg'
 import Logger from '../../util/logger'
 import Bot from '../../bot'

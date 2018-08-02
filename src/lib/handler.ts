@@ -1,6 +1,6 @@
 // TODO: if microsoft decides to fix issue 5863 for typescipt change T to this in some places
 
-import { requireDirectory, pathExists, createDirectory, DirectoryContents, loadFile } from '../util/util'
+import { requireDirectory, pathExists, DirectoryContents, loadFile } from './util/util'
 
 export interface Element {
   getTriggers(): string[]
@@ -63,7 +63,7 @@ export class ElementData<T extends Element> {
 export interface ElementMatch<T extends Element> {
   data: ElementData<T>
   remaining: string
-  manager: ElementLoader<T>
+  loader: ElementLoader<T>
   index: number
 }
 
@@ -119,7 +119,7 @@ export abstract class ElementLoader<T extends Element> {
         return {
           data: this.elementData[i],
           remaining: r,
-          manager: this,
+          loader: this,
           index: i
         }
       }
@@ -182,7 +182,7 @@ export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
     this.generateElementFunc = generateElement
   }
 
-  loadContents(contents: DirectoryContents): Map<string, Error> {
+  loadContents(contents: DirectoryContents, dirName?: string): Map<string, Error> {
     let errors: Map<string, Error> = new Map<string, Error>()
     contents.files.forEach((rawElement, file) => {
       try {
@@ -192,6 +192,10 @@ export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
       }
     })
     errors = new Map<string, Error>([...errors, ...contents.errors])
+    if(dirName) errors.forEach()
+    contents.directories.forEach((contents, dirName) => {
+      errors = new Map<string, Error>([...errors, ...this.loadContents(contents, dirName)])
+    })
     return errors
   }
 
@@ -254,38 +258,38 @@ export class RecursiveElementLoader<T extends RecursiveElement> extends ElementL
 
 export abstract class ElementManager<T extends Element> {
 
-  managers: ElementLoader<T>[]
+  loaders: ElementLoader<T>[]
 
   constructor() {
-    this.managers = []
+    this.loaders = []
   }
 
-  addManager(manager: ElementLoader<T>): Map<string, Error> {
-    let errors = manager.load()
-    this.managers.push(manager)
+  addLoader(loader: ElementLoader<T>): Map<string, Error> {
+    let errors = loader.load()
+    this.loaders.push(loader)
     return errors
   }
 
   reload(): Map<string, Error> {
     let errors: Map<string, Error> = new Map<string, Error>()
-    for (let manager of this.managers) {
-      manager.clear()
-      errors = new Map<string, Error>([...manager.load(), ...errors])
+    for (let loader of this.loaders) {
+      loader.clear()
+      errors = new Map<string, Error>([...loader.load(), ...errors])
     }
     return errors
   }
 
   getAllElements(): T[] {
-    return [].concat(...this.managers.map(m => m.getAllElements()))
+    return [].concat(...this.loaders.map(m => m.getAllElements()))
   }
 
   find(trigger: string): ElementMatch<T> {
-    let manager = this.managers.find(m => trigger.startsWith(m.getDirectory()))
-    if (manager) {
-      return manager.find(trigger.slice(manager.getDirectory().length).trim())
+    let loader = this.loaders.find(m => trigger.startsWith(m.getDirectory()))
+    if (loader) {
+      return loader.find(trigger.slice(loader.getDirectory().length).trim())
     }
-    for (let manager of this.managers) {
-      let match = manager.find(trigger)
+    for (let loader of this.loaders) {
+      let match = loader.find(trigger)
       if (match) return match
     }
     return null
@@ -296,20 +300,20 @@ export abstract class ElementManager<T extends Element> {
     if (match) {
       if (match.remaining) {
         let element = match.data.element
-        let manager = isRecursiveElement(element) || element instanceof ElementGroup
+        let loader = isRecursiveElement(element) || element instanceof ElementGroup
           ? element.getElementManager()
-          : match.manager
-        return manager.loadElement(match.remaining)
+          : match.loader
+        return loader.loadElement(match.remaining)
       } else {
         return false
       }
     } else {
-      let manager = this.managers.find(m => trigger.startsWith(m.getDirectory()))
-      if (manager) {
-        return manager.loadElement(trigger.slice(manager.getDirectory().length).trim())
+      let loader = this.loaders.find(m => trigger.startsWith(m.getDirectory()))
+      if (loader) {
+        return loader.loadElement(trigger.slice(loader.getDirectory().length).trim())
       } else {
-        for (let manager of this.managers) {
-          if (manager.loadElement(trigger)) return true
+        for (let loader of this.loaders) {
+          if (loader.loadElement(trigger)) return true
         }
         return false
       }
@@ -322,7 +326,7 @@ export abstract class ElementManager<T extends Element> {
       if (match.remaining) {
         return false
       } else {
-        match.manager.reloadElement(match.index)
+        match.loader.reloadElement(match.index)
       }
     }
   }

@@ -1,5 +1,4 @@
-import { Command, CommandConstructionData, CommandContext, Bot } from '../../../index'
-import { Message } from 'eris'
+import { Command, CommandConstructionData, CommandContext } from '../../..'
 
 export default class extends Command {
   constructor(data: CommandConstructionData) {
@@ -11,22 +10,17 @@ export default class extends Command {
   async run(context: CommandContext) {
     let bot = context.bot
     let commandManager = bot.getCommandManager()
-    let userID = context.msg.author.id
-    if (userID === (await bot.client.getOAuthApplication()).owner.id || (await bot.userManager.getAdmin(userID))) {
-      commandManager.runResult(
-        commandManager.parseContent(
-          context.args.content,
-          commandManager.elements,
-          commandManager.find('sudo').element
-        ),
-        context.msg,
-        true
-      )
-    } else {
-      if (!bot.get('silent', false)) context.say(':lock: Only admins of this bot may use this')
-    }
+    commandManager.runResult(
+      commandManager.parseContent(
+        context.args.content,
+        commandManager.getAllElements(),
+        commandManager.find('sudo').data.element
+      ),
+      context.msg,
+      true
+    )
   }
   async hasPermission(context: CommandContext): Promise<boolean> {
-      return context.msg.author.id === context.bot.config.ownerID || (await context.bot.userManager.getAdmin(msg.author.id))
+    return context.msg.author.id === (await context.bot.client.getOAuthApplication()).owner.id
   }
 }

@@ -1,45 +1,36 @@
 import { Client } from 'eris'
 import * as fs from 'fs'
-import * as readline from 'readline-sync'
 
 import Logger from './util/logger'
-import DatabaseManager from './database/database-manager'
-import TableManager from './database/table-manager'
+import DatabaseClient, { ConnectionOptions } from './database/database-manager'
 import Config from './config'
 import { CommandManager } from './module/command/command-manager'
 import { ModuleManager } from './module/module-manager'
 import Module from './module/module'
 import { EventManager } from './module/event/event-manager'
-import UserManager from './user-manager'
 import BotUtil, { multiPromise, pathExists, createDirectory, getInput } from './util/util'
-
-import TABLES from './default-modules/core/database'
-const BTI = TABLES.bot
 
 export default class Bot {
 
   private directory: string
   private logger: Logger
-  util: BotUtil
-  private databaseManager: DatabaseManager
+  private util: BotUtil
+  private databaseClient: DatabaseClient
   private moduleManager: ModuleManager
   private commandManager: CommandManager
   private eventManager: EventManager
   mainModuleID: number
-  table: TableManager
   client: Client
   config: Config
-  temp: any
 
-  constructor(directory: string) {
+  constructor(directory: string, dbConnectionOptions: ConnectionOptions) {
     this.directory = directory
-    this.logger = null
-    this.util = null
-    this.databaseManager = null
-    this.table = null
-    this.client = null
+    this.logger = new Logger('bot-core')
+    this.util = new BotUtil(this)
+    this.databaseClient = new DatabaseClient(dbConnectionOptions, this.logger)
+    this.moduleManager = new ModuleManager(this)
+    this.client = new Client(this.config.token, {})
     this.config = null
-    this.temp = {}
   }
 
   onrestart(bot: Bot, err?: Error) { }
@@ -50,28 +41,11 @@ export default class Bot {
       this.logger.log('Loading...')
       this.util = new BotUtil(this)
       this.loadConfig('config.json')
-      this.client = new Client(this.config.token, {})
-      this.databaseManager = new DatabaseManager('storage', this.logger)
-      this.moduleManager = new ModuleManager(this)
-      await this.databaseManager.load(this.directory).catch(err => { return reject(err) })
-      if(this.config.generateFolders) {
-        if (!pathExists(this.directory)) createDirectory(this.directory)
-      }
-      await multiPromise([
-        this.loadModule(`${__dirname}/default-modules`).catch(err => { return reject(err) }),
-        this.loadModule(this.directory).catch(err => { return reject(err) })
-      ])
-      this.table = this.databaseManager.tables[BTI.name]
+      if (!pathExists(this.directory)) createDirectory(this.directory)
+      this.moduleManager.loadDirectory(`${__dirname}/default-modules`)
+      this.moduleManager.addLoader(new Mo)
       this.moduleManager.reload()
       this.logger.success('Successfully loaded.')
-      resolve()
-    })
-  }
-
-  loadModule(directory: string): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      await this.databaseManager.loadFile(`${directory}/database.js`).catch(err => { return reject(err) })
-      this.moduleManager.loadDirectory(directory)
       resolve()
     })
   }
@@ -128,6 +102,7 @@ export default class Bot {
 
   start(): Promise<void> {
     return new Promise((resolve, reject) => {
+      this.logger.info('Starting bot...')
       this.load().then(() => {
         this.connect().then(resolve, reject)
       }, reject)
@@ -151,7 +126,6 @@ export default class Bot {
           reject(err)
         })
       } else {
-        this.temp = {}
         this.start().then(resolve.bind(null, this), reject.bind(null, this))
       }
     })
@@ -174,13 +148,11 @@ export default class Bot {
     return this.logger
   }
 
-  // Database Functions
-
-  get(key: any, defaultValue: any = null): Promise<any> {
-    return this.table.get(key, 'value', defaultValue)
+  getUtil(): BotUtil {
+    return this.util
   }
 
-  set(key: any, value: any): Promise<void> {
-    return this.table.set(key, { name: 'value', value })
+  getDBManager(): DatabaseClient {
+    return this.databaseClient
   }
 }

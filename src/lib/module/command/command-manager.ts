@@ -1,12 +1,11 @@
 import { Message, User } from 'eris'
 import chalk from 'chalk'
 
-import { ElementManager, ElementLoader, RecursiveElementLoader, ElementGroup } from '../handler'
+import { ElementManager, ElementLoader, RecursiveElementLoader, ElementGroup } from '../../handler'
 import Command, { ArgList, CommandContext } from './command'
 import { ArgType } from './arg'
 import Bot from '../../bot'
 import Logger from '../../util/logger'
-import TableManager from '../../database/table-manager'
 
 export class CommandLoader extends RecursiveElementLoader<Command> {
   constructor(directory: string, parent?: Command) {
@@ -59,7 +58,6 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
   bot: Bot
 
   prefixes: string[]
-  commandTable: TableManager
   lastTriggered: object
   logger: Logger
 

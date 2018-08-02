@@ -1,11 +1,11 @@
-import { Element } from './handler'
+import { Element } from '../handler'
 import { CommandLoader } from './command/command-manager'
 import { EventLoader } from './event/event-manager'
 import { Bot } from '../..';
 
 export interface ModuleConstructionData {
-  directory: string
-  bot: Bot
+    directory: string
+    bot: Bot
 }
 
 export interface ModuleOptions {
@@ -16,6 +16,7 @@ export interface ModuleOptions {
 
 export default abstract class Module implements Element {
 
+    bot: Bot
     private name: string
     private commandManager: CommandLoader
     private eventManager: EventLoader
@@ -24,10 +25,11 @@ export default abstract class Module implements Element {
         this.commandManager = new CommandLoader(data.directory)
         this.eventManager = new EventLoader(data.directory)
         this.name = options.name
+        this.bot = data.bot
     }
 
     getTriggers(): string[] {
-      return [this.name]
+        return [this.name]
     }
 
     getName() {
@@ -35,10 +37,10 @@ export default abstract class Module implements Element {
     }
 
     getCommandManager(): CommandLoader {
-      return this.commandManager
+        return this.commandManager
     }
 
     getEventManager(): EventLoader {
-      return this.eventManager
+        return this.eventManager
     }
 }

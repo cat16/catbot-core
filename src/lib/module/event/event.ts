@@ -1,5 +1,5 @@
 import Bot from '../../bot'
-import { Element } from '../handler'
+import { Element } from '../../handler'
 
 export enum EventType {
   Client

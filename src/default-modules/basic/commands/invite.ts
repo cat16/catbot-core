@@ -1,4 +1,4 @@
-import { Command, CommandContext, CommandConstructionData } from '../../../index'
+import { Command, CommandContext, CommandConstructionData } from '../../..'
 
 export default class extends Command {
     constructor(data: CommandConstructionData) {
