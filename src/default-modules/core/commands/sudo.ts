@@ -21,6 +21,6 @@ export default class extends Command {
     )
   }
   async hasPermission(context: CommandContext): Promise<boolean> {
-    return context.msg.author.id === (await context.bot.client.getOAuthApplication()).owner.id
+    return context.msg.author.id === (await context.bot.getClient().getOAuthApplication()).owner.id
   }
 }

@@ -7,6 +7,6 @@ export default class extends Command {
         })
     }
     run(context: CommandContext) {
-        context.say(`Invite: https://discordapp.com/oauth2/authorize?client_id=${context.bot.client.user.id}&permissions=0&scope=bot`)
+        context.say(`Invite: https://discordapp.com/oauth2/authorize?client_id=${context.bot.getClient().user.id}&permissions=0&scope=bot`)
     }
 }

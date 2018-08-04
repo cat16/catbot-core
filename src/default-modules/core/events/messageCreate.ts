@@ -9,7 +9,7 @@ export default class extends Event {
     })
   }
   run (bot: Bot, msg: Message) {
-    if (msg.author.id === bot.client.user.id) return
+    if (msg.author.id === bot.getClient().user.id) return
     if (msg.author.bot /*&& !bot.get('disableBotInput', false)*/) return
     bot.getCommandManager().handleMessage(msg)
   }

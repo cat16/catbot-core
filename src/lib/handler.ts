@@ -192,7 +192,10 @@ export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
       }
     })
     errors = new Map<string, Error>([...errors, ...contents.errors])
-    if(dirName) errors.forEach()
+    if(dirName) errors.forEach((error, file) => {
+      errors.delete(file)
+      errors.set(`${dirName}/${file}`, error)
+    })
     contents.directories.forEach((contents, dirName) => {
       errors = new Map<string, Error>([...errors, ...this.loadContents(contents, dirName)])
     })

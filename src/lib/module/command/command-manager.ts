@@ -2,13 +2,14 @@ import { Message, User } from 'eris'
 import chalk from 'chalk'
 
 import { ElementManager, ElementLoader, RecursiveElementLoader, ElementGroup } from '../../handler'
-import Command, { ArgList, CommandContext } from './command'
+import Command, { ArgList, CommandContext, CommandOrGroup } from './command'
 import { ArgType } from './arg'
 import Bot from '../../bot'
 import Logger from '../../util/logger'
+import { Collection } from 'mongodb'
 
-export class CommandLoader extends RecursiveElementLoader<Command> {
-  constructor(directory: string, parent?: Command) {
+export class CommandLoader extends RecursiveElementLoader<CommandOrGroup> {
+  constructor(directory: string, parent?: CommandOrGroup) {
     super(
       directory,
       (rawElement) => {
@@ -38,8 +39,8 @@ export class CommandResult {
 
 export class CommandError {
   message: string
-  command?: Command | ElementGroup<Command>
-  constructor(message: string, command?: Command | ElementGroup<Command>) {
+  command?: CommandOrGroup
+  constructor(message: string, command?: CommandOrGroup) {
     this.message = message
     this.command = command
   }
@@ -50,9 +51,9 @@ interface Trigger {
   alreadyTold: boolean
 }
 
-export type PermCheck = (command: Command, user: User) => boolean
+export type PermCheck = (command: CommandOrGroup, user: User) => boolean
 
-export class CommandManager extends ElementManager<Command | ElementGroup<Command>> {
+export class CommandManager extends ElementManager<CommandOrGroup> {
 
   permChecks: PermCheck[]
   bot: Bot
@@ -63,7 +64,7 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
 
   constructor(bot: Bot) {
     super()
-    this.prefixes = [bot.client.user.mention]
+    this.prefixes = [bot.getClient().user.mention]
     this.lastTriggered = {}
     this.bot = bot
     this.logger = new Logger('command-manager', bot.getLogger())
@@ -73,8 +74,8 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
     return new Promise(async (resolve, reject) => {
       let result = this.parseFull(msg.content)
       if (result && await this.shouldRespond(result)) {
-        let cooldown: number = await this.bot.get('commandCooldown')
-        if (cooldown != null) {
+        let cooldown: number = await this.getValue('command-cooldown', 0)
+        if (cooldown != 0) {
           let lastTriggered: Trigger = this.lastTriggered[msg.author.id]
           if (lastTriggered != null) {
             let now = new Date().getTime()
@@ -82,7 +83,7 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
               if (lastTriggered.alreadyTold) {
                 return resolve(false)
               } else {
-                this.bot.client.createMessage(msg.channel.id,
+                this.bot.getClient().createMessage(msg.channel.id,
                   `:clock1: Please wait before using another command (${Math.ceil((cooldown - (now - lastTriggered.time)) / 1000)} seconds left)`
                 )
                 this.lastTriggered[msg.author.id] = {
@@ -106,8 +107,8 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
 
   shouldRespond(result: CommandResult | CommandError): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      let silent = await this.bot.get('silent', false)
-      let respondToUnknownCommands = await this.bot.get('respondToUnknownCommands', false)
+      let silent = await this.getValue('silent', false)
+      let respondToUnknownCommands = await this.getValue('respondToUnknownCommands', false)
       resolve(!(silent && result instanceof CommandError) && (result || respondToUnknownCommands))
     })
   }
@@ -116,7 +117,7 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
     return new Promise(async (resolve, reject) => {
       if (result instanceof CommandError) {
         if (await this.shouldRespond(result))
-          this.bot.client.createMessage(msg.channel.id, result.message)
+          this.bot.getClient().createMessage(msg.channel.id, result.message)
         resolve(true)
       } else if (result instanceof CommandResult) {
         let command = result.command
@@ -129,7 +130,7 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
           }
         } else {
           this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' did not have permission to run command '${chalk.magenta(command.getName())}'`)
-          if (!command.silent) this.bot.client.createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
+          if (!command.silent) this.bot.getClient().createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
         resolve(true)
       } else {
@@ -147,7 +148,7 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
     return null
   }
 
-  parseContent(content: string, commands: (Command | ElementGroup<Command>)[] = this.getAllElements(), parent?: Command | ElementGroup<Command>): CommandResult | CommandError {
+  parseContent(content: string, commands: (CommandOrGroup)[] = this.getAllElements(), parent?: CommandOrGroup): CommandResult | CommandError {
     let handleCommand = (command: Command, content: string): CommandResult | CommandError => {
       let args = new Map<string, any>()
       if (command.args.length > 0) {
@@ -205,12 +206,22 @@ export class CommandManager extends ElementManager<Command | ElementGroup<Comman
   }
 
   // TODO: move to bot
-  checkPerms(command: Command, user: User): Promise<boolean> {
+  checkPerms(command: CommandOrGroup, user: User): Promise<boolean> {
     return new Promise((resolve, reject) => {
       for (let permCheck of this.permChecks) {
         if (!permCheck(command, user)) return resolve(false)
       }
       resolve(true)
     })
+  }
+
+  async getValue(name: string, defaultValue?: any): Promise<any> {
+    let value = await this.collection().findOne({key: name})
+    if(defaultValue === undefined) return value
+    else return value == null ? defaultValue : value
+  }
+
+  collection(): Collection {
+    return this.bot.db().collection('command-manager')
   }
 }

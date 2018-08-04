@@ -15,7 +15,7 @@ export default class extends Command {
       let start = i
       let end = i + CODE_LENGTH
       if (code.substring(end).length > 0) while (code.substring(end, end + 1) !== '\n') end--
-      context.bot.client.createMessage(context.msg.channel.id, `\`\`\`js\n${code.substring(start, end)}\n\`\`\``)
+      context.say(`\`\`\`js\n${code.substring(start, end)}\n\`\`\``)
       i -= end - CODE_LENGTH - i
     }
   }

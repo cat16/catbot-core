@@ -1,7 +1,6 @@
-import { Command, Bot } from '../../../index'
-import TABLES from './database'
-import TableManager from '../../database/table-manager'
-const CTICols = TABLES.commands.cols
+import { Command, Bot } from '../../index'
+import { CommandOrGroup } from '../../lib/module/command/command-manager'
+import { Collection } from 'mongodb'
 
 export enum PermMode {
     NONE = 'none',
@@ -10,65 +9,28 @@ export enum PermMode {
     SUBTRACT = 'subtract'
 }
 
-export default class PermissionManager {
+export class CommandPermissionManager {
 
-    bot: Bot
-    table: TableManager
+    private collection: Collection
+    private command: Command
 
-    constructor(bot: Bot, table: TableManager) {
-        this.bot = bot
-        this.table = table
+    constructor(collection: Collection, command: Command) {
+        this.collection = collection
+        this.command = command
     }
 
-    load(): Promise<void> {
-        return new Promise(async (resolve, reject) => {
-            for (let command of this.bot.getCommandManager().getAllElements()) {
-                this.loadCommandPerms(command)
-            }
-        })
+    private getValue(key: string): Promise<any> {
+        return this.collection.findOne({key: 'commands'})[this.command.name]
     }
 
-    loadCommandPerms(command: Command, force: boolean = false): Promise<void> {
+    getPermissions(ignoreNone: boolean = false, ignoreMode: boolean = false): Promise<string[]> {
         return new Promise(async (resolve, reject) => {
-            let data = command.getModuleData('permissions')
-            if (force || await this.getPermMode(command) == null)
-                await this.setPermMode(command, command.moduleData.permMode)
-            if (force || await this.getPermissions(command) == null)
-                await this.setPermissions(command, command.defaultTags)
-            if (force || await this.getDefaultPermission(command) == null)
-                await this.setDefaultPermission(command, command.defaultPermission)
-            resolve()
-        })
-    }
-
-    checkPerms(command: Command, userId: string): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
-          let userTags = await this.bot.userManager.getUserPermTags(userId, true)
-          if (userTags.some(tag => tag === 'blacklist')) {
-            return resolve(false)
-          }
-          let commandTags = await this.getPermissions(command, true)
-          let isPrivate = await this.bot.table.getBoolean('private', 'value', true) && command.getName() !== 'sudo'
-          if (commandTags.find(tag => { return userTags.some(tag2 => tag2 === tag) })) {
-            if (!(await this.getDefaultPermission(command, true) && !isPrivate)) return resolve(true)
-            else resolve(false)
-          } else {
-            if (await this.getDefaultPermission(command, true) && !isPrivate) return resolve(true)
-            else resolve(false)
-          }
-        })
-      }
-
-    getPermissions(command: Command, ignoreNone: boolean = false, ignoreMode: boolean = false): Promise<string[]> {
-        return new Promise(async (resolve, reject) => {
-            let permMode = await this.getPermMode(command, true)
-            let thisPerms = await this.table.getStringArray(
-                command.getName(), CTICols.permissions.name, ignoreNone
-            )
-            if (permMode === PermMode.OVERRIDE || command.parent == null || ignoreMode) {
+            let permMode = await this.getPermMode(this.command, true)
+            let thisPerms = await this.getValue('permissions')
+            if (permMode === PermMode.OVERRIDE || this.command.getParent() == null || ignoreMode) {
                 resolve(thisPerms)
             } else {
-                let parentPerms = await this.getPermissions(command.parent, ignoreNone)
+                let parentPerms = await this.getPermissions(ignoreNone)
                 switch (permMode) {
                     case PermMode.NONE:
                         resolve(parentPerms)
@@ -86,9 +48,9 @@ export default class PermissionManager {
         })
     }
 
-    setPermissions(command: Command, permissions: string[]): Promise<void> {
+    setPermissions(command: CommandOrGroup, permissions: string[]): Promise<void> {
         return this.table.setStringArray(
-            command.getName(),
+            command.,
             {
                 name: CTICols.permissions.name,
                 value: permissions
@@ -96,7 +58,7 @@ export default class PermissionManager {
         )
     }
 
-    getDefaultPermission(command: Command, ignoreNone: boolean = false, ignoreParent: boolean = false): Promise<boolean> {
+    getDefaultPermission(command: CommandOrGroup, ignoreNone: boolean = false, ignoreParent: boolean = false): Promise<boolean> {
         return new Promise(async (resolve, reject) => {
             let defPerm = await this.table.getBoolean(
                 command.getName(),
@@ -110,7 +72,7 @@ export default class PermissionManager {
         })
     }
 
-    setDefaultPermission(command: Command, defaultPermission: boolean): Promise<void> {
+    setDefaultPermission(command: CommandOrGroup, defaultPermission: boolean): Promise<void> {
         return this.table.setBoolean(
             command.getName(),
             {
@@ -120,7 +82,7 @@ export default class PermissionManager {
         )
     }
 
-    getPermMode(command: Command, ignoreNone: boolean = true): Promise<PermMode> {
+    getPermMode(command: CommandOrGroup, ignoreNone: boolean = true): Promise<PermMode> {
         return this.table.get(
             command.getName(),
             CTICols.permMode.name,
@@ -128,7 +90,7 @@ export default class PermissionManager {
         )
     }
 
-    setPermMode(command: Command, permMode: string): Promise<void> {
+    setPermMode(command: CommandOrGroup, permMode: string): Promise<void> {
         return this.table.set(
             command.getName(),
             {
@@ -136,5 +98,36 @@ export default class PermissionManager {
                 value: permMode
             }
         )
+    }
+}
+
+export default class PermissionManager {
+
+    private commandCollection: Collection
+
+    constructor(bot: Bot) {
+        this.commandCollection = bot.db().collection('command-permissions')
+    }
+
+    command(command: Command): CommandPermissionManager {
+        return new CommandPermissionManager(this.commandCollection, command)
+    }
+
+    checkPerms(command: CommandOrGroup, userId: string): Promise<boolean> {
+        return new Promise(async (resolve, reject) => {
+            let userTags = await this.bot.userManager.getUserPermTags(userId, true)
+            if (userTags.some(tag => tag === 'blacklist')) {
+                return resolve(false)
+            }
+            let commandTags = await this.getPermissions(command, true)
+            let isPrivate = await this.bot.table.getBoolean('private', 'value', true) && command.getName() !== 'sudo'
+            if (commandTags.find(tag => { return userTags.some(tag2 => tag2 === tag) })) {
+                if (!(await this.getDefaultPermission(command, true) && !isPrivate)) return resolve(true)
+                else resolve(false)
+            } else {
+                if (await this.getDefaultPermission(command, true) && !isPrivate) return resolve(true)
+                else resolve(false)
+            }
+        })
     }
 }

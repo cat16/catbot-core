@@ -4,7 +4,7 @@ import { RecursiveElement, RecursiveElementLoader, ElementGroup } from '../../ha
 import Arg from './arg'
 import Logger from '../../util/logger'
 import Bot from '../../bot'
-import Module from '../module';
+import Module from '../module'
 
 export class ArgList {
 
@@ -58,18 +58,21 @@ export interface CommandConstructionData {
   parent?: Command
 }
 
+export type CommandOrGroup = Command | ElementGroup<Command>
+
+//TODO: Make more things private
 export default abstract class Command implements RecursiveElement {
 
   name: string
 
-  aliases: string[]
-  manager: RecursiveElementLoader<Command>
+  private aliases: string[]
+  private manager: RecursiveElementLoader<Command>
   args: Arg[]
   silent: boolean
-  module: Module
+  private module: Module
 
   logger: Logger
-  parent?: Command
+  private parent?: Command
 
   private currentMsg: Message
 
@@ -103,7 +106,7 @@ export default abstract class Command implements RecursiveElement {
     return this.parent == null ? this.name : `${this.parent.getName()} ${this.name}`
   }
 
-  getSubcommands(): (Command | ElementGroup<Command>)[] {
+  getSubcommands(): CommandOrGroup[] {
     return this.manager.getAllElements()
   }
 
@@ -113,5 +116,9 @@ export default abstract class Command implements RecursiveElement {
 
   getTriggers(): string[] {
     return [this.name].concat(this.aliases)
+  }
+
+  getModule(): Module {
+    return this.module
   }
 }

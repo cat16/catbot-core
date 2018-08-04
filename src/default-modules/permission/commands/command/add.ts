@@ -1,5 +1,6 @@
 import { Command, Arg, ArgType, CommandContext, CommandConstructionData } from '../../../..'
 import PermissionManager from '../../permission-manager'
+import { PermissionModule } from '../../module'
 
 export default class extends Command {
     constructor(data: CommandConstructionData) {
@@ -13,18 +14,18 @@ export default class extends Command {
         })
     }
 
-    async run (data: CommandContext) {
-        let command: Command = data.args.get('command')
-        let tag: string = data.args.get('tag')
-        let permissionManager: PermissionManager = data.bot.getModule('permissions').data.permissionManager
+    async run (context: CommandContext) {
+        let command: Command = context.args.get('command')
+        let tag: string = context.args.get('tag')
+        let permissionManager: PermissionManager = (<PermissionModule><any>this.getModule()).permissionManager
         let tags = await command.getPermissions(true)
         if (!tags.includes(tag)) {
             tags.push(tag)
             command.setPermissions(tags).then(() => {
-                data.say(`:white_check_mark: Successfully gave command \`${command.getName()}\` tag '${tag}'`)
+                context.say(`:white_check_mark: Successfully gave command \`${command.getName()}\` tag '${tag}'`)
             })
         } else {
-            data.say(`:x: Command \`${command.getName()}\` already has tag '${tag}'`)
+            context.say(`:x: Command \`${command.getName()}\` already has tag '${tag}'`)
         }
     }
 }

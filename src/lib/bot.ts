@@ -5,10 +5,11 @@ import Logger from './util/logger'
 import DatabaseClient, { ConnectionOptions } from './database/database-manager'
 import Config from './config'
 import { CommandManager } from './module/command/command-manager'
-import { ModuleManager } from './module/module-manager'
+import { ModuleManager, ModuleLoader } from './module/module-manager'
 import Module from './module/module'
 import { EventManager } from './module/event/event-manager'
-import BotUtil, { multiPromise, pathExists, createDirectory, getInput } from './util/util'
+import BotUtil, { pathExists, createDirectory, getInput } from './util/util'
+import { Db } from '../../node_modules/@types/mongodb'
 
 export default class Bot {
 
@@ -19,15 +20,14 @@ export default class Bot {
   private moduleManager: ModuleManager
   private commandManager: CommandManager
   private eventManager: EventManager
-  mainModuleID: number
-  client: Client
-  config: Config
+  private client: Client
+  private config: Config
 
-  constructor(directory: string, dbConnectionOptions: ConnectionOptions) {
+  constructor(directory: string) {
     this.directory = directory
     this.logger = new Logger('bot-core')
     this.util = new BotUtil(this)
-    this.databaseClient = new DatabaseClient(dbConnectionOptions, this.logger)
+    this.databaseClient = null
     this.moduleManager = new ModuleManager(this)
     this.client = new Client(this.config.token, {})
     this.config = null
@@ -41,10 +41,14 @@ export default class Bot {
       this.logger.log('Loading...')
       this.util = new BotUtil(this)
       this.loadConfig('config.json')
+      this.databaseClient = new DatabaseClient({
+        uri: this.config.dbURI,
+        user: this.config.dbUser,
+        password: this.config.dbPassword
+      }, this.logger)
       if (!pathExists(this.directory)) createDirectory(this.directory)
       this.moduleManager.loadDirectory(`${__dirname}/default-modules`)
-      this.moduleManager.addLoader(new Mo)
-      this.moduleManager.reload()
+      this.moduleManager.addLoader(new ModuleLoader(this.directory, this))
       this.logger.success('Successfully loaded.')
       resolve()
     })
@@ -154,5 +158,17 @@ export default class Bot {
 
   getDBManager(): DatabaseClient {
     return this.databaseClient
+  }
+
+  db(): Db {
+    return this.databaseClient.db('bot')
+  }
+
+  getClient() {
+    return this.client
+  }
+
+  getConfig() {
+    return this.config
   }
 }

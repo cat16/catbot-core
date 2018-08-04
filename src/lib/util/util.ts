@@ -14,14 +14,14 @@ export default class BotUtil {
   getUser(userString: string): User {
     if (userString.startsWith('<@') && userString.endsWith('>')) userString = userString.slice(2, -1)
     if (userString.startsWith('!')) userString = userString.slice(1)
-    let user = this.bot.client.users.find(u => { return u.id === userString })
+    let user = this.bot.getClient().users.find(u => { return u.id === userString })
     if (user) return user
     else return null
   }
 
   getChannel(channelString: string): AnyChannel {
     if (channelString.startsWith('<#') && channelString.endsWith('>')) channelString = channelString.slice(2, -1)
-    let channel = this.bot.client.getChannel(channelString)
+    let channel = this.bot.getClient().getChannel(channelString)
     if (channel) return channel
     else return null
   }

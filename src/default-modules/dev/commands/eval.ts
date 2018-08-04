@@ -35,7 +35,7 @@ export default class extends Command {
             },
             {
               name: 'Output',
-              value: '```js\n' + output.replace(data.bot.config.token, '[TOKEN]').slice(0, 1000) + '```'
+              value: '```js\n' + output.replace(data.bot.getConfig().token, '[TOKEN]').slice(0, 1000) + '```'
             },
             {
               name: 'Type',

@@ -8,7 +8,7 @@ export default class extends Command {
     }
     async run(data: CommandContext) {
         let sentp = data.say('Reloading all commands...')
-        data.bot.getMainModule().commandManager.reload()
+        data.bot.getCommandManager().reload()
         sentp.then(sent => sent.edit(':white_check_mark: Commands reloaded'))
     }
 }
