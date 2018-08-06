@@ -18,10 +18,10 @@ export default class extends Command {
         if (tags.includes(tag)) {
             tags = tags.filter((tag) => { return tag !== tag })
             command.setPermissions(tags).then(() => {
-                data.say(`:white_check_mark: Successfully removed tag '${tag}' from command \`${command.getName()}\``)
+                data.say(`:white_check_mark: Successfully removed tag '${tag}' from command \`${command.getFullName()}\``)
             })
         } else {
-            data.say(`:x: Command \`${command.getName()}\` doesn't have tag '${tag}'`)
+            data.say(`:x: Command \`${command.getFullName()}\` doesn't have tag '${tag}'`)
         }
     }
 }

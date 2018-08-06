@@ -1,5 +1,5 @@
 import { Command, Bot } from '../../index'
-import { CommandOrGroup } from '../../lib/module/command/command-manager'
+import { CommandOrGroup } from '../../lib/module/command/command'
 import { Collection } from 'mongodb'
 
 export enum PermMode {
@@ -50,7 +50,7 @@ export class CommandPermissionManager {
 
     setPermissions(command: CommandOrGroup, permissions: string[]): Promise<void> {
         return this.table.setStringArray(
-            command.,
+            command.getName(),
             {
                 name: CTICols.permissions.name,
                 value: permissions

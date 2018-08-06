@@ -1,8 +1,8 @@
 import { Message, User } from 'eris'
 import chalk from 'chalk'
 
-import { ElementManager, ElementLoader, RecursiveElementLoader, ElementGroup } from '../../handler'
-import Command, { ArgList, CommandContext, CommandOrGroup } from './command'
+import { ElementManager, RecursiveElementLoader } from '../../handler'
+import Command, { ArgList, CommandContext, CommandOrGroup, CommandGroup } from './command'
 import { ArgType } from './arg'
 import Bot from '../../bot'
 import Logger from '../../util/logger'
@@ -17,6 +17,10 @@ export class CommandLoader extends RecursiveElementLoader<CommandOrGroup> {
       },
       parent
     )
+  }
+
+  generateGroup(path, generateElement): CommandGroup {
+    return new CommandGroup(path, generateElement)
   }
 }
 
@@ -124,12 +128,12 @@ export class CommandManager extends ElementManager<CommandOrGroup> {
         if (sudo || await this.checkPerms(command, msg.author)) {
           try {
             await command.run(new CommandContext(this.bot, msg, result.args))
-            if (!command.silent) this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' ran command '${chalk.magenta(command.getName())}'`)
+            if (!command.silent) this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' ran command '${chalk.magenta(command.getFullName())}'`)
           } catch (err) {
-            this.logger.error(`Command '${command.getName()}' crashed: ${err.stack}`)
+            this.logger.error(`Command '${command.getFullName()}' crashed: ${err.stack}`)
           }
         } else {
-          this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' did not have permission to run command '${chalk.magenta(command.getName())}'`)
+          this.logger.log(`'${chalk.magenta(`${msg.author.username}#${msg.author.discriminator}`)}' did not have permission to run command '${chalk.magenta(command.getFullName())}'`)
           if (!command.silent) this.bot.getClient().createMessage(msg.channel.id, ':lock: You do not have permission to use this command')
         }
         resolve(true)

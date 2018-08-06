@@ -1,6 +1,6 @@
 import { Message, MessageContent } from 'eris'
 
-import { RecursiveElement, RecursiveElementLoader, ElementGroup } from '../../handler'
+import { RecursiveElement, RecursiveElementLoader, ElementGroup, ElementGenerationFunction } from '../../handler'
 import Arg from './arg'
 import Logger from '../../util/logger'
 import Bot from '../../bot'
@@ -58,7 +58,21 @@ export interface CommandConstructionData {
   parent?: Command
 }
 
-export type CommandOrGroup = Command | ElementGroup<Command>
+export type CommandOrGroup = Command | CommandGroup
+
+export class CommandGroup extends ElementGroup<Command> {
+
+  private name: string
+
+  constructor(directory: string, generateElement: ElementGenerationFunction<Command>) {
+    super(directory, generateElement)
+    this.name = directory
+  }
+
+  getName(): string {
+    return this.name
+  }
+}
 
 //TODO: Make more things private
 export default abstract class Command implements RecursiveElement {
@@ -86,7 +100,7 @@ export default abstract class Command implements RecursiveElement {
     this.parent = data.parent
     this.module = null
 
-    this.logger = new Logger(`command::${this.getName()}`, data.bot.getLogger())
+    this.logger = new Logger(`command::${this.getFullName()}`, data.bot.getLogger())
   }
 
   abstract run(data: CommandContext): void
@@ -103,7 +117,11 @@ export default abstract class Command implements RecursiveElement {
   }
 
   getName(): string {
-    return this.parent == null ? this.name : `${this.parent.getName()} ${this.name}`
+    return this.name
+  }
+
+  getFullName(): string {
+    return this.parent == null ? this.name : `${this.parent.getFullName()} ${this.name}`
   }
 
   getSubcommands(): CommandOrGroup[] {

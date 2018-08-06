@@ -31,10 +31,15 @@ export class ElementGroup<T extends RecursiveElement> implements RecursiveElemen
   private parent?: RecursiveElement
   public triggers: string[]
 
-  constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: RecursiveElement) {
-    this.elementManager = new RecursiveElementLoader<T>(directory, generateElement, this)
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>) {
+    this.elementManager = new RecursiveElementLoader<T>(directory, generateElement, new DefaultRecursiveElementLoaderOptions<T>())
     this.triggers.push(...directory.split('.'))
-    this.parent = parent
+  }
+
+  setOptions(options: RecursiveElementLoaderOptions<T, this>): this {
+    this.parent = options.parent
+    this.elementManager = new RecursiveElementLoader<T>(this.elementManager.getDirectory(), this.elementManager.generateElement, { parent: this, generateGroup: options.generateGroup })
+    return this
   }
 
   getElementManager(): RecursiveElementLoader<T> {
@@ -192,7 +197,7 @@ export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
       }
     })
     errors = new Map<string, Error>([...errors, ...contents.errors])
-    if(dirName) errors.forEach((error, file) => {
+    if (dirName) errors.forEach((error, file) => {
       errors.delete(file)
       errors.set(`${dirName}/${file}`, error)
     })
@@ -207,15 +212,40 @@ export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
   }
 }
 
-export class RecursiveElementLoader<T extends RecursiveElement> extends ElementLoader<T | ElementGroup<T>> {
+export type GroupGenerationFunction<T extends RecursiveElement, G extends ElementGroup<T>> = (path: string, generateElement: ElementGenerationFunction<T>) => G
+
+export interface RecursiveElementLoaderOptions<T extends RecursiveElement, G extends ElementGroup<T>> {
+  parent?: T | G
+  generateGroup: GroupGenerationFunction<T, G>
+}
+
+export class DefaultRecursiveElementLoaderOptions<T extends RecursiveElement> implements RecursiveElementLoaderOptions<T, ElementGroup<T>> {
+  parent?: T
+  generateGroup: GroupGenerationFunction<T, ElementGroup<T>>
+  constructor(parent?: T) {
+    this.parent = parent
+    this.generateGroup = (
+      (path: string, generateElement: ElementGenerationFunction<T>) =>
+        new ElementGroup<T>(path, generateElement).setOptions({ parent: this.parent, generateGroup: this.generateGroup })
+    )
+  }
+}
+
+export class RecursiveElementLoader<T extends RecursiveElement, G extends ElementGroup<T> = ElementGroup<T>> extends ElementLoader<T | G> {
 
   private generateElementFunc: ElementGenerationFunction<T>
-  private parent?: ElementGroup<T> | T
+  private generateGroupFunc: GroupGenerationFunction<T, G>
+  private parent?: G | T
 
-  constructor(directory: string, generateElement: ElementGenerationFunction<T>, parent?: ElementGroup<T> | T) {
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, options: RecursiveElementLoaderOptions<T, G>) {
     super(directory, true)
     this.generateElementFunc = generateElement
-    this.parent = parent
+    this.generateGroupFunc = options.generateGroup
+    this.parent = options.parent
+  }
+
+  generateGroup(path: string, generateElement: ElementGenerationFunction<T>): G {
+    return this.generateGroupFunc(path, generateElement)
   }
 
   loadContents(contents: DirectoryContents): Map<string, Error> {
@@ -236,7 +266,7 @@ export class RecursiveElementLoader<T extends RecursiveElement> extends ElementL
     errors = new Map<string, Error>([...errors, ...contents.errors])
     contents.directories.forEach((contents2, name) => {
       let path = `${this.getPath()}/${name}`
-      this.add(new ElementData(new ElementGroup(path, this.generateElement), path))
+      this.add(new ElementData(this.generateGroup(path, this.generateElement), path))
     })
     rawRecursiveElements.forEach((rawElement, file) => {
       this.loadElement(file, rawElement)
@@ -248,7 +278,7 @@ export class RecursiveElementLoader<T extends RecursiveElement> extends ElementL
     return this.generateElementFunc(rawElement)
   }
 
-  getParent(): ElementGroup<T> | T {
+  getParent(): G | T {
     return this.parent
   }
 

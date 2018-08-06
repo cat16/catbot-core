@@ -22,10 +22,10 @@ export default class extends Command {
         if (!tags.includes(tag)) {
             tags.push(tag)
             command.setPermissions(tags).then(() => {
-                context.say(`:white_check_mark: Successfully gave command \`${command.getName()}\` tag '${tag}'`)
+                context.say(`:white_check_mark: Successfully gave command \`${command.getFullName()}\` tag '${tag}'`)
             })
         } else {
-            context.say(`:x: Command \`${command.getName()}\` already has tag '${tag}'`)
+            context.say(`:x: Command \`${command.getFullName()}\` already has tag '${tag}'`)
         }
     }
 }

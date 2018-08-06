@@ -22,9 +22,9 @@ export default class extends Command {
         let tags = await command.getPermissions(true)
         let send = ''
         if (baseTags.length === 0) {
-            send += `\`${command.getName()}\` does not have any tags\n`
+            send += `\`${command.getFullName()}\` does not have any tags\n`
         } else {
-            send += `\`${command.getName()}\` has the following tags: [${baseTags.join(', ')}]\n`
+            send += `\`${command.getFullName()}\` has the following tags: [${baseTags.join(', ')}]\n`
         }
         if (tags.length === 0) {
             send += `With perm mode \`${await command.getPermMode(true)}\`, it does not have any tags`
