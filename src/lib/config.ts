@@ -1,21 +1,21 @@
 export interface ConfigOptions {
   token: string
-  ownerID: string
-  defaultPrefix: string
-  generateFolders: boolean
+  dbURI: string
+  dbUser: string
+  dbPassword: string
 }
 
 export default class Config {
 
   token: string
-  ownerID: string
-  defaultPrefix: string
-  generateFolders: boolean
+  dbURI: string
+  dbUser: string
+  dbPassword: string
 
   constructor(options: ConfigOptions | any = {}) {
     this.token = options.token
-    this.ownerID = options.ownerID
-    this.defaultPrefix = options.defaultPrefix
-    this.generateFolders = options.generateFolders || true
+    this.dbURI = options.dbURI
+    this.dbUser = options.dbUser
+    this.dbPassword = options.dbPassword
   }
 }

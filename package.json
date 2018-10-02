@@ -1,13 +1,13 @@
 {
   "name": "cat16-bot-core",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "the core code for cat16's discord bots; uses eris",
   "main": "dist/index",
   "types": "dist/index.d.ts",
   "scripts": {
     "start": "node dist/test/main",
     "test": "node dist/test/main --debug",
-    "pretest": "tsc",
+    "pretest": "npm run build",
     "build": "tsc",
     "prepublish": "npm run build"
   },
@@ -22,15 +22,13 @@
   },
   "homepage": "https://github.com/cat16/bot-core#readme",
   "dependencies": {
-    "chalk": "^2.3.2",
-    "eris": "^0.8.3",
-    "readline-sync": "^1.4.7",
-    "sqlite3": "^3.1.13"
+    "@types/mongodb": "^3.1.2",
+    "chalk": "^2.4.1",
+    "eris": "^0.8.6",
+    "mongodb": "^3.1.1"
   },
   "devDependencies": {
-    "@types/node": "^9.4.7",
-    "@types/readline-sync": "^1.4.3",
-    "@types/sqlite3": "^3.1.1",
-    "typescript": "^2.7.2"
+    "@types/node": "^10.5.6",
+    "typescript": "^3.0.1"
   }
 }

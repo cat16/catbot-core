@@ -1,107 +1,64 @@
 import { Client } from 'eris'
 import * as fs from 'fs'
-import * as readline from 'readline-sync'
 
 import Logger from './util/logger'
-import load from './util/load'
-import DatabaseManager from './database/database-manager'
-import TableManager from './database/table-manager' // eslint-disable-line no-unused-vars
+import DatabaseClient, { ConnectionOptions } from './database/database-manager'
 import Config from './config'
-import CommandManager from './command/command-manager'
-import EventManager from './event/event-manager'
-import UserManager from './user-manager'
-import Util from './util/util'
+import { CommandManager } from './module/command/command-manager'
+import { ModuleManager, ModuleLoader } from './module/module-manager'
+import Module from './module/module'
+import { EventManager } from './module/event/event-manager'
+import BotUtil, { pathExists, createDirectory, getInput } from './util/util'
+import { Db } from '../../node_modules/@types/mongodb'
 
-import TABLES from './default/database'
-const BTI = TABLES.bot
+export default class Bot {
 
-export default class Catbot {
+  private directory: string
+  private logger: Logger
+  private util: BotUtil
+  private databaseClient: DatabaseClient
+  private moduleManager: ModuleManager
+  private commandManager: CommandManager
+  private eventManager: EventManager
+  private client: Client
+  private config: Config
 
-  directory: string
-  logger: Logger
-  util: Util
-  databaseManager: DatabaseManager
-  commandManager: CommandManager
-  eventManager: EventManager
-  table: TableManager
-  userManager: UserManager
-  client: Client
-  config: Config
-  temp: any
-
-  constructor (directory: string) {
+  constructor(directory: string) {
     this.directory = directory
-    this.logger = null
-    this.util = null
-    this.databaseManager = null
-    this.commandManager = null
-    this.table = null
-    this.userManager = null
-    this.client = null
+    this.logger = new Logger('bot-core')
+    this.util = new BotUtil(this)
+    this.databaseClient = null
+    this.moduleManager = new ModuleManager(this)
+    this.client = new Client(this.config.token, {})
     this.config = null
-    this.temp = {}
   }
 
-  onrestart (bot: Catbot, err?: Error) {}
+  onrestart(bot: Bot, err?: Error) { }
 
-  load (): Promise<void> {
+  load(): Promise<void> {
     return new Promise(async (resolve, reject) => {
       this.logger = new Logger('bot-core')
       this.logger.log('Loading...')
-      this.util = new Util(this)
+      this.util = new BotUtil(this)
       this.loadConfig('config.json')
-      this.databaseManager = new DatabaseManager('storage', this.logger)
-      this.commandManager = new CommandManager(this)
-      this.eventManager = new EventManager(this)
-      this.client = new Client(this.config.token, {})
-      // load database
-      await this.databaseManager.load(this.directory).catch(err => { return reject(err) })
-      await this.util.multiPromise([
-        this.registerDir(`${__dirname}/default`, false, true).catch(err => { return reject(err) }),
-        this.registerDir(this.directory, this.config.generateFolders, false).catch(err => { return reject(err) })
-      ])
-      this.table = this.databaseManager.tables[BTI.name]
-      this.userManager = new UserManager(this.databaseManager)
-      this.commandManager.load()
-      await this.util.multiPromise([
-        this.commandManager.reload().catch(err => { return reject(err) }),
-        this.eventManager.reload().catch(err => { return reject(err) })
-      ])
+      this.databaseClient = new DatabaseClient({
+        uri: this.config.dbURI,
+        user: this.config.dbUser,
+        password: this.config.dbPassword
+      }, this.logger)
+      if (!pathExists(this.directory)) createDirectory(this.directory)
+      this.moduleManager.loadDirectory(`${__dirname}/default-modules`)
+      this.moduleManager.addLoader(new ModuleLoader(this.directory, this))
       this.logger.success('Successfully loaded.')
       resolve()
     })
   }
 
-  registerDir (directory: string, generateFolders: boolean, defaultFolder: boolean): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      await this.databaseManager.loadFile(`${directory}/database.js`).catch(err => { return reject(err) })
-      this.eventManager.addDir(`${directory}/events`, generateFolders, defaultFolder)
-      this.commandManager.addDir(`${directory}/commands`, generateFolders, defaultFolder)
-      resolve()
-    })
+  getModule(name: string): Module {
+    return this.moduleManager.find(name).data.element
   }
 
-  /*registerEvents (directory: string, generateFolders: boolean) {
-    let events = load(directory, generateFolders)
-    if (events == null) return
-    for (let event in events) {
-      let eventFunc = events[event]
-      if (eventFunc instanceof Function) {
-        let logger = new Logger(`event::${event}`, this.logger)
-        this.client.on(event, (data) => {
-          try {
-            eventFunc.call({ logger }, data, this)
-          } catch (ex) {
-            this.logger.error(`Event '${event}' crashed! : ${ex.stack}`)
-          }
-        })
-      } else {
-        this.logger.warn(`Could not load event '${event}': No function was exported`)
-      }
-    }
-  }*/
-
-  connect (): Promise<void> {
+  connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.logger.log('Connecting...')
       this.client.on('ready', () => {
@@ -112,7 +69,7 @@ export default class Catbot {
     })
   }
 
-  loadConfig (file: string) {
+  async loadConfig(file: string): Promise<void> {
     let writeConfig = (config) => {
       fs.writeFileSync(`${this.directory}/${file}`, JSON.stringify(config, null, '\t'))
     }
@@ -124,7 +81,8 @@ export default class Catbot {
       for (let key in neededConfig) {
         if (config[key] == null && neededConfig[key] === undefined) {
           if (!updated) this.logger.warn(`Config is not completed! Please fill in the following values...`)
-          config[key] = this.getInput(key)
+          process.stdout.write(this.logger.getLogString(key))
+          config[key] = await getInput()
           updated = true
         }
       }
@@ -137,7 +95,8 @@ export default class Catbot {
       this.logger.warn('No config file detected!\nCreating new config file...')
       let config = new Config()
       for (let key in config) {
-        if (config[key] == null) config[key] = this.getInput(`Enter ${key}`)
+        process.stdout.write(this.logger.getLogString(`Enter ${key}: `))
+        if (config[key] == null) config[key] = await getInput()
       }
       writeConfig(config)
       this.logger.success('Config file generated')
@@ -145,19 +104,17 @@ export default class Catbot {
     }
   }
 
-  getInput (msg: string): string {
-    return readline.question(this.logger.getLogString(`${msg}: `))
-  }
-
-  start (): Promise<void> {
+  start(): Promise<void> {
     return new Promise((resolve, reject) => {
+      this.logger.info('Starting bot...')
       this.load().then(() => {
         this.connect().then(resolve, reject)
       }, reject)
     })
   }
 
-  restart (reloadFiles: boolean = false): Promise<Catbot> {
+  //replace with an exit, dummy, and find a way to make stop actually stop it
+  restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
       this.logger.info('Restarting...')
       this.client.disconnect({ reconnect: false })
@@ -173,24 +130,45 @@ export default class Catbot {
           reject(err)
         })
       } else {
-        this.temp = {}
         this.start().then(resolve.bind(null, this), reject.bind(null, this))
       }
     })
   }
 
-  stop () {
+  stop() {
     this.logger.info('Stopping...')
     this.client.disconnect({ reconnect: false })
   }
 
-  // Database Functions
-
-  get (key: any, defaultValue: any = null): Promise<any> {
-    return this.table.get(key, 'value', defaultValue)
+  getCommandManager(): CommandManager {
+    return this.commandManager
   }
 
-  set (key: any, value: any): Promise<void> {
-    return this.table.set(key, { name: 'value', value })
+  getEventManager(): EventManager {
+    return this.eventManager
+  }
+
+  getLogger(): Logger {
+    return this.logger
+  }
+
+  getUtil(): BotUtil {
+    return this.util
+  }
+
+  getDBManager(): DatabaseClient {
+    return this.databaseClient
+  }
+
+  db(): Db {
+    return this.databaseClient.db('bot')
+  }
+
+  getClient() {
+    return this.client
+  }
+
+  getConfig() {
+    return this.config
   }
 }

@@ -1,159 +1,366 @@
-import chalk from 'chalk'
+// TODO: if microsoft decides to fix issue 5863 for typescipt change T to this in some places
 
-import * as fs from 'fs'
-
-import load from './util/load'
-import Logger from './util/logger'
-import Catbot from './bot'
-
-export interface Directory {
-  path: string
-  generateFolders: boolean
-  isDefault: boolean
-}
+import { requireDirectory, pathExists, DirectoryContents, loadFile } from './util/util'
 
 export interface Element {
-  fileName: string
-  getAllElements(includeEmpty?: boolean): Element[]
-  path: string
-  isDefault: boolean
+  getTriggers(): string[]
 }
 
-export interface ElementSearchResult<T extends Element> {
+let isElement = (obj): obj is Element => {
+  return 'getTriggers' in obj
+}
+
+export type ElementGenerationFunction<T extends Element> = (rawElement: any) => T
+
+export interface RecursiveElement extends Element {
+  getElementManager(): RecursiveElementLoader<RecursiveElement>
+  getParent(): RecursiveElement | null
+}
+
+let isRecursiveElement = (obj): obj is RecursiveElement => {
+  return (
+    'getSubelements' in obj
+    && 'getParent' in obj
+    && isElement(obj)
+  )
+}
+
+export class ElementGroup<T extends RecursiveElement> implements RecursiveElement {
+
+  private elementManager: RecursiveElementLoader<T>
+  private parent?: RecursiveElement
+  public triggers: string[]
+
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>) {
+    this.elementManager = new RecursiveElementLoader<T>(directory, generateElement, new DefaultRecursiveElementLoaderOptions<T>())
+    this.triggers.push(...directory.split('.'))
+  }
+
+  setOptions(options: RecursiveElementLoaderOptions<T, this>): this {
+    this.parent = options.parent
+    this.elementManager = new RecursiveElementLoader<T>(this.elementManager.getDirectory(), this.elementManager.generateElement, { parent: this, generateGroup: options.generateGroup })
+    return this
+  }
+
+  getElementManager(): RecursiveElementLoader<T> {
+    return this.elementManager
+  }
+
+  getParent(): RecursiveElement {
+    return this.parent
+  }
+
+  getTriggers(): string[] {
+    return this.triggers
+  }
+
+}
+
+export class ElementData<T extends Element> {
   element: T
-  content: string
+  path: string
+  constructor(element: T, path: string) {
+    this.element = element
+    this.path = path
+  }
 }
 
-export type ElementFunc<T extends Element> = (Catbot) => T
+export interface ElementMatch<T extends Element> {
+  data: ElementData<T>
+  remaining: string
+  loader: ElementLoader<T>
+  index: number
+}
 
-export default abstract class Handler<T extends Element> {
+export abstract class ElementLoader<T extends Element> {
 
-  bot: Catbot
-  logger: Logger
-  elements: T[]
-  loadDirs: Directory[]
-  elementName: string
+  private directory: string
+  private elementData: ElementData<T>[]
+  private recursive: boolean
 
-  constructor(bot: Catbot, logger: Logger, elementName: string) {
-    this.bot = bot
-    this.logger = logger
-    this.elements = []
-    this.loadDirs = []
-    this.elementName = elementName
+  constructor(
+    directory: string,
+    recursive: boolean
+  ) {
+    this.directory = directory
+    this.elementData = []
+    this.recursive = recursive
   }
 
-  addDir(directory: string, generateFolders: boolean, isDefault: boolean) {
-    this.loadDirs.push({ path: directory, generateFolders, isDefault })
+  abstract loadContents(contents: DirectoryContents): Map<string, Error>
+  abstract generateElement(rawElement: any): T
+
+  add(data: ElementData<T>): void {
+    this.elementData.push(data)
   }
 
-  abstract push(element: T): Promise<void>
-  abstract find(content: string): ElementSearchResult<T>
-
-  add(element: T, path: string, isDefault: boolean = false): Promise<void> {
-    let fileName = path.split('/').pop().split('.')[0]
-    element.getAllElements(true).forEach(e => {
-      e.path = path
-      e.fileName = fileName
-      if (isDefault) e.isDefault = true
-    })
-    return this.push(element)
+  remove(index: number): ElementData<T> {
+    return this.elementData.splice(index, 1)[0]
   }
 
-  reload(): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      this.logger.info(`Reloading ${this.elementName}s...`)
-      this.elements = []
-      let loadedDirs = 0
+  get(index: number): ElementData<T> {
+    return this.elementData[index]
+  }
 
-      let dirCheck = () => {
-        loadedDirs++
-        if (loadedDirs === this.loadDirs.length) {
-          this.logger.success(`Successfully reloaded all ${this.elementName}s.`)
-          resolve()
+  set(index: number, data: ElementData<T>)
+    : ElementData<T> {
+    return this.elementData.splice(index, 1, data)[0]
+  }
+
+  getAllElements(): T[] {
+    return this.elementData.map(d => d.element)
+  }
+
+  find(trigger: string): ElementMatch<T> {
+    for (let i = 0; i < this.elementData.length; i++) {
+      let element = this.elementData[i].element
+      let triggerFound = element.getTriggers().find(t => trigger.startsWith(t))
+      if (triggerFound) {
+        let r = trigger.slice(triggerFound.length).trim()
+        if (isRecursiveElement(element) || element instanceof ElementGroup) {
+          let match = element.getElementManager().find(r)
+          if (match) return match
+        }
+        return {
+          data: this.elementData[i],
+          remaining: r,
+          loader: this,
+          index: i
         }
       }
-
-      for (let dir of this.loadDirs) {
-        let elementFuncs: ElementFunc<T>[] = load(dir.path, dir.generateFolders)
-        if (elementFuncs == null) {
-          loadedDirs++
-          continue
-        }
-        let unloaded = 0
-        let loaded = 0
-        let totalLoaded = 0
-
-        let elementCheck = () => {
-          if (loaded === unloaded) {
-            this.logger.info(`Loaded ${chalk.magenta(`${totalLoaded} ${this.elementName}${totalLoaded === 1 ? '' : 's'}`)} from ${chalk.gray(dir.path)}`)
-            dirCheck()
-          }
-        }
-
-        if (Object.keys(elementFuncs).length === 0) {
-          dirCheck()
-        } else {
-          for (let elementFunc in elementFuncs) {
-            unloaded++
-            let element = elementFuncs[elementFunc](this.bot)
-            this.add(element, `${dir.path}/${elementFunc}`, dir.isDefault).then(() => {
-              loaded++
-              totalLoaded += element.getAllElements(false).length
-              elementCheck()
-            }, (err) => {
-              this.logger.error(`Could not load ${this.elementName} from file '${elementFunc}': ${err.stack}`)
-              unloaded--
-              elementCheck()
-            })
-          }
-        }
-      }
-    })
-  }
-
-  reloadElement(name: string): Promise<void> {
-    let reload = (path, isDefault) => {
-      return new Promise(async (resolve, reject) => {
-        let element: T
-        try {
-          let required = require(path)
-          element = required.default !== undefined ? required.default(this.bot) : required(this.bot)
-        } catch (err) {
-          reject(err)
-          return
-        }
-        delete require.cache[require.resolve(path)]
-        this.elements = this.elements.filter(e => e !== element)
-        this.add(element, path, isDefault).then(() => {
-          this.logger.info(`Successfully reloaded file for ${this.elementName} '${element.fileName}'`)
-          resolve()
-        }, err => {
-          this.logger.error(`Failed to reload file for ${this.elementName} '${element.fileName}': ${err.stack}`)
-          reject(err)
-        })
-      })
     }
+    return null
+  }
 
-    return new Promise(async (resolve, reject) => {
-      this.logger.info(`Attemping to reload ${this.elementName} '${name}'...`)
-      let result = this.find(name)
-      if (result !== null) {
-        let path = result.element.path
-        return reload(path, result.element.isDefault).then(() => { resolve() }, reject)
-      } else {
-        for (let dir of this.loadDirs) {
-          let path = `${dir.path}/${name}`
-          if (fs.existsSync(path)) {
-            try {
-              /** @type {Command} */
-              return reload(path, dir.isDefault).then(() => { resolve() }, reject)
-            } catch (ex) {
-              return reject(new Error(`Could not reload ${this.elementName} '${name}':\n\`\`\`js\n${ex.stack}\n\`\`\``))
-            }
-          }
-        }
-        reject(new Error(`:x: No ${this.elementName} named '${name}' found`))
+  clear(): void {
+    this.elementData = []
+  }
+
+  load(): Map<string, Error> {
+    return this.loadContents(requireDirectory(this.getPath(), this.recursive))
+  }
+
+  reloadElement(index: number): boolean {
+    let elementData = this.get(index)
+    if (elementData == null) return false
+    let path = elementData.path
+    this.set(
+      index,
+      new ElementData<T>(
+        this.generateElement(
+          loadFile(path)
+        ), path
+      )
+    )
+  }
+
+  loadElement(file: string, rawElement?: any): boolean {
+    let match = this.find(file)
+    if (match) {
+      return false
+    } else {
+      if (rawElement == null) {
+        if (pathExists(`${this.getPath()}/${file}`)) rawElement = loadFile(`${this.getPath()}/${file}`)
+        else return false
+      }
+      let element: T = this.generateElement(rawElement)
+      this.add(new ElementData<T>(element, `${this.getPath()}/${file}`))
+      return true
+    }
+  }
+
+  getDirectory(): string {
+    return this.directory
+  }
+
+  getPath(): string {
+    return `./${this.getDirectory()}`
+  }
+}
+
+export class FlatElementLoader<T extends Element> extends ElementLoader<T> {
+
+  private generateElementFunc: ElementGenerationFunction<T>
+
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, recursive: boolean) {
+    super(directory, recursive)
+    this.generateElementFunc = generateElement
+  }
+
+  loadContents(contents: DirectoryContents, dirName?: string): Map<string, Error> {
+    let errors: Map<string, Error> = new Map<string, Error>()
+    contents.files.forEach((rawElement, file) => {
+      try {
+        this.loadElement(file, rawElement)
+      } catch (err) {
+        errors.set(file, err)
       }
     })
+    errors = new Map<string, Error>([...errors, ...contents.errors])
+    if (dirName) errors.forEach((error, file) => {
+      errors.delete(file)
+      errors.set(`${dirName}/${file}`, error)
+    })
+    contents.directories.forEach((contents, dirName) => {
+      errors = new Map<string, Error>([...errors, ...this.loadContents(contents, dirName)])
+    })
+    return errors
+  }
+
+  generateElement(rawElement: any): T {
+    return this.generateElementFunc(rawElement)
+  }
+}
+
+export type GroupGenerationFunction<T extends RecursiveElement, G extends ElementGroup<T>> = (path: string, generateElement: ElementGenerationFunction<T>) => G
+
+export interface RecursiveElementLoaderOptions<T extends RecursiveElement, G extends ElementGroup<T>> {
+  parent?: T | G
+  generateGroup: GroupGenerationFunction<T, G>
+}
+
+export class DefaultRecursiveElementLoaderOptions<T extends RecursiveElement> implements RecursiveElementLoaderOptions<T, ElementGroup<T>> {
+  parent?: T
+  generateGroup: GroupGenerationFunction<T, ElementGroup<T>>
+  constructor(parent?: T) {
+    this.parent = parent
+    this.generateGroup = (
+      (path: string, generateElement: ElementGenerationFunction<T>) =>
+        new ElementGroup<T>(path, generateElement).setOptions({ parent: this.parent, generateGroup: this.generateGroup })
+    )
+  }
+}
+
+export class RecursiveElementLoader<T extends RecursiveElement, G extends ElementGroup<T> = ElementGroup<T>> extends ElementLoader<T | G> {
+
+  private generateElementFunc: ElementGenerationFunction<T>
+  private generateGroupFunc: GroupGenerationFunction<T, G>
+  private parent?: G | T
+
+  constructor(directory: string, generateElement: ElementGenerationFunction<T>, options: RecursiveElementLoaderOptions<T, G>) {
+    super(directory, true)
+    this.generateElementFunc = generateElement
+    this.generateGroupFunc = options.generateGroup
+    this.parent = options.parent
+  }
+
+  generateGroup(path: string, generateElement: ElementGenerationFunction<T>): G {
+    return this.generateGroupFunc(path, generateElement)
+  }
+
+  loadContents(contents: DirectoryContents): Map<string, Error> {
+    let errors: Map<string, Error> = new Map<string, Error>()
+    let rawRecursiveElements: Map<string, any> = new Map<string, any>()
+    contents.files.forEach((rawElement, file) => {
+      if (!contents.directories.get(file)) {
+        try {
+          this.loadElement(file, rawElement)
+        } catch (err) {
+          errors.set(file, err)
+        }
+      } else {
+        rawRecursiveElements.set(file, rawElement)
+        contents.directories.delete(file)
+      }
+    })
+    errors = new Map<string, Error>([...errors, ...contents.errors])
+    contents.directories.forEach((contents2, name) => {
+      let path = `${this.getPath()}/${name}`
+      this.add(new ElementData(this.generateGroup(path, this.generateElement), path))
+    })
+    rawRecursiveElements.forEach((rawElement, file) => {
+      this.loadElement(file, rawElement)
+    })
+    return errors
+  }
+
+  generateElement(rawElement: any): T {
+    return this.generateElementFunc(rawElement)
+  }
+
+  getParent(): G | T {
+    return this.parent
+  }
+
+  getDirectory(): string {
+    return this.parent
+      ? `${this.parent.getElementManager().getDirectory()}/${super.getDirectory()}`
+      : super.getDirectory()
+  }
+}
+
+export abstract class ElementManager<T extends Element> {
+
+  loaders: ElementLoader<T>[]
+
+  constructor() {
+    this.loaders = []
+  }
+
+  addLoader(loader: ElementLoader<T>): Map<string, Error> {
+    let errors = loader.load()
+    this.loaders.push(loader)
+    return errors
+  }
+
+  reload(): Map<string, Error> {
+    let errors: Map<string, Error> = new Map<string, Error>()
+    for (let loader of this.loaders) {
+      loader.clear()
+      errors = new Map<string, Error>([...loader.load(), ...errors])
+    }
+    return errors
+  }
+
+  getAllElements(): T[] {
+    return [].concat(...this.loaders.map(m => m.getAllElements()))
+  }
+
+  find(trigger: string): ElementMatch<T> {
+    let loader = this.loaders.find(m => trigger.startsWith(m.getDirectory()))
+    if (loader) {
+      return loader.find(trigger.slice(loader.getDirectory().length).trim())
+    }
+    for (let loader of this.loaders) {
+      let match = loader.find(trigger)
+      if (match) return match
+    }
+    return null
+  }
+
+  loadElement(trigger: string): boolean {
+    let match = this.find(trigger)
+    if (match) {
+      if (match.remaining) {
+        let element = match.data.element
+        let loader = isRecursiveElement(element) || element instanceof ElementGroup
+          ? element.getElementManager()
+          : match.loader
+        return loader.loadElement(match.remaining)
+      } else {
+        return false
+      }
+    } else {
+      let loader = this.loaders.find(m => trigger.startsWith(m.getDirectory()))
+      if (loader) {
+        return loader.loadElement(trigger.slice(loader.getDirectory().length).trim())
+      } else {
+        for (let loader of this.loaders) {
+          if (loader.loadElement(trigger)) return true
+        }
+        return false
+      }
+    }
+  }
+
+  reloadElement(trigger: string): boolean {
+    let match = this.find(trigger)
+    if (match) {
+      if (match.remaining) {
+        return false
+      } else {
+        match.loader.reloadElement(match.index)
+      }
+    }
   }
 }

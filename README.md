@@ -9,7 +9,7 @@ An Eris-based Discord bot core designed to cover all your basic needs!
  - Very extendable feature such as an abstract handler class
  - Some preloaded commands to make internal systems managable and testing easier
  - Typescript support
-## Dependancies
+## Dependencies
  - [eris](https://github.com/abalabahaha/eris) for the Discord API
  - [sqlite3](https://github.com/mapbox/node-sqlite3) for the database system
  - [chalk](https://github.com/chalk/chalk) for colors on the console

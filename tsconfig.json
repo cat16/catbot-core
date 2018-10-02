@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2016",
     "module": "commonjs",
     "outDir": "dist",
     "moduleResolution": "node",
     "declaration": true
   },
   "include": [
-      "./src/**/*"
+      "./src/**/*",
+      "./test/src/**/*"
   ]
 }
