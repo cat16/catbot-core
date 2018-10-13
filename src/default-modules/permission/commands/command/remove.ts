@@ -1,27 +1,27 @@
-import { Command, Arg, ArgType, CommandContext, CommandConstructionData } from '../../../..'
+import { Arg, ArgType, Command, CommandConstructionData, CommandContext } from "../../../..";
 
 export default class extends Command {
     constructor(data: CommandConstructionData) {
         super(data, {
-            name: 'remove',
-            aliases: ['take'],
+            name: "remove",
+            aliases: ["take"],
             args: [
-                new Arg({ name: 'command', types: [ArgType.COMMAND] }),
-                new Arg({ name: 'tag' })
-            ]
-        })
+                new Arg({ name: "command", types: [ArgType.COMMAND] }),
+                new Arg({ name: "tag" }),
+            ],
+        });
     }
-    async run(data: CommandContext) {
-        let command: Command = data.args.get('command')
-        let tag: string = data.args.get('tag')
-        let tags = await command.getPermissions(true)
+    public async run(data: CommandContext) {
+        const command: Command = data.args.get("command");
+        const tag: string = data.args.get("tag");
+        let tags = await command.getPermissions(true);
         if (tags.includes(tag)) {
-            tags = tags.filter((tag) => { return tag !== tag })
+            tags = tags.filter((tag) => tag !== tag);
             command.setPermissions(tags).then(() => {
-                data.say(`:white_check_mark: Successfully removed tag '${tag}' from command \`${command.getFullName()}\``)
-            })
+                data.say(`:white_check_mark: Successfully removed tag '${tag}' from command \`${command.getFullName()}\``);
+            });
         } else {
-            data.say(`:x: Command \`${command.getFullName()}\` doesn't have tag '${tag}'`)
+            data.say(`:x: Command \`${command.getFullName()}\` doesn't have tag '${tag}'`);
         }
     }
 }

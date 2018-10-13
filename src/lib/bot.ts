@@ -1,174 +1,192 @@
-import { Client } from 'eris'
-import * as fs from 'fs'
+import { Client } from "eris";
+import * as fs from "fs";
 
-import Logger from './util/logger'
-import DatabaseClient, { ConnectionOptions } from './database/database-manager'
-import Config from './config'
-import { CommandManager } from './module/command/command-manager'
-import { ModuleManager, ModuleLoader } from './module/module-manager'
-import Module from './module/module'
-import { EventManager } from './module/event/event-manager'
-import BotUtil, { pathExists, createDirectory, getInput } from './util/util'
-import { Db } from '../../node_modules/@types/mongodb'
+import { Db } from "../../node_modules/@types/mongodb";
+import Config from "./config";
+import DatabaseClient, { ConnectionOptions } from "./database/database-manager";
+import { CommandManager } from "./module/command/command-manager";
+import { EventManager } from "./module/event/event-manager";
+import Module from "./module/module";
+import { ModuleLoader, ModuleManager } from "./module/module-manager";
+import Logger from "./util/logger";
+import BotUtil, { createDirectory, getInput, pathExists } from "./util/util";
 
 export default class Bot {
-
-  private directory: string
-  private logger: Logger
-  private util: BotUtil
-  private databaseClient: DatabaseClient
-  private moduleManager: ModuleManager
-  private commandManager: CommandManager
-  private eventManager: EventManager
-  private client: Client
-  private config: Config
+  private directory: string;
+  private logger: Logger;
+  private util: BotUtil;
+  private databaseClient: DatabaseClient;
+  private moduleManager: ModuleManager;
+  private commandManager: CommandManager;
+  private eventManager: EventManager;
+  private client: Client;
+  private config: Config;
 
   constructor(directory: string) {
-    this.directory = directory
-    this.logger = new Logger('bot-core')
-    this.util = new BotUtil(this)
-    this.databaseClient = null
-    this.moduleManager = new ModuleManager(this)
-    this.client = new Client(this.config.token, {})
-    this.config = null
+    this.directory = directory;
+    this.logger = new Logger("bot-core");
+    this.util = new BotUtil(this);
+    this.databaseClient = null;
+    this.moduleManager = new ModuleManager(this);
+    this.client = new Client(this.config.token, {});
+    this.config = null;
   }
 
-  onrestart(bot: Bot, err?: Error) { }
-
-  load(): Promise<void> {
+  public load(): Promise<void> {
     return new Promise(async (resolve, reject) => {
-      this.logger = new Logger('bot-core')
-      this.logger.log('Loading...')
-      this.util = new BotUtil(this)
-      this.loadConfig('config.json')
-      this.databaseClient = new DatabaseClient({
-        uri: this.config.dbURI,
-        user: this.config.dbUser,
-        password: this.config.dbPassword
-      }, this.logger)
-      if (!pathExists(this.directory)) createDirectory(this.directory)
-      this.moduleManager.loadDirectory(`${__dirname}/default-modules`)
-      this.moduleManager.addLoader(new ModuleLoader(this.directory, this))
-      this.logger.success('Successfully loaded.')
-      resolve()
-    })
+      this.logger = new Logger("bot-core");
+      this.logger.log("Loading...");
+      this.util = new BotUtil(this);
+      this.loadConfig("config.json");
+      this.databaseClient = new DatabaseClient(
+        {
+          password: this.config.dbPassword,
+          uri: this.config.dbURI,
+          user: this.config.dbUser
+        },
+        this.logger
+      );
+      if (!pathExists(this.directory)) {
+        createDirectory(this.directory);
+      }
+      this.moduleManager.loadDirectory(`${__dirname}/default-modules`);
+      this.moduleManager.addLoader(new ModuleLoader(this.directory, this));
+      this.logger.success("Successfully loaded.");
+      resolve();
+    });
   }
 
-  getModule(name: string): Module {
-    return this.moduleManager.find(name).data.element
+  public getModule(name: string): Module {
+    return this.moduleManager.find(name).data.element;
   }
 
-  connect(): Promise<void> {
+  public connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger.log('Connecting...')
-      this.client.on('ready', () => {
-        this.logger.success('Successfully connected.')
-        resolve()
-      })
-      this.client.connect()
-    })
+      this.logger.log("Connecting...");
+      this.client.on("ready", () => {
+        this.logger.success("Successfully connected.");
+        resolve();
+      });
+      this.client.connect();
+    });
   }
 
-  async loadConfig(file: string): Promise<void> {
-    let writeConfig = (config) => {
-      fs.writeFileSync(`${this.directory}/${file}`, JSON.stringify(config, null, '\t'))
-    }
+  public async loadConfig(file: string): Promise<void> {
+    const writeConfig = config => {
+      fs.writeFileSync(
+        `${this.directory}/${file}`,
+        JSON.stringify(config, null, "\t")
+      );
+    };
 
     if (fs.existsSync(`${this.directory}/${file}`)) {
-      let config = require(`${this.directory}/${file}`)
-      let updated = false
-      let neededConfig = new Config()
-      for (let key in neededConfig) {
+      const config = require(`${this.directory}/${file}`);
+      let updated = false;
+      const neededConfig = new Config();
+      for (const key in neededConfig) {
         if (config[key] == null && neededConfig[key] === undefined) {
-          if (!updated) this.logger.warn(`Config is not completed! Please fill in the following values...`)
-          process.stdout.write(this.logger.getLogString(key))
-          config[key] = await getInput()
-          updated = true
+          if (!updated) {
+            this.logger.warn(
+              `Config is not completed! Please fill in the following values...`
+            );
+          }
+          process.stdout.write(this.logger.getLogString(key));
+          config[key] = await getInput();
+          updated = true;
         }
       }
       if (updated) {
-        writeConfig(config)
-        this.logger.success('Config file updated.')
+        writeConfig(config);
+        this.logger.success("Config file updated.");
       }
-      this.config = config
+      this.config = config;
     } else {
-      this.logger.warn('No config file detected!\nCreating new config file...')
-      let config = new Config()
-      for (let key in config) {
-        process.stdout.write(this.logger.getLogString(`Enter ${key}: `))
-        if (config[key] == null) config[key] = await getInput()
+      this.logger.warn("No config file detected!\nCreating new config file...");
+      const config = new Config();
+      for (const key in config) {
+        if (config.hasOwnProperty(key)) {
+          process.stdout.write(this.logger.getLogString(`Enter ${key}: `));
+          if (config[key] == null) {
+            config[key] = await getInput();
+          }
+        }
       }
-      writeConfig(config)
-      this.logger.success('Config file generated')
-      this.config = config
+      writeConfig(config);
+      this.logger.success("Config file generated");
+      this.config = config;
     }
   }
 
-  start(): Promise<void> {
+  public start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger.info('Starting bot...')
+      this.logger.info("Starting bot...");
       this.load().then(() => {
-        this.connect().then(resolve, reject)
-      }, reject)
-    })
+        this.connect().then(resolve, reject);
+      }, reject);
+    });
   }
 
-  //replace with an exit, dummy, and find a way to make stop actually stop it
-  restart(reloadFiles: boolean = false): Promise<Bot> {
+  // replace with an exit, dummy, and find a way to make stop actually stop it
+  public restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
-      this.logger.info('Restarting...')
-      this.client.disconnect({ reconnect: false })
+      this.logger.info("Restarting...");
+      this.client.disconnect({ reconnect: false });
       if (reloadFiles) {
-        Object.keys(require.cache).forEach(function (key) { if (!key.includes('node_modules')) delete require.cache[key] })
-        let NewCatbot = require(__filename).default
-        let bot = new NewCatbot(this.directory)
-        bot.start().then(() => {
-          this.onrestart(bot)
-          resolve(bot)
-        }, err => {
-          this.onrestart(bot, err)
-          reject(err)
-        })
+        Object.keys(require.cache).forEach(key => {
+          if (!key.includes("node_modules")) {
+            delete require.cache[key];
+          }
+        });
+        const NewCatbot = require(__filename).default;
+        const bot = new NewCatbot(this.directory);
+        bot.start().then(
+          () => {
+            resolve(bot);
+          },
+          err => {
+            reject(err);
+          }
+        );
       } else {
-        this.start().then(resolve.bind(null, this), reject.bind(null, this))
+        this.start().then(resolve.bind(null, this), reject.bind(null, this));
       }
-    })
+    });
   }
 
-  stop() {
-    this.logger.info('Stopping...')
-    this.client.disconnect({ reconnect: false })
+  public stop() {
+    this.logger.info("Stopping...");
+    this.client.disconnect({ reconnect: false });
   }
 
-  getCommandManager(): CommandManager {
-    return this.commandManager
+  public getCommandManager(): CommandManager {
+    return this.commandManager;
   }
 
-  getEventManager(): EventManager {
-    return this.eventManager
+  public getEventManager(): EventManager {
+    return this.eventManager;
   }
 
-  getLogger(): Logger {
-    return this.logger
+  public getLogger(): Logger {
+    return this.logger;
   }
 
-  getUtil(): BotUtil {
-    return this.util
+  public getUtil(): BotUtil {
+    return this.util;
   }
 
-  getDBManager(): DatabaseClient {
-    return this.databaseClient
+  public getDBManager(): DatabaseClient {
+    return this.databaseClient;
   }
 
-  db(): Db {
-    return this.databaseClient.db('bot')
+  public db(): Db {
+    return this.databaseClient.db("bot");
   }
 
-  getClient() {
-    return this.client
+  public getClient() {
+    return this.client;
   }
 
-  getConfig() {
-    return this.config
+  public getConfig() {
+    return this.config;
   }
 }

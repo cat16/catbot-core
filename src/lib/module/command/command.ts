@@ -1,142 +1,152 @@
-import { Message, MessageContent } from 'eris'
+import { Message, MessageContent } from "eris";
 
-import { RecursiveElement, RecursiveElementLoader, ElementGroup, ElementGenerationFunction } from '../../handler'
-import Arg from './arg'
-import Logger from '../../util/logger'
-import Bot from '../../bot'
-import Module from '../module'
+import Bot from "../../bot";
+import {
+  ElementGenerationFunction,
+  ElementGroup,
+  RecursiveElement,
+  RecursiveElementLoader
+} from "../../handler";
+import Logger from "../../util/logger";
+import Module from "../module";
+import Arg from "./arg/arg";
+import { CommandLoader } from "./command-manager";
 
 export class ArgList {
-
-  private args: Map<string, any>
-  public content: string
+  public content: string;
+  private args: Map<string, any>;
 
   constructor(args: Map<string, any>, content: string) {
-    this.args = args
-    this.content = content
+    this.args = args;
+    this.content = content;
   }
 
-  get(arg: string): any {
-    return this.args.get(arg)
+  public get(arg: string): any {
+    return this.args.get(arg);
   }
 }
 
 export class CommandContext {
-
-  public bot: Bot
-  public msg: Message
-  public args: ArgList
+  public bot: Bot;
+  public msg: Message;
+  public args: ArgList;
 
   constructor(bot, msg, args: ArgList) {
-    this.bot = bot
-    this.msg = msg
-    this.args = args
+    this.bot = bot;
+    this.msg = msg;
+    this.args = args;
   }
 
-  say(msg: MessageContent): Promise<Message> {
-    return this.msg.channel.createMessage(msg)
+  public say(msg: MessageContent): Promise<Message> {
+    return this.msg.channel.createMessage(msg);
   }
 }
 
 export abstract class ModuleData {
-  name: string
+  public name: string;
   constructor(name: string) {
-    this.name = name
+    this.name = name;
   }
 }
 
 export interface CommandOptions {
-  name: string
-  aliases?: string[]
-  args?: Arg[]
-  silent?: boolean
+  name: string;
+  aliases?: string[];
+  args?: Arg[];
+  silent?: boolean;
 }
 
 export interface CommandConstructionData {
-  bot: Bot,
-  manager: RecursiveElementLoader<Command>,
-  parent?: Command
+  bot: Bot;
+  manager: CommandLoader;
+  parent?: Command;
 }
 
-export type CommandOrGroup = Command | CommandGroup
+export type CommandOrGroup = Command | CommandGroup;
 
-export class CommandGroup extends ElementGroup<Command> {
+export class CommandGroup extends ElementGroup<Command, CommandLoader> {
+  private name: string;
 
-  private name: string
-
-  constructor(directory: string, generateElement: ElementGenerationFunction<Command>) {
-    super(directory, generateElement)
-    this.name = directory
+  constructor(
+    directory: string,
+    generateElement: ElementGenerationFunction<Command>
+  ) {
+    super(directory, generateElement);
+    this.name = directory;
   }
 
-  getName(): string {
-    return this.name
+  public getName(): string {
+    return this.name;
   }
 }
 
-//TODO: Make more things private
+// TODO: Make more things private
 export default abstract class Command implements RecursiveElement {
+  public name: string;
+  public args: Arg[];
+  public silent: boolean;
 
-  name: string
+  public logger: Logger;
 
-  private aliases: string[]
-  private manager: RecursiveElementLoader<Command>
-  args: Arg[]
-  silent: boolean
-  private module: Module
+  private aliases: string[];
+  private manager: CommandLoader;
+  private module: Module;
+  private parent?: Command;
 
-  logger: Logger
-  private parent?: Command
-
-  private currentMsg: Message
+  private currentMsg: Message;
 
   constructor(data: CommandConstructionData, options: CommandOptions) {
-    this.name = options.name
+    this.name = options.name;
 
-    this.aliases = options.aliases || []
-    this.manager = data.manager
-    this.args = options.args || []
-    this.silent = options.silent || false
-    this.parent = data.parent
-    this.module = null
+    this.aliases = options.aliases || [];
+    this.manager = data.manager;
+    this.args = options.args || [];
+    this.silent = options.silent || false;
+    this.parent = data.parent;
+    this.module = null;
 
-    this.logger = new Logger(`command::${this.getFullName()}`, data.bot.getLogger())
+    this.logger = new Logger(
+      `command::${this.getFullName()}`,
+      data.bot.getLogger()
+    );
   }
 
-  abstract run(data: CommandContext): void
-  hasPermission(context: CommandContext): Promise<boolean> | boolean {
-    return false
+  public abstract run(data: CommandContext): void;
+  public hasPermission(context: CommandContext): Promise<boolean> | boolean {
+    return false;
   }
 
-  getElementManager(): RecursiveElementLoader<Command> {
-    return this.manager
+  public getElementLoader(): CommandLoader {
+    return this.manager;
   }
 
-  getParent(): Command {
-    return this.parent
+  public getParent(): Command {
+    return this.parent;
   }
 
-  getName(): string {
-    return this.name
+  public getName(): string {
+    return this.name;
   }
 
-  getFullName(): string {
-    return this.parent == null ? this.name : `${this.parent.getFullName()} ${this.name}`
+  public getFullName(): string {
+    return this.parent == null
+      ? this.name
+      : `${this.parent.getFullName()} ${this.name}`;
   }
 
-  getSubcommands(): CommandOrGroup[] {
-    return this.manager.getAllElements()
+  public getSubcommands(): CommandOrGroup[] {
+    return this.manager.getAllElements();
   }
 
-  getAliases(): string[] {
-    return this.aliases
+  public getAliases(): string[] {
+    return this.aliases;
   }
 
-  getTriggers(): string[] {
-    return [this.name].concat(this.aliases)
+  public getTriggers(): string[] {
+    return [this.name].concat(this.aliases);
   }
 
-  getModule(): Module {
-    return this.module
+  public getModule(): Module {
+    return this.module;
   }
 }

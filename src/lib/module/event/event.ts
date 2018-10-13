@@ -1,28 +1,25 @@
-import Bot from '../../bot'
-import { Element } from '../../handler'
+import Bot from "../../bot";
+import FileElement from "../../element/file-element";
 
 export enum EventType {
   Client
 }
 
 export interface EventOptions {
-  name: string
-  type: EventType
+  type: EventType;
 }
 
-export default abstract class Event implements Element {
+export default abstract class Event extends FileElement {
+  public type: EventType;
 
-  name: string
-  type: EventType
-
-  constructor (options: EventOptions) {
-    this.name = options.name
-    this.type = options.type
+  constructor(options: EventOptions) {
+    super(path);
+    this.type = options.type;
   }
 
-  abstract run(bot: Bot, ...args): void
+  public abstract run(bot: Bot, ...args): void;
 
-  getTriggers(): string[] {
-    return [name]
+  public getTriggers(): string[] {
+    return [name];
   }
 }

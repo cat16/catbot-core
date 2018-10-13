@@ -22,13 +22,16 @@
   },
   "homepage": "https://github.com/cat16/bot-core#readme",
   "dependencies": {
-    "@types/mongodb": "^3.1.2",
     "chalk": "^2.4.1",
     "eris": "^0.8.6",
-    "mongodb": "^3.1.1"
+    "mongodb": "^3.1.8"
   },
   "devDependencies": {
-    "@types/node": "^10.5.6",
-    "typescript": "^3.0.1"
+    "@types/mongodb": "^3.1.12",
+    "@types/node": "^10.11.7",
+    "prettier": "1.14.2",
+    "tslint": "^5.11.0",
+    "tslint-config-prettier": "^1.15.0",
+    "typescript": "^3.1.3"
   }
 }

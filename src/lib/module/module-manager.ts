@@ -1,33 +1,35 @@
-import { ElementManager, ElementLoader, FlatElementLoader } from '../handler'
-import Module from './module'
 import { Bot } from '../..';
+import {
+  ElementLoader,
+  ElementManager,
+  FlatElementLoader
+} from '../element/loader/';
+import Module from './module';
 
 export class ModuleLoader extends FlatElementLoader<Module> {
-    constructor(directory: string, bot: Bot) {
-        super(
-            directory,
-            (rawElement) => {
-                return new rawElement({
-                    bot: bot,
-                    directory: directory
-                })
-            },
-            false
-        )
-    }
+  constructor(directory: string, bot: Bot) {
+    super(
+      directory,
+      rawElement => {
+        return new rawElement({
+          bot,
+          directory
+        });
+      },
+      false
+    );
+  }
 }
 
 export class ModuleManager extends ElementManager<Module> {
+  public bot: Bot;
 
-    bot: Bot
+  constructor(bot: Bot) {
+    super();
+    this.bot = bot;
+  }
 
-    constructor(bot: Bot) {
-        super()
-        this.bot = bot
-    }
-
-    loadDirectory(directory: string) {
-        this.addLoader(new ModuleLoader(directory, this.bot))
-    }
-
+  public loadDirectory(directory: string) {
+    this.addLoader(new ModuleLoader(directory, this.bot));
+  }
 }

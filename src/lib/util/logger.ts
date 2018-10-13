@@ -1,114 +1,85 @@
-import chalk from 'chalk'
+import chalk from "chalk";
+import MsgType from "./msg-type";
 
-let twoDigit = (num: string) => {
-  return num.length === 1 ? `0${num}` : num
-}
-
-export enum MsgType {
-  INFO = 'info',
-  SUCCESS = 'success',
-  WARN = 'warn',
-  ERROR = 'error',
-  DEBUG = 'debug'
-}
+const twoDigit = (num: string) => {
+  return num.length === 1 ? `0${num}` : num;
+};
 
 export default class Logger {
-
-  name: string
+  public name: string;
 
   constructor(name: string, parent?: Logger, field?: string) {
-    name = chalk.cyan(name)
-    name = parent == null ? name : `${parent.name}${chalk.gray('->')}${name}`
-    name = field == null ? name : `${name}::${field}`
-    this.name = name
+    name = chalk.cyan(name);
+    name = parent == null ? name : `${parent.name}${chalk.gray("->")}${name}`;
+    name = field == null ? name : `${name}::${field}`;
+    this.name = name;
   }
 
-  getLogString(msg: string, type: MsgType = MsgType.INFO) {
-    let d = new Date()
-    let year = `${d.getFullYear()}`
-    let month = `${d.getMonth() + 1}`
-    let day = `${d.getDate()}`
-    let hour = `${d.getHours()}`
-    let min = `${d.getMinutes()}`
-    let sec = `${d.getSeconds()}`
-    month = twoDigit(month)
-    day = twoDigit(day)
-    hour = twoDigit(hour)
-    sec = twoDigit(sec)
-    let date = `${day}-${month}-${year}|${hour}:${min}:${sec}`
-    let typestr = `${type}`
-    switch (type) {
-      case MsgType.INFO:
-        typestr = chalk.blue(typestr)
-        break
-      case MsgType.SUCCESS:
-        typestr = chalk.green(typestr)
-        break
-      case MsgType.WARN:
-        typestr = chalk.yellow(typestr)
-        break
-      case MsgType.ERROR:
-        typestr = chalk.red(typestr)
-        break
-      case MsgType.DEBUG:
-        typestr = chalk.yellow(typestr)
-        break
-    }
-    return `[${chalk.gray(date)}] [${this.name}] [${typestr}] ${msg}`
+  public getLogString(msg: string, msgType: MsgType = MsgType.INFO) {
+    const date = chalk.gray(this.getLogDateString(new Date()));
+    const name = this.name;
+    const type = msgType.getColoredName();
+    return `[${date}] [${name}] [${type}] ${msg}`;
+  }
+
+  public getLogDateString(d: Date): string {
+    const year = `${d.getFullYear()}`;
+    const month = twoDigit(`${d.getMonth() + 1}`);
+    const day = twoDigit(`${d.getDate()}`);
+    const hour = twoDigit(`${d.getHours()}`);
+    const min = twoDigit(`${d.getMinutes()}`);
+    const sec = twoDigit(`${d.getSeconds()}`);
+    return `${day}-${month}-${year}|${hour}:${min}:${sec}`;
   }
 
   /**
    * prints general information to the console
    */
-  info(msg: string) {
-    this.log(msg, MsgType.INFO)
+  public info(msg: string, newLine = true) {
+    this.log(msg, newLine, MsgType.INFO);
   }
 
   /**
    * prints a success to the console
    */
-  success(msg) {
-    this.log(msg, MsgType.SUCCESS)
+  public success(msg: string, newLine = true) {
+    this.log(msg, newLine, MsgType.SUCCESS);
   }
 
   /**
    * prints a warning to the console
    */
-  warn(msg: string) {
-    this.log(msg, MsgType.WARN)
+  public warn(msg: string, newLine = true) {
+    this.log(msg, newLine, MsgType.WARN);
   }
 
   /**
    * prints an error to the console
    */
-  error(msg: string) {
-    this.log(msg, MsgType.ERROR)
+  public error(msg: string, newLine = true) {
+    this.log(msg, newLine, MsgType.ERROR);
   }
 
   /**
    * prints debug information to the console
    */
-  debug(msg: string) {
-    this.log(msg, MsgType.DEBUG)
+  public debug(msg: string, newLine = true) {
+    this.log(msg, newLine, MsgType.DEBUG);
   }
 
   /**
    * logs a message to the console
    */
-  log(msg: string, type?: MsgType) {
-    let send = this.getLogString(msg, type)
+  public log(msg: string, newLine = true, type?: MsgType) {
+    const send = this.getLogString(msg, type);
     switch (type) {
       default:
-      case MsgType.DEBUG:
-      case MsgType.INFO:
-        console.log(send)
-        break
+        process.stdout.write(`${send}${newLine ? `\n` : ``}`);
+        break;
       case MsgType.WARN:
-        console.warn(send)
-        break
       case MsgType.ERROR:
-        console.error(send)
-        break
+        process.stderr.write(`${send}${newLine ? `\n` : ``}`);
+        break;
     }
   }
 }
