@@ -5,15 +5,21 @@ export enum EventType {
   Client
 }
 
+export interface EventConstuctionData {
+  path: string;
+  bot: Bot;
+}
+
 export interface EventOptions {
   type: EventType;
 }
 
 export default abstract class Event extends FileElement {
-  public type: EventType;
+  private type: EventType;
+  private bot: Bot;
 
-  constructor(options: EventOptions) {
-    super(path);
+  constructor(data: EventConstuctionData, options: EventOptions) {
+    super(data.path);
     this.type = options.type;
   }
 
@@ -21,5 +27,13 @@ export default abstract class Event extends FileElement {
 
   public getTriggers(): string[] {
     return [name];
+  }
+
+  public getType(): EventType {
+    return this.type;
+  }
+
+  public getBot(): Bot {
+    return this.bot;
   }
 }

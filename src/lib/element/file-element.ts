@@ -1,11 +1,11 @@
 export default class FileElement {
-  private path: string;
+  private fileName: string;
 
   constructor(path: string) {
-    this.path = path;
+    this.fileName = path;
   }
 
-  public getPath(): string {
-    return this.path;
+  public getFileName(): string {
+    return this.fileName;
   }
 }
