@@ -1,35 +1,29 @@
-import { Bot } from '../..';
-import {
-  ElementLoader,
-  ElementManager,
-  FlatElementLoader
-} from '../element/loader/';
-import Module from './module';
+import { Bot, ModuleConstructionData } from "../..";
+import ElementDirectoryManager from "../element/manager/element-directory-manager";
+import { loadDirFlat } from "../element/manager/load";
+import Logger from "../util/logger";
+import BotModule from "./module";
 
-export class ModuleLoader extends FlatElementLoader<Module> {
+export class ModuleManager extends ElementDirectoryManager<BotModule> {
+  public bot: Bot;
+
   constructor(directory: string, bot: Bot) {
     super(
       directory,
-      rawElement => {
-        return new rawElement({
-          bot,
-          directory
-        });
-      },
-      false
+      (dir: string) =>
+        loadDirFlat(
+          dir,
+          ModuleClass => {
+            let data: ModuleConstructionData = {
+              directory: dir,
+              bot: this.bot
+            };
+            return new ModuleClass(data);
+          },
+          { targetFile: "module" }
+        ),
+      new Logger("Module Manager", bot.getLogger())
     );
-  }
-}
-
-export class ModuleManager extends ElementManager<Module> {
-  public bot: Bot;
-
-  constructor(bot: Bot) {
-    super();
     this.bot = bot;
-  }
-
-  public loadDirectory(directory: string) {
-    this.addLoader(new ModuleLoader(directory, this.bot));
   }
 }

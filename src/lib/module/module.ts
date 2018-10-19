@@ -1,7 +1,8 @@
-import { Bot } from '../..';
-import FileElement from '../element/file-element';
-import { CommandLoader } from './command/command-manager';
-import { EventLoader } from './event/event-manager';
+import { Bot } from "../..";
+import FileElement from "../element/file-element";
+import { CommandLoader } from "./command/command-manager";
+import { EventLoader } from "./event/event-manager";
+import NamedElement from "../element/named-element";
 
 export interface ModuleConstructionData {
   directory: string;
@@ -14,7 +15,8 @@ export interface ModuleOptions {
   defaultData?: object;
 }
 
-export default abstract class Module extends FileElement {
+export default abstract class BotModule extends FileElement
+  implements NamedElement {
   public bot: Bot;
   private name: string;
   private commandManager: CommandLoader;
@@ -28,11 +30,11 @@ export default abstract class Module extends FileElement {
     this.bot = data.bot;
   }
 
-  public getTriggers(): string[] {
-    return [this.name];
+  public getAliases(): string[] {
+    return [];
   }
 
-  public getName() {
+  public getName(): string {
     return this.name;
   }
 
