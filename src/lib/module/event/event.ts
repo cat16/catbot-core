@@ -5,8 +5,8 @@ export enum EventType {
   Client
 }
 
-export interface EventConstuctionData {
-  path: string;
+export interface EventConstructionData {
+  fileName: string;
   bot: Bot;
 }
 
@@ -14,12 +14,12 @@ export interface EventOptions {
   type: EventType;
 }
 
-export default abstract class Event extends FileElement {
+export default abstract class BotEvent extends FileElement {
   private type: EventType;
   private bot: Bot;
 
-  constructor(data: EventConstuctionData, options: EventOptions) {
-    super(data.path);
+  constructor(data: EventConstructionData, options: EventOptions) {
+    super(data.fileName);
     this.type = options.type;
   }
 
