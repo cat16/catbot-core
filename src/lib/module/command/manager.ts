@@ -2,17 +2,18 @@ import chalk from "chalk";
 import { Message, User } from "eris";
 
 import { Collection } from "mongodb";
-import Bot from "../../bot";
-import Logger from "../../util/logger";
-import ArgType from "./arg/arg-type";
 import Command, {
   ArgList,
   CommandContext,
   CommandGroup,
   CommandOrGroup
-} from "./command";
-import CommandError from "./command-error";
-import CommandResult from "./command-result";
+} from ".";
+import Bot from "../../bot";
+import NamedElementDirectoryManager from "../../element/manager/names-element-directory-manager";
+import Logger from "../../util/logger";
+import ArgType from "./arg/type";
+import CommandError from "./error";
+import CommandResult from "./result";
 import ITrigger from "./trigger";
 
 const startsWithAny = (str: string, arr: string[]): string => {
@@ -27,13 +28,14 @@ const startsWithAny = (str: string, arr: string[]): string => {
 
 export type PermCheck = (command: CommandOrGroup, user: User) => boolean;
 
-export class CommandManager extends ElementManager<CommandOrGroup> {
+export class CommandManager extends NamedElementDirectoryManager<
+  CommandOrGroup
+> {
   public permChecks: PermCheck[];
   public bot: Bot;
 
   public prefixes: string[];
   public lastTriggered: object;
-  public logger: Logger;
 
   constructor(bot: Bot) {
     super();

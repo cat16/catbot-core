@@ -1,8 +1,8 @@
 import { Bot } from "../..";
-import FileElement from "../element/file-element";
-import { CommandLoader } from "./command/command-manager";
-import { EventLoader } from "./event/event-manager";
-import NamedElement from "../element/named-element";
+import FileElement from "../file-element/file-element";
+import NamedElement from "../file-element/named-element";
+import { CommandManager } from "./command/manager";
+import { EventManager } from "./event/event-manager";
 
 export interface ModuleConstructionData {
   directory: string;
@@ -19,13 +19,13 @@ export default abstract class BotModule extends FileElement
   implements NamedElement {
   public bot: Bot;
   private name: string;
-  private commandManager: CommandLoader;
-  private eventManager: EventLoader;
+  private commandManager: CommandManager;
+  private eventManager: EventManager;
 
   constructor(data: ModuleConstructionData, options: ModuleOptions) {
     super(data.directory);
-    this.commandManager = new CommandLoader(data.directory);
-    this.eventManager = new EventLoader(data.directory);
+    this.commandManager = new CommandManager(data.directory, data.bot);
+    this.eventManager = new EventManager(data.directory, data.bot);
     this.name = options.name;
     this.bot = data.bot;
   }
@@ -38,11 +38,11 @@ export default abstract class BotModule extends FileElement
     return this.name;
   }
 
-  public getCommandManager(): CommandLoader {
+  public getCommandManager(): CommandManager {
     return this.commandManager;
   }
 
-  public getEventManager(): EventLoader {
+  public getEventManager(): EventManager {
     return this.eventManager;
   }
 }

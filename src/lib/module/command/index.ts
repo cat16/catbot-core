@@ -1,53 +1,9 @@
 import { Message, MessageContent } from "eris";
 
 import Bot from "../../bot";
-import {
-  ElementGenerationFunction,
-  ElementGroup,
-  RecursiveElement,
-  RecursiveElementLoader
-} from "../../handler";
 import Logger from "../../util/logger";
 import Module from "../module";
-import Arg from "./arg/arg";
-import { CommandLoader } from "./command-manager";
-
-export class ArgList {
-  public content: string;
-  private args: Map<string, any>;
-
-  constructor(args: Map<string, any>, content: string) {
-    this.args = args;
-    this.content = content;
-  }
-
-  public get(arg: string): any {
-    return this.args.get(arg);
-  }
-}
-
-export class CommandContext {
-  public bot: Bot;
-  public msg: Message;
-  public args: ArgList;
-
-  constructor(bot, msg, args: ArgList) {
-    this.bot = bot;
-    this.msg = msg;
-    this.args = args;
-  }
-
-  public say(msg: MessageContent): Promise<Message> {
-    return this.msg.channel.createMessage(msg);
-  }
-}
-
-export abstract class ModuleData {
-  public name: string;
-  constructor(name: string) {
-    this.name = name;
-  }
-}
+import Arg from "./arg";
 
 export interface CommandOptions {
   name: string;
@@ -58,26 +14,7 @@ export interface CommandOptions {
 
 export interface CommandConstructionData {
   bot: Bot;
-  manager: CommandLoader;
   parent?: Command;
-}
-
-export type CommandOrGroup = Command | CommandGroup;
-
-export class CommandGroup extends ElementGroup<Command, CommandLoader> {
-  private name: string;
-
-  constructor(
-    directory: string,
-    generateElement: ElementGenerationFunction<Command>
-  ) {
-    super(directory, generateElement);
-    this.name = directory;
-  }
-
-  public getName(): string {
-    return this.name;
-  }
 }
 
 // TODO: Make more things private
@@ -88,10 +25,7 @@ export default abstract class Command implements RecursiveElement {
 
   public logger: Logger;
 
-  private aliases: string[];
-  private manager: CommandLoader;
   private module: Module;
-  private parent?: Command;
 
   private currentMsg: Message;
 

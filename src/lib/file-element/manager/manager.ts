@@ -36,4 +36,8 @@ export default class ElementDirectoryManager<E extends FileElement> {
   public getElements(): E[] {
     return this.elements;
   }
+
+  public getLogger(): Logger {
+    return this.logger;
+  }
 }

@@ -49,7 +49,9 @@ export function loadDirFlat<E extends FileElement>(
   requireFiles(
     files.map(file => (targetFile ? `${file}/${targetFile}` : file))
   ).forEach((rawElement, fileName) => {
-    if (targetFile) fileName = fileName.slice(fileName.indexOf("/") + 1);
+    if (targetFile) {
+      fileName = fileName.slice(fileName.indexOf("/") + 1);
+    }
     let element;
     try {
       element =

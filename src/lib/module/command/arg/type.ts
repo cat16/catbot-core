@@ -1,5 +1,5 @@
-import ArgResult from "./arg-result";
-import ArgTypeOptions, { ValidateFunction } from "./arg-type-options";
+import ArgResult from "./result";
+import ArgTypeOptions, { ValidateFunction } from "./type-options";
 
 export default class ArgType {
   public static ANY = new ArgType({

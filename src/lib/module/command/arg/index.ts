@@ -1,5 +1,5 @@
-import ArgOptions from "./arg-options";
-import ArgType from "./arg-type";
+import ArgOptions from "./options";
+import ArgType from "./type";
 
 export default class Arg {
   public name: string;

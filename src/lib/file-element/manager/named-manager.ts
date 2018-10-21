@@ -1,7 +1,7 @@
 import FileElement from "../file-element";
 import NamedElement from "../named-element";
-import ElementDirectoryManager from "./element-directory-manager";
 import RecursiveFileElement from "../recursive-file-element";
+import ElementDirectoryManager from "./manager";
 
 export interface NamedElementSearchOptions {
   useAliases: boolean;
@@ -24,14 +24,19 @@ export default class NamedElementDirectoryManager<
     let element: E;
 
     element = elements.find(e => name.startsWith(e.getName()));
-    if (element.getName() === name) return element;
-    if (element instanceof RecursiveFileElement)
+    if (element.getName() === name) {
+      return element;
+    }
+    if (element instanceof RecursiveFileElement) {
       element = this.findRecursive(
         name.slice(element.getName().length + 1),
         options,
         element.getChildren()
       );
-    if (element || !options.useAliases) return element;
+    }
+    if (element || !options.useAliases) {
+      return element;
+    }
 
     let alias: string;
     element = elements.find(e =>
@@ -43,13 +48,16 @@ export default class NamedElementDirectoryManager<
         return false;
       })
     );
-    if (element.getName() === name) return element;
-    if (element instanceof RecursiveFileElement)
+    if (element.getName() === name) {
+      return element;
+    }
+    if (element instanceof RecursiveFileElement) {
       element = this.findRecursive(
         name.slice(alias.length + 1),
         options,
         element.getChildren()
       );
+    }
     return null;
   }
 }

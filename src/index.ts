@@ -5,8 +5,8 @@ export {
   CommandContext,
   CommandConstructionData,
   ModuleData
-} from "./lib/module/command/command";
+} from "./lib/module/command";
 export { default as Event, EventType } from "./lib/module/event/event";
-export { default as Arg, ArgType } from "./lib/module/command/arg/arg";
+export { default as Arg, ArgType } from "./lib/module/command/arg";
 export { default as Logger } from "./lib/util/logger";
 export * from "./lib/util/util";

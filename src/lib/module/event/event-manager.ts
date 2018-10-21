@@ -1,8 +1,8 @@
-import BotEvent, { EventConstructionData } from "./event";
-import ElementDirectoryManager from "../../element/manager/element-directory-manager";
 import Bot from "../../bot";
+import { loadDirFlat } from "../../file-element/manager/load";
+import ElementDirectoryManager from "../../file-element/manager/manager";
 import Logger from "../../util/logger";
-import { loadDirFlat } from "../../element/manager/load";
+import BotEvent, { EventConstructionData } from "./event";
 
 export class EventManager extends ElementDirectoryManager<BotEvent> {
   public bot: Bot;
@@ -12,8 +12,8 @@ export class EventManager extends ElementDirectoryManager<BotEvent> {
       directory,
       (dir: string) =>
         loadDirFlat(dir, EventClass => {
-          let data: EventConstructionData = {
-            fileName: dir, //wait what am I doing right here
+          const data: EventConstructionData = {
+            fileName: dir, // wait what am I doing right here
             bot: this.bot
           };
           return new EventClass(data);

@@ -1,5 +1,5 @@
 import Bot from "../../bot";
-import FileElement from "../../element/file-element";
+import FileElement from "../../file-element/file-element";
 
 export enum EventType {
   Client

@@ -4,7 +4,7 @@ import * as fs from "fs";
 import { Db } from "../../node_modules/@types/mongodb";
 import Config from "./config";
 import DatabaseClient, { ConnectionOptions } from "./database/database-manager";
-import { CommandManager } from "./module/command/command-manager";
+import { CommandManager } from "./module/command/manager";
 import { EventManager } from "./module/event/event-manager";
 import Module from "./module/module";
 import { ModuleLoader, ModuleManager } from "./module/module-manager";
