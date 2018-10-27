@@ -2,32 +2,10 @@ import { getDirectories, getFiles, requireFiles } from "../../util/util";
 import FileElement from "../file-element";
 import RecursiveFileElement from "../recursive-file-element";
 
-export function loadElement<E extends FileElement>(
-  directory: string,
-  path: string,
-  initFileElement: (rawElement: any) => E
-): E | Error {
-  try {
-    return initFileElement(import(`${directory}/${path}`));
-  } catch (err) {
-    return err;
-  }
-}
+export type ElementInitFunc<E> = (rawElement: any, fileName: string) => E;
 
-export function reloadElement<E extends FileElement>(
-  directory: string,
-  element: E,
-  initFileElement: (rawElement: any) => E
-): E | Error {
-  try {
-    const path =
-      element instanceof RecursiveFileElement
-        ? element.getFilePath()
-        : element.getFileName();
-    return initFileElement(import(`${directory}/${path}`));
-  } catch (err) {
-    return err;
-  }
+export function generateClassInit<E>(...args): ElementInitFunc<E> {
+  return (Class, fileName) => new Class(fileName, args);
 }
 
 export interface FlatLoadOptions {
@@ -36,7 +14,7 @@ export interface FlatLoadOptions {
 
 export function loadDirFlat<E extends FileElement>(
   directory: string,
-  initFileElement: (rawElement: any) => E,
+  initFileElement: ElementInitFunc<E>,
   options: FlatLoadOptions = {}
 ): Map<string, E | Error> {
   const targetFile = options.targetFile;
@@ -55,7 +33,9 @@ export function loadDirFlat<E extends FileElement>(
     let element;
     try {
       element =
-        rawElement instanceof Error ? rawElement : initFileElement(rawElement);
+        rawElement instanceof Error
+          ? rawElement
+          : initFileElement(rawElement, fileName);
     } catch (err) {
       element = err;
     }
@@ -64,9 +44,21 @@ export function loadDirFlat<E extends FileElement>(
   return elements;
 }
 
+export type RecursiveElementInitFunc<E> = (
+  rawElement: any,
+  fileName: string,
+  parent: E
+) => E;
+
+export function generateRecursiveClassInit<E>(
+  ...args
+): RecursiveElementInitFunc<E> {
+  return (Class, fileName, parent) => new Class(fileName, parent, args);
+}
+
 export function loadDirRecursive<E extends RecursiveFileElement<E>>(
   directory: string,
-  initFileElement: (rawElement: any, parent?: E) => E,
+  initFileElement: RecursiveElementInitFunc<E>,
   initDirElement: (name: string, parent?: E) => E,
   parent?: E
 ): Map<string, E | Error> {
@@ -78,7 +70,7 @@ export function loadDirRecursive<E extends RecursiveFileElement<E>>(
       elements.set(fileName, rawElement);
     } else {
       try {
-        const element: E = initFileElement(rawElement, parent);
+        const element: E = initFileElement(rawElement, fileName, parent);
         const dir = dirs.find(dirName => dirName === fileName);
         if (dir) {
           const contents = loadDirRecursive(

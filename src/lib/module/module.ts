@@ -2,7 +2,7 @@ import { Bot } from "../..";
 import FileElement from "../file-element/file-element";
 import NamedElement from "../file-element/named-element";
 import { CommandManager } from "./command/manager";
-import { EventManager } from "./event/event-manager";
+import { EventManager } from "./event/manager";
 
 export interface ModuleConstructionData {
   directory: string;

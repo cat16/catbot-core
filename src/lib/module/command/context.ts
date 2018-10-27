@@ -1,6 +1,6 @@
 import { Message, MessageContent } from "eris";
-import { ArgList } from ".";
-import { Bot } from "../../..";
+import Bot from "../../bot";
+import ArgList from "./arg/list";
 
 export default class CommandContext {
   public bot: Bot;

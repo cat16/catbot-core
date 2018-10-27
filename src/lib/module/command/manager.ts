@@ -2,18 +2,21 @@ import chalk from "chalk";
 import { Message, User } from "eris";
 
 import { Collection } from "mongodb";
-import Command, {
-  ArgList,
-  CommandContext,
-  CommandGroup,
-  CommandOrGroup
-} from ".";
+import { CommandOrGroup } from ".";
 import Bot from "../../bot";
-import NamedElementDirectoryManager from "../../element/manager/names-element-directory-manager";
+import {
+  generateRecursiveClassInit,
+  loadDirRecursive
+} from "../../file-element/manager/load";
+import NamedElementDirectoryManager from "../../file-element/manager/named";
 import Logger from "../../util/logger";
+import ArgList from "./arg/list";
 import ArgType from "./arg/type";
+import CommandContext from "./context";
 import CommandError from "./error";
+import CommandGroup from "./group";
 import CommandResult from "./result";
+import RunnableCommand from "./runnable";
 import ITrigger from "./trigger";
 
 const startsWithAny = (str: string, arr: string[]): string => {
@@ -31,18 +34,30 @@ export type PermCheck = (command: CommandOrGroup, user: User) => boolean;
 export class CommandManager extends NamedElementDirectoryManager<
   CommandOrGroup
 > {
-  public permChecks: PermCheck[];
-  public bot: Bot;
+  private permChecks: PermCheck[];
+  private bot: Bot;
 
-  public prefixes: string[];
-  public lastTriggered: object;
+  private prefixes: string[];
+  private lastTriggered: object;
 
-  constructor(bot: Bot) {
-    super();
+  constructor(directory: string, bot: Bot) {
+    super(
+      directory,
+      (dir: string) =>
+        loadDirRecursive(
+          dir,
+          generateRecursiveClassInit(this.bot),
+          (name, parent) =>
+            new CommandGroup(
+              { bot: this.bot, fileName: name, parent },
+              { name }
+            )
+        ),
+      new Logger("command-manager", bot.getLogger())
+    );
     this.prefixes = [bot.getClient().user.mention];
     this.lastTriggered = {};
     this.bot = bot;
-    this.logger = new Logger("command-manager", bot.getLogger());
   }
 
   public handleMessage(msg: Message): Promise<boolean> {
@@ -116,18 +131,18 @@ export class CommandManager extends NamedElementDirectoryManager<
         if (sudo || (await this.checkPerms(command, msg.author))) {
           try {
             await command.run(new CommandContext(this.bot, msg, result.args));
-            if (!command.silent) {
+            if (!command.isSilent()) {
               const user = chalk.magenta(
                 `${msg.author.username}#${msg.author.discriminator}`
               );
-              this.logger.log(
+              this.getLogger().log(
                 `'${user}' ran command '${chalk.magenta(
                   command.getFullName()
                 )}'`
               );
             }
           } catch (err) {
-            this.logger.error(
+            this.getLogger().error(
               `Command '${command.getFullName()}' crashed: ${err.stack}`
             );
           }
@@ -136,10 +151,10 @@ export class CommandManager extends NamedElementDirectoryManager<
             `${msg.author.username}#${msg.author.discriminator}`
           );
           const commandName = chalk.magenta(command.getFullName());
-          this.logger.log(
+          this.getLogger().log(
             `'${user}' did not have permission to run command '${commandName}'`
           );
-          if (!command.silent) {
+          if (!command.isSilent()) {
             this.bot
               .getClient()
               .createMessage(
@@ -165,81 +180,32 @@ export class CommandManager extends NamedElementDirectoryManager<
   }
 
   public parseContent(
-    content: string,
-    commands: CommandOrGroup[] = this.getAllElements(),
-    parent?: CommandOrGroup
+    content: string/*,
+    commands: CommandOrGroup[] = this.getElements(),
+    parent?: CommandOrGroup*/
   ): CommandResult | CommandError {
-    const handleCommand = (
-      command: Command,
-      content: string
-    ): CommandResult | CommandError => {
-      const args = new Map<string, any>();
-      if (command.args.length > 0) {
-        for (const arg of command.args) {
-          const types = arg.types;
-          if (content != null && content.length > 0) {
-            let finalResult = new CommandError(
-              `No suitable arguement was provided for '${arg.name}'` +
-                `\nAcceptable types: [${types.join(", ")}]`
-            );
-            for (const type of types) {
-              const result = type.validate(content, this.bot);
-              if (result.failed) {
-                if (types.length === 1) {
-                  finalResult = new CommandError(
-                    result.data as string,
-                    command
-                  );
-                }
-              } else {
-                args.set(arg.name, result.data);
-                if (result.subcontent == null) {
-                  result.subcontent = "";
-                }
-                content = result.subcontent.trim();
-                finalResult = null;
-                break;
-              }
-            }
-            if (finalResult) {
-              if (types.find(type => type === ArgType.ANY)) {
-                const parts = content.split(/ (.+)/);
-                args.set(arg.name, parts[0]);
-                content = parts[1];
-              } else {
-                return finalResult;
-              }
-            }
-          } else {
-            return new CommandError(
-              `Arguement ${arg.name} was not provided`,
-              command
-            );
-          }
-        }
-      }
-      return new CommandResult(command, new ArgList(args, content));
-    };
-
-    for (const command of commands) {
+    /*for (const command of commands) {
       const alias = startsWithAny(content, command.getTriggers());
       if (alias) {
         const subcontent = content.slice(alias.length).trimLeft();
-        if (command.getElementLoader().getAllElements().length > 0) {
+        if (command.getChildren().length > 0) {
           const result = this.parseContent(
             subcontent,
-            command.getElementLoader().getAllElements(),
+            command.getChildren(),
             command
           );
-          if (!(result instanceof CommandError) && command instanceof Command) {
-            return handleCommand(command, subcontent);
+          if (
+            !(result instanceof CommandError) &&
+            command instanceof RunnableCommand
+          ) {
+            return this.handleCommand(command, subcontent);
           } else {
             return result;
           }
-        } else if (command instanceof Command) {
-          return handleCommand(command, subcontent);
+        } else if (command instanceof RunnableCommand) {
+          return this.handleCommand(command, subcontent);
         } else {
-          this.logger.warn(
+          this.getLogger().warn(
             `Command '${command.getTriggers()[0]}' has nothing to run!`
           );
         }
@@ -254,7 +220,9 @@ export class CommandManager extends NamedElementDirectoryManager<
           )
       : new CommandError(
           `I'm not sure what you meant by "${content.split(" ")[0]}"`
-        );
+        );*/
+    const result = this.search(content);
+    return result instanceof CommandGroup ? new CommandError(`No subcommand was provided for '${result.getFullName()}'`, result.getFullName()) : result instanceof RunnableCommand ? new CommandResult(command, result.);
   }
 
   // TODO: move to bot
@@ -280,5 +248,54 @@ export class CommandManager extends NamedElementDirectoryManager<
 
   public collection(): Collection {
     return this.bot.db().collection("command-manager");
+  }
+
+  private handleCommand(
+    command: RunnableCommand,
+    content: string
+  ): CommandResult | CommandError {
+    const args = new Map<string, any>();
+    if (command.getArgs().length > 0) {
+      for (const arg of command.getArgs()) {
+        const types = arg.types;
+        if (content != null && content.length > 0) {
+          let finalResult = new CommandError(
+            `No suitable arguement was provided for '${arg.name}'` +
+              `\nAcceptable types: [${types.join(", ")}]`
+          );
+          for (const type of types) {
+            const result = type.validate(content, this.bot);
+            if (result.failed) {
+              if (types.length === 1) {
+                finalResult = new CommandError(result.data as string, command);
+              }
+            } else {
+              args.set(arg.name, result.data);
+              if (result.subcontent == null) {
+                result.subcontent = "";
+              }
+              content = result.subcontent.trim();
+              finalResult = null;
+              break;
+            }
+          }
+          if (finalResult) {
+            if (types.find(type => type === ArgType.ANY)) {
+              const parts = content.split(/ (.+)/);
+              args.set(arg.name, parts[0]);
+              content = parts[1];
+            } else {
+              return finalResult;
+            }
+          }
+        } else {
+          return new CommandError(
+            `Arguement ${arg.name} was not provided`,
+            command
+          );
+        }
+      }
+    }
+    return new CommandResult(command, new ArgList(args, content));
   }
 }

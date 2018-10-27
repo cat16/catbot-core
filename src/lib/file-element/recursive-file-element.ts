@@ -6,15 +6,15 @@ export default abstract class RecursiveFileElement<
   private parent?: T;
   private children: T[];
 
-  constructor(path: string, parent?: T) {
-    super(path);
+  constructor(fileName: string, parent?: T) {
+    super(fileName);
     this.parent = parent;
     this.children = [];
   }
 
-  public getFilePath() {
+  public getFilePath(separator: string = "/") {
     return this.parent
-      ? `${this.parent.getFilePath()}/${this.getFileName()}`
+      ? `${this.parent.getFilePath()}${separator}${this.getFileName()}`
       : this.getFileName();
   }
 

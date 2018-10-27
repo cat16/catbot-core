@@ -1,6 +1,6 @@
 import Bot from "../../bot";
+import ElementDirectoryManager from "../../file-element/manager";
 import { loadDirFlat } from "../../file-element/manager/load";
-import ElementDirectoryManager from "../../file-element/manager/manager";
 import Logger from "../../util/logger";
 import BotEvent, { EventConstructionData } from "./event";
 
