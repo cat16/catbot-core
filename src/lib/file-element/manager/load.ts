@@ -1,12 +1,7 @@
 import { getDirectories, getFiles, requireFiles } from "../../util/util";
 import FileElement from "../file-element";
+import FileElementGenerator from "../generator";
 import RecursiveFileElement from "../recursive-file-element";
-
-export type ElementInitFunc<E> = (rawElement: any, fileName: string) => E;
-
-export function generateClassInit<E>(...args): ElementInitFunc<E> {
-  return (Class, fileName) => new Class(fileName, args);
-}
 
 export interface FlatLoadOptions {
   targetFile?: string;
@@ -14,7 +9,7 @@ export interface FlatLoadOptions {
 
 export function loadDirFlat<E extends FileElement>(
   directory: string,
-  initFileElement: ElementInitFunc<E>,
+  generator: FileElementGenerator<E>,
   options: FlatLoadOptions = {}
 ): Map<string, E | Error> {
   const targetFile = options.targetFile;
@@ -35,7 +30,7 @@ export function loadDirFlat<E extends FileElement>(
       element =
         rawElement instanceof Error
           ? rawElement
-          : initFileElement(rawElement, fileName);
+          : generator.generate(rawElement, fileName);
     } catch (err) {
       element = err;
     }

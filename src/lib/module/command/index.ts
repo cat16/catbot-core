@@ -4,10 +4,6 @@ import RecursiveFileElement from "../../file-element/recursive-file-element";
 import Logger from "../../util/logger";
 import Module from "../module";
 import CommandContext from "./context";
-import CommandGroup from "./group";
-import RunnableCommand from "./runnable";
-
-export type CommandOrGroup = RunnableCommand | CommandGroup;
 
 export interface CommandOptions {
   name: string;
@@ -22,8 +18,7 @@ export interface CommandConstructionData {
 }
 
 // TODO: Make more things private
-export default abstract class Command
-  extends RecursiveFileElement<CommandOrGroup>
+export default abstract class Command extends RecursiveFileElement<Command>
   implements NamedElement {
   private aliases: string[];
   private module: Module;
@@ -44,15 +39,15 @@ export default abstract class Command
     );
   }
 
-  public getName() {
+  public getName(): string {
     return this.getFileName();
   }
 
-  public getTriggers() {
+  public getTriggers(): string[] {
     return [this.getName(), ...this.getAliases()];
   }
 
-  public getFullName() {
+  public getFullName(): string {
     return this.getFilePath(" ");
   }
 

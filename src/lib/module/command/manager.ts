@@ -1,8 +1,7 @@
 import chalk from "chalk";
 import { Message, User } from "eris";
 
-import { Collection } from "mongodb";
-import { CommandOrGroup } from ".";
+import Command from ".";
 import Bot from "../../bot";
 import {
   generateRecursiveClassInit,
@@ -10,29 +9,27 @@ import {
 } from "../../file-element/manager/load";
 import NamedElementDirectoryManager from "../../file-element/manager/named";
 import Logger from "../../util/logger";
+import { startsWithAny } from "../../util/util";
 import ArgList from "./arg/list";
 import ArgType from "./arg/type";
 import CommandContext from "./context";
+import DBK from "./dbk";
 import CommandError from "./error";
+import CustomError from "./error/custom";
+import InvalidArgumentProvided from "./error/invalid-arg-provided";
+import NoArgumentProvided from "./error/no-arg-provided";
+import NoCommandProvided from "./error/no-command-provided";
+import UnknownCommand from "./error/unknownCommand";
 import CommandGroup from "./group";
 import CommandResult from "./result";
 import RunnableCommand from "./runnable";
 import ITrigger from "./trigger";
 
-const startsWithAny = (str: string, arr: string[]): string => {
-  let longest = "";
-  arr.forEach(str2 => {
-    if (str2.length > longest.length && str.startsWith(str2)) {
-      longest = str2;
-    }
-  });
-  return longest.length === 0 ? null : longest;
-};
+export type PermCheck = (command: Command, user: User) => boolean;
 
-export type PermCheck = (command: CommandOrGroup, user: User) => boolean;
-
-export class CommandManager extends NamedElementDirectoryManager<
-  CommandOrGroup
+// move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
+export class CommandDirectoryManager extends NamedElementDirectoryManager<
+  Command
 > {
   private permChecks: PermCheck[];
   private bot: Bot;
@@ -46,16 +43,13 @@ export class CommandManager extends NamedElementDirectoryManager<
       (dir: string) =>
         loadDirRecursive(
           dir,
-          generateRecursiveClassInit(this.bot),
+          generateRecursiveClassInit(bot),
           (name, parent) =>
-            new CommandGroup(
-              { bot: this.bot, fileName: name, parent },
-              { name }
-            )
+            new CommandGroup({ bot, fileName: name, parent }, { name })
         ),
       new Logger("command-manager", bot.getLogger())
     );
-    this.prefixes = [bot.getClient().user.mention];
+    this.prefixes = [`${bot.getClient().user.mention} `];
     this.lastTriggered = {};
     this.bot = bot;
   }
@@ -64,7 +58,7 @@ export class CommandManager extends NamedElementDirectoryManager<
     return new Promise(async (resolve, reject) => {
       const result = this.parseFull(msg.content);
       if (result && (await this.shouldRespond(result))) {
-        const cooldown: number = await this.getValue("command-cooldown", 0);
+        const cooldown: number = await this.getValue(DBK.CommandCooldown, 0);
         if (cooldown !== 0) {
           const lastTriggered: ITrigger = this.lastTriggered[msg.author.id];
           if (lastTriggered != null) {
@@ -103,9 +97,9 @@ export class CommandManager extends NamedElementDirectoryManager<
 
   public shouldRespond(result: CommandResult | CommandError): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      const silent = await this.getValue("silent", false);
+      const silent = await this.getValue(DBK.Silent, false);
       const respondToUnknownCommands = await this.getValue(
-        "respondToUnknownCommands",
+        DBK.RespondToUnknownCommands,
         false
       );
       resolve(
@@ -123,7 +117,9 @@ export class CommandManager extends NamedElementDirectoryManager<
     return new Promise(async (resolve, reject) => {
       if (result instanceof CommandError) {
         if (await this.shouldRespond(result)) {
-          this.bot.getClient().createMessage(msg.channel.id, result.message);
+          this.bot
+            .getClient()
+            .createMessage(msg.channel.id, result.getMessage());
         }
         resolve(true);
       } else if (result instanceof CommandResult) {
@@ -179,54 +175,27 @@ export class CommandManager extends NamedElementDirectoryManager<
     return null;
   }
 
-  public parseContent(
-    content: string/*,
-    commands: CommandOrGroup[] = this.getElements(),
-    parent?: CommandOrGroup*/
-  ): CommandResult | CommandError {
-    /*for (const command of commands) {
-      const alias = startsWithAny(content, command.getTriggers());
-      if (alias) {
-        const subcontent = content.slice(alias.length).trimLeft();
-        if (command.getChildren().length > 0) {
-          const result = this.parseContent(
-            subcontent,
-            command.getChildren(),
-            command
-          );
-          if (
-            !(result instanceof CommandError) &&
-            command instanceof RunnableCommand
-          ) {
-            return this.handleCommand(command, subcontent);
-          } else {
-            return result;
-          }
-        } else if (command instanceof RunnableCommand) {
-          return this.handleCommand(command, subcontent);
-        } else {
-          this.getLogger().warn(
-            `Command '${command.getTriggers()[0]}' has nothing to run!`
-          );
-        }
+  public parseContent(content: string): CommandResult | CommandError {
+    const result = this.search(content);
+    const command = result.element;
+    if (command instanceof RunnableCommand) {
+      return this.handleCommand(command, result.leftover);
+    }
+    if (command instanceof CommandGroup) {
+      if (result.leftover.length === 0) {
+        return new NoCommandProvided(command);
+      } else {
+        return new UnknownCommand(result.leftover, command);
       }
     }
-    return content === ""
-      ? parent === null
-        ? new CommandError("No command was provided")
-        : new CommandError(
-            `No subcommand was provided for '${parent.getTriggers()[0]}'`,
-            parent
-          )
-      : new CommandError(
-          `I'm not sure what you meant by "${content.split(" ")[0]}"`
-        );*/
-    const result = this.search(content);
-    return result instanceof CommandGroup ? new CommandError(`No subcommand was provided for '${result.getFullName()}'`, result.getFullName()) : result instanceof RunnableCommand ? new CommandResult(command, result.);
+    if (content.length > 0) {
+      return new UnknownCommand(content);
+    }
+    return new NoCommandProvided();
   }
 
   // TODO: move to bot
-  public checkPerms(command: CommandOrGroup, user: User): Promise<boolean> {
+  public checkPerms(command: Command, user: User): Promise<boolean> {
     return new Promise((resolve, reject) => {
       for (const permCheck of this.permChecks) {
         if (!permCheck(command, user)) {
@@ -237,17 +206,12 @@ export class CommandManager extends NamedElementDirectoryManager<
     });
   }
 
-  public async getValue(name: string, defaultValue?: any): Promise<any> {
-    const value = await this.collection().findOne({ key: name });
-    if (defaultValue === undefined) {
-      return value;
-    } else {
-      return value == null ? defaultValue : value;
-    }
+  public async getValue(key: DBK, defaultValue?: any): Promise<any> {
+    return this.bot.getDatabase().get(key.getKey(), defaultValue);
   }
 
-  public collection(): Collection {
-    return this.bot.db().collection("command-manager");
+  public async setValue(key: DBK, value: any): Promise<void> {
+    return this.bot.getDatabase().set(key.getKey(), value);
   }
 
   private handleCommand(
@@ -259,15 +223,16 @@ export class CommandManager extends NamedElementDirectoryManager<
       for (const arg of command.getArgs()) {
         const types = arg.types;
         if (content != null && content.length > 0) {
-          let finalResult = new CommandError(
-            `No suitable arguement was provided for '${arg.name}'` +
-              `\nAcceptable types: [${types.join(", ")}]`
+          let finalResult: CommandError = new InvalidArgumentProvided(
+            arg.name,
+            content,
+            command
           );
           for (const type of types) {
             const result = type.validate(content, this.bot);
             if (result.failed) {
               if (types.length === 1) {
-                finalResult = new CommandError(result.data as string, command);
+                finalResult = new CustomError(result.data as string, command);
               }
             } else {
               args.set(arg.name, result.data);
@@ -289,10 +254,7 @@ export class CommandManager extends NamedElementDirectoryManager<
             }
           }
         } else {
-          return new CommandError(
-            `Arguement ${arg.name} was not provided`,
-            command
-          );
+          return new NoArgumentProvided(arg.name, command);
         }
       }
     }

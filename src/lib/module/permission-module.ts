@@ -1,6 +1,6 @@
 import Command from "./command";
-import Module from "./module";
+import BotModule from "./module";
 
-export default abstract class PermissionModule extends Module {
+export default abstract class PermissionModule extends BotModule {
   public abstract hasPermission(command: Command);
 }

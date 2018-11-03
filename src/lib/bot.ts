@@ -1,13 +1,12 @@
 import { Client } from "eris";
 import * as fs from "fs";
 
-import { Db } from "../../node_modules/@types/mongodb";
 import Config from "./config";
-import DatabaseClient, { ConnectionOptions } from "./database/database-manager";
-import { CommandManager } from "./module/command/manager";
+import Database from "./database/client-database";
+import { CommandDirectoryManager } from "./module/command/manager";
 import { EventManager } from "./module/event/manager";
+import { ModuleManager } from "./module/manager";
 import Module from "./module/module";
-import { ModuleLoader, ModuleManager } from "./module/module-manager";
 import Logger from "./util/logger";
 import BotUtil, { createDirectory, getInput, pathExists } from "./util/util";
 
@@ -15,10 +14,8 @@ export default class Bot {
   private directory: string;
   private logger: Logger;
   private util: BotUtil;
-  private databaseClient: DatabaseClient;
+  private activeDatabase: Database;
   private moduleManager: ModuleManager;
-  private commandManager: CommandManager;
-  private eventManager: EventManager;
   private client: Client;
   private config: Config;
 
@@ -26,7 +23,7 @@ export default class Bot {
     this.directory = directory;
     this.logger = new Logger("bot-core");
     this.util = new BotUtil(this);
-    this.databaseClient = null;
+    this.activeDatabase = null;
     this.moduleManager = new ModuleManager(this);
     this.client = new Client(this.config.token, {});
     this.config = null;
@@ -38,7 +35,7 @@ export default class Bot {
       this.logger.log("Loading...");
       this.util = new BotUtil(this);
       this.loadConfig("config.json");
-      this.databaseClient = new DatabaseClient(
+      this.activeDatabase = new DatabaseClient(
         {
           password: this.config.dbPassword,
           uri: this.config.dbURI,
@@ -158,7 +155,7 @@ export default class Bot {
     this.client.disconnect({ reconnect: false });
   }
 
-  public getCommandManager(): CommandManager {
+  public getCommandManager(): CommandDirectoryManager {
     return this.commandManager;
   }
 
@@ -174,12 +171,8 @@ export default class Bot {
     return this.util;
   }
 
-  public getDBManager(): DatabaseClient {
-    return this.databaseClient;
-  }
-
-  public db(): Db {
-    return this.databaseClient.db("bot");
+  public getDatabase(): Database {
+    return this.activeDatabase;
   }
 
   public getClient() {

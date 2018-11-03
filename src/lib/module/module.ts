@@ -1,7 +1,7 @@
 import { Bot } from "../..";
 import FileElement from "../file-element/file-element";
 import NamedElement from "../file-element/named-element";
-import { CommandManager } from "./command/manager";
+import { CommandDirectoryManager } from "./command/manager";
 import { EventManager } from "./event/manager";
 
 export interface ModuleConstructionData {
@@ -19,12 +19,12 @@ export default abstract class BotModule extends FileElement
   implements NamedElement {
   public bot: Bot;
   private name: string;
-  private commandManager: CommandManager;
+  private commandManager: CommandDirectoryManager;
   private eventManager: EventManager;
 
   constructor(data: ModuleConstructionData, options: ModuleOptions) {
     super(data.directory);
-    this.commandManager = new CommandManager(data.directory, data.bot);
+    this.commandManager = new CommandDirectoryManager(data.directory, data.bot);
     this.eventManager = new EventManager(data.directory, data.bot);
     this.name = options.name;
     this.bot = data.bot;
@@ -38,7 +38,7 @@ export default abstract class BotModule extends FileElement
     return this.name;
   }
 
-  public getCommandManager(): CommandManager {
+  public getCommandManager(): CommandDirectoryManager {
     return this.commandManager;
   }
 

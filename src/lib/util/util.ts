@@ -66,7 +66,7 @@ export default class BotUtil {
   }
 }
 
-export function multiPromise(promises: Array<Promise<any>>): Promise<any[]> {
+export function multiPromise(promises: Promise<any>[]): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const results = [];
     let finished = 0;
@@ -168,4 +168,14 @@ export function requireFiles(paths: string[]): Map<string, any | Error> {
     results.set(path, result);
   }
   return results;
+}
+
+export function startsWithAny(str: string, arr: string[]): string {
+  let longest = "";
+  arr.forEach(str2 => {
+    if (str2.length > longest.length && str.startsWith(str2)) {
+      longest = str2;
+    }
+  });
+  return longest.length === 0 ? null : longest;
 }
