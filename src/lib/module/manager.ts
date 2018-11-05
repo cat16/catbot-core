@@ -1,5 +1,5 @@
 import { Bot, ModuleConstructionData } from "../..";
-import ElementDirectoryManager from "../file-element/manager";
+import ElementDirectoryManager from "../file-element/manager/directory";
 import { generateClassInit, loadDirFlat } from "../file-element/manager/load";
 import Logger from "../util/logger";
 import BotModule from "./module";

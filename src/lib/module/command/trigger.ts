@@ -1,5 +1,5 @@
-interface ITrigger {
-    time: number;
-    alreadyTold: boolean;
+interface Trigger {
+  time: number;
+  alreadyTold: boolean;
 }
-export default ITrigger;
+export default Trigger;

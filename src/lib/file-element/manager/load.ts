@@ -1,6 +1,6 @@
 import { getDirectories, getFiles, requireFiles } from "../../util/util";
 import FileElement from "../file-element";
-import FileElementGenerator from "../generator";
+import FileElementFactory from "../generator";
 import RecursiveFileElement from "../recursive-file-element";
 
 export interface FlatLoadOptions {
@@ -9,7 +9,7 @@ export interface FlatLoadOptions {
 
 export function loadDirFlat<E extends FileElement>(
   directory: string,
-  generator: FileElementGenerator<E>,
+  generator: FileElementFactory<E>,
   options: FlatLoadOptions = {}
 ): Map<string, E | Error> {
   const targetFile = options.targetFile;

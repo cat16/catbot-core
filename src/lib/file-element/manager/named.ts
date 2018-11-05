@@ -1,7 +1,7 @@
-import ElementDirectoryManager from ".";
 import FileElement from "../file-element";
 import NamedElement from "../named-element";
 import RecursiveFileElement from "../recursive-file-element";
+import ElementDirectoryManager from "./directory";
 
 export interface NamedElementSearchOptions {
   useAliases?: boolean;
@@ -13,9 +13,11 @@ export interface ElementSearchResult<E extends FileElement> {
   leftover: string;
 }
 
-export default class NamedElementDirectoryManager<
+export default class NamedDirectoryElementManager<
   E extends FileElement & NamedElement
-> extends ElementDirectoryManager<E> {
+> {
+  private managers: ElementDirectoryManager<E>;
+
   public search(
     name: string,
     options?: NamedElementSearchOptions

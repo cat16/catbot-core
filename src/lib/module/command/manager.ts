@@ -7,7 +7,7 @@ import {
   generateRecursiveClassInit,
   loadDirRecursive
 } from "../../file-element/manager/load";
-import NamedElementDirectoryManager from "../../file-element/manager/named";
+import NamedDirectoryElementManager from "../../file-element/manager/named";
 import Logger from "../../util/logger";
 import { startsWithAny } from "../../util/util";
 import ArgList from "./arg/list";
@@ -23,12 +23,12 @@ import UnknownCommand from "./error/unknownCommand";
 import CommandGroup from "./group";
 import CommandResult from "./result";
 import RunnableCommand from "./runnable";
-import ITrigger from "./trigger";
+import Trigger from "./trigger";
 
 export type PermCheck = (command: Command, user: User) => boolean;
 
 // move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
-export class CommandDirectoryManager extends NamedElementDirectoryManager<
+export class CommandDirectoryManager extends NamedDirectoryElementManager<
   Command
 > {
   private permChecks: PermCheck[];
@@ -60,7 +60,7 @@ export class CommandDirectoryManager extends NamedElementDirectoryManager<
       if (result && (await this.shouldRespond(result))) {
         const cooldown: number = await this.getValue(DBK.CommandCooldown, 0);
         if (cooldown !== 0) {
-          const lastTriggered: ITrigger = this.lastTriggered[msg.author.id];
+          const lastTriggered: Trigger = this.lastTriggered[msg.author.id];
           if (lastTriggered != null) {
             const now = new Date().getTime();
             if (now - lastTriggered.time < cooldown) {

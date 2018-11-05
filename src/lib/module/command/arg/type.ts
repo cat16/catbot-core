@@ -66,9 +66,9 @@ export default class ArgType {
   });
   public static COMMAND = new ArgType({
     validate: (text, bot) => {
-      const result = bot.getCommandManager().find(text);
+      const result = bot.getCommandManager().search(text);
       if (result) {
-        return new ArgResult(false, result.data.element, result.remaining);
+        return new ArgResult(false, result.element, result.leftover);
       } else {
         return new ArgResult(true, `'${text}' is not a command`);
       }
