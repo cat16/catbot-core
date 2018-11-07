@@ -1,4 +1,4 @@
-import { CommandOrGroup } from "..";
+import { CommandOrGroup } from "../instance";
 
 export default abstract class CommandError {
   private command?: CommandOrGroup;

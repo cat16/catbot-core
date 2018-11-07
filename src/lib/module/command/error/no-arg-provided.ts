@@ -1,8 +1,8 @@
 import CommandError from ".";
-import Command from "..";
+import CommandInstance from "../instance";
 export default class NoArgumentProvided extends CommandError {
   private arg: string;
-  constructor(arg: string, command: Command) {
+  constructor(arg: string, command: CommandInstance) {
     super(command);
     this.arg = arg;
   }

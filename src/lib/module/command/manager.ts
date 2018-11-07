@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { Message, User } from "eris";
 
-import Command from ".";
 import Bot from "../../bot";
 import {
   generateRecursiveClassInit,
@@ -21,15 +20,16 @@ import NoArgumentProvided from "./error/no-arg-provided";
 import NoCommandProvided from "./error/no-command-provided";
 import UnknownCommand from "./error/unknownCommand";
 import CommandGroup from "./group";
+import CommandInstance from "./instance";
 import CommandResult from "./result";
 import RunnableCommand from "./runnable";
 import Trigger from "./trigger";
 
-export type PermCheck = (command: Command, user: User) => boolean;
+export type PermCheck = (command: CommandInstance, user: User) => boolean;
 
 // move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
 export class CommandDirectoryManager extends NamedDirectoryElementManager<
-  Command
+  CommandInstance
 > {
   private permChecks: PermCheck[];
   private bot: Bot;
@@ -195,7 +195,7 @@ export class CommandDirectoryManager extends NamedDirectoryElementManager<
   }
 
   // TODO: move to bot
-  public checkPerms(command: Command, user: User): Promise<boolean> {
+  public checkPerms(command: CommandInstance, user: User): Promise<boolean> {
     return new Promise((resolve, reject) => {
       for (const permCheck of this.permChecks) {
         if (!permCheck(command, user)) {

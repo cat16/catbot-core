@@ -5,20 +5,15 @@ import Logger from "../../util/logger";
 import Module from "../module";
 import CommandContext from "./context";
 
-export interface CommandOptions {
-  name: string;
-  aliases?: string[];
-  silent?: boolean;
-}
-
 export interface CommandConstructionData {
   fileName: string;
-  parent?: Command;
+  parent?: CommandInstance;
   bot: Bot;
 }
 
 // TODO: Make more things private
-export default abstract class Command extends RecursiveFileElement<Command>
+export default abstract class CommandInstance
+  extends RecursiveFileElement<CommandInstance>
   implements NamedElement {
   private aliases: string[];
   private module: Module;

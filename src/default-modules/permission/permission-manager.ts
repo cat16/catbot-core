@@ -1,6 +1,6 @@
 import { Collection } from "mongodb";
 import { Bot, Command } from "../../index";
-import { CommandOrGroup } from "../../lib/module/command";
+import { CommandOrGroup } from "../../lib/module/command/instance";
 
 export enum PermMode {
   NONE = "none",
