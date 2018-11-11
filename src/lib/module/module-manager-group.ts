@@ -1,6 +1,6 @@
 import Bot from "../bot";
-import CommandInstance from "./command/instance";
-import BotEvent from "./event";
+import Command from "./command";
+import Event from "./event";
 import { ModuleManager } from "./manager";
 
 export default class BotModuleManager {
@@ -10,7 +10,7 @@ export default class BotModuleManager {
     this.manager = new ModuleManager(directory, bot);
   }
 
-  public getCommands(): CommandInstance[] {
+  public getCommands(): Command[] {
     const commands = [];
     this.manager
       .getElements()
@@ -20,7 +20,7 @@ export default class BotModuleManager {
     return commands;
   }
 
-  public findCommand(name: string): CommandInstance {
+  public findCommand(name: string): Command {
     for (const botModule of this.manager.getElements()) {
       const command = botModule.getCommandManager().find(name);
       if (command) {
@@ -30,7 +30,7 @@ export default class BotModuleManager {
     return null;
   }
 
-  public getEvents(): BotEvent[] {
+  public getEvents(): Event[] {
     const events = [];
     this.manager
       .getElements()

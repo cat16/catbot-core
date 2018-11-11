@@ -1,9 +1,9 @@
 import CommandError from ".";
-import CommandInstance from "../instance";
+import Command from "..";
 
 export default class CustomError extends CommandError {
   private message: string;
-  constructor(message: string, command: CommandInstance) {
+  constructor(message: string, command: Command) {
     super(command);
   }
   public getMessage() {

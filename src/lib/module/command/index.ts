@@ -4,16 +4,9 @@ import RecursiveFileElement from "../../file-element/recursive-file-element";
 import Logger from "../../util/logger";
 import Module from "../module";
 import CommandContext from "./context";
+import CommandCreateInfo from "./create-info";
 
-export interface CommandConstructionData {
-  fileName: string;
-  parent?: CommandInstance;
-  bot: Bot;
-}
-
-// TODO: Make more things private
-export default abstract class CommandInstance
-  extends RecursiveFileElement<CommandInstance>
+export default class Command extends RecursiveFileElement<Command>
   implements NamedElement {
   private aliases: string[];
   private module: Module;
@@ -21,16 +14,21 @@ export default abstract class CommandInstance
   private silent: boolean;
   private logger: Logger;
 
-  constructor(data: CommandConstructionData, options: CommandOptions) {
-    super(data.fileName, data.parent);
+  constructor(
+    fileName: string,
+    parent: Command,
+    bot: Bot,
+    createInfo: CommandCreateInfo
+  ) {
+    super(fileName, parent);
 
-    this.aliases = options.aliases || [];
-    this.silent = options.silent || false;
+    this.aliases = createInfo.aliases || [];
+    this.silent = createInfo.silent || false;
     this.module = null;
 
     this.logger = new Logger(
       `command::${this.getFilePath(" ")}`,
-      data.bot.getLogger()
+      bot.getLogger()
     );
   }
 

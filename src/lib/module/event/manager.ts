@@ -1,10 +1,9 @@
-import BotEvent, { EventConstructionData } from ".";
+import Event, { EventConstructionData } from ".";
 import Bot from "../../bot";
-import ElementDirectoryManager from "../../file-element/manager/directory";
-import { loadDirFlat } from "../../file-element/manager/load";
+import ElementDirectoryGroup from "../../file-element/manager/group";
 import Logger from "../../util/logger";
 
-export class EventManager extends ElementDirectoryManager<BotEvent> {
+export class EventManager extends ElementDirectoryGroup<Event> {
   public bot: Bot;
 
   constructor(directory: string, bot: Bot) {

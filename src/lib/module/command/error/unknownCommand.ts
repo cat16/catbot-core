@@ -1,9 +1,9 @@
 import CommandError from ".";
-import CommandInstance from "../instance";
+import Command from "..";
 
 export default class UnknownCommand extends CommandError {
   private content: string;
-  constructor(content: string, command?: CommandInstance) {
+  constructor(content: string, command?: Command) {
     super(command);
     this.content = content;
   }

@@ -1,4 +1,4 @@
-import FileElement from "./file-element";
+import FileElement from ".";
 
 export default abstract class RecursiveFileElement<
   T extends RecursiveFileElement<T>

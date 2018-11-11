@@ -3,7 +3,7 @@ import * as fs from "fs";
 
 import Config from "./config";
 import Database from "./database/client-database";
-import { CommandDirectoryManager } from "./module/command/manager";
+import { CommandManager } from "./module/command/manager";
 import { EventManager } from "./module/event/manager";
 import { ModuleManager } from "./module/manager";
 import Module from "./module/module";
@@ -155,7 +155,7 @@ export default class Bot {
     this.client.disconnect({ reconnect: false });
   }
 
-  public getCommandManager(): CommandDirectoryManager {
+  public getCommandManager(): CommandManager {
     return this.commandManager;
   }
 

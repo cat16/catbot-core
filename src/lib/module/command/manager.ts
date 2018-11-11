@@ -1,11 +1,8 @@
 import chalk from "chalk";
 import { Message, User } from "eris";
 
+import Command from ".";
 import Bot from "../../bot";
-import {
-  generateRecursiveClassInit,
-  loadDirRecursive
-} from "../../file-element/manager/load";
 import NamedDirectoryElementManager from "../../file-element/manager/named";
 import Logger from "../../util/logger";
 import { startsWithAny } from "../../util/util";
@@ -19,39 +16,28 @@ import InvalidArgumentProvided from "./error/invalid-arg-provided";
 import NoArgumentProvided from "./error/no-arg-provided";
 import NoCommandProvided from "./error/no-command-provided";
 import UnknownCommand from "./error/unknownCommand";
-import CommandGroup from "./group";
-import CommandInstance from "./instance";
+import CommandLoader from "./loader";
 import CommandResult from "./result";
 import RunnableCommand from "./runnable";
 import Trigger from "./trigger";
 
-export type PermCheck = (command: CommandInstance, user: User) => boolean;
+export type PermCheck = (command: Command, user: User) => boolean;
 
 // move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
-export class CommandDirectoryManager extends NamedDirectoryElementManager<
-  CommandInstance
-> {
+export class CommandManager extends NamedDirectoryElementManager<Command> {
   private permChecks: PermCheck[];
   private bot: Bot;
+  private logger: Logger;
 
   private prefixes: string[];
   private lastTriggered: object;
 
-  constructor(directory: string, bot: Bot) {
-    super(
-      directory,
-      (dir: string) =>
-        loadDirRecursive(
-          dir,
-          generateRecursiveClassInit(bot),
-          (name, parent) =>
-            new CommandGroup({ bot, fileName: name, parent }, { name })
-        ),
-      new Logger("command-manager", bot.getLogger())
-    );
+  constructor(directories: string[], bot: Bot) {
+    super(directories.map(dir => new CommandLoader(dir, bot)));
     this.prefixes = [`${bot.getClient().user.mention} `];
     this.lastTriggered = {};
     this.bot = bot;
+    this.logger = new Logger("command-manager", bot.getLogger());
   }
 
   public handleMessage(msg: Message): Promise<boolean> {
@@ -131,14 +117,14 @@ export class CommandDirectoryManager extends NamedDirectoryElementManager<
               const user = chalk.magenta(
                 `${msg.author.username}#${msg.author.discriminator}`
               );
-              this.getLogger().log(
+              this.logger.log(
                 `'${user}' ran command '${chalk.magenta(
                   command.getFullName()
                 )}'`
               );
             }
           } catch (err) {
-            this.getLogger().error(
+            this.logger.error(
               `Command '${command.getFullName()}' crashed: ${err.stack}`
             );
           }
@@ -147,7 +133,7 @@ export class CommandDirectoryManager extends NamedDirectoryElementManager<
             `${msg.author.username}#${msg.author.discriminator}`
           );
           const commandName = chalk.magenta(command.getFullName());
-          this.getLogger().log(
+          this.logger.log(
             `'${user}' did not have permission to run command '${commandName}'`
           );
           if (!command.isSilent()) {
@@ -178,14 +164,15 @@ export class CommandDirectoryManager extends NamedDirectoryElementManager<
   public parseContent(content: string): CommandResult | CommandError {
     const result = this.search(content);
     const command = result.element;
-    if (command instanceof RunnableCommand) {
-      return this.handleCommand(command, result.leftover);
-    }
-    if (command instanceof CommandGroup) {
-      if (result.leftover.length === 0) {
-        return new NoCommandProvided(command);
+    if (command) {
+      if (command instanceof RunnableCommand) {
+        return this.handleCommand(command, result.leftover);
       } else {
-        return new UnknownCommand(result.leftover, command);
+        if (result.leftover.length === 0) {
+          return new NoCommandProvided(command);
+        } else {
+          return new UnknownCommand(result.leftover, command);
+        }
       }
     }
     if (content.length > 0) {
@@ -195,7 +182,7 @@ export class CommandDirectoryManager extends NamedDirectoryElementManager<
   }
 
   // TODO: move to bot
-  public checkPerms(command: CommandInstance, user: User): Promise<boolean> {
+  public checkPerms(command: Command, user: User): Promise<boolean> {
     return new Promise((resolve, reject) => {
       for (const permCheck of this.permChecks) {
         if (!permCheck(command, user)) {

@@ -1,21 +1,27 @@
+import Command from ".";
+import Bot from "../../bot";
 import Arg from "./arg";
 import CommandContext from "./context";
-import CommandInstance, {
-  CommandConstructionData,
-  CommandOptions
-} from "./instance";
+import RunnableCommandCreateInfo, {
+  CommandRunFunc
+} from "./runnable-create-info";
 
-export interface RunnableCommandOptions extends CommandOptions {
-  args?: Arg[];
-}
-
-export default abstract class RunnableCommand extends CommandInstance {
+export default class RunnableCommand extends Command {
   private args: Arg[];
+  private runFunc: CommandRunFunc;
 
-  constructor(data: CommandConstructionData, options: RunnableCommandOptions) {
-    super(data, options);
+  constructor(
+    fileName: string,
+    parent: Command,
+    bot: Bot,
+    createInfo: RunnableCommandCreateInfo
+  ) {
+    super(fileName, parent, bot, createInfo);
+    this.runFunc = createInfo.run;
   }
-  public abstract run(data: CommandContext): void;
+  public run(context: CommandContext) {
+    this.runFunc(context);
+  }
 
   public getArgs(): Arg[] {
     return this.args;

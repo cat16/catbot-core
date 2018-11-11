@@ -1,27 +1,33 @@
-import FileElement from "../file-element";
-import ElementDirectoryManager from "./directory";
+import FileElement from "..";
+import DirLoader from "../loader/dir";
 
-class ElementDirectoryGroup<
+export default class ElementDirectoryGroup<
   E extends FileElement,
-  G extends ElementDirectoryManager<E> = ElementDirectoryManager<E>
+  L extends DirLoader<E> = DirLoader<E>
 > {
-  private managers: G[];
+  private elementGroups: Map<L, E[]>;
 
-  constructor(managers?: G[]) {
-    this.managers = managers || [];
+  constructor(loaders?: L[]) {
+    if (loaders) {
+      loaders.forEach(loader => {
+        this.elementGroups.set(loader, []);
+      });
+    }
+  }
+
+  public load() {
+    this.getLoaders().forEach(loader => loader.load());
   }
 
   public getAll() {
     const elements: E[] = [];
-    this.managers.forEach(manager => elements.push(...manager.getElements()));
+    this.elementGroups.forEach(loaderElements =>
+      elements.push(...loaderElements)
+    );
     return elements;
   }
 
-  public getManagers(): G[] {
-    return this.managers;
-  }
-
-  public loadAll(): void {
-    this.managers.forEach(manager => manager.load());
+  public getLoaders(): L[] {
+    return Array.from(this.elementGroups.keys());
   }
 }

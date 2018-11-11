@@ -1,5 +1,5 @@
 import Bot from "../../bot";
-import FileElement from "../../file-element/file-element";
+import FileElement from "../../file-element";
 
 export enum EventType {
   Client
@@ -14,7 +14,7 @@ export interface EventOptions {
   type: EventType;
 }
 
-export default abstract class BotEvent extends FileElement {
+export default abstract class Event extends FileElement {
   private type: EventType;
   private bot: Bot;
 

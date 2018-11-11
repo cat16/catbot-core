@@ -3,6 +3,7 @@ node_modules
 *.sh
 *.db
 *.json
+!jsconfig.json
 !tsconfig.json
 !tslint.json
 .vscode

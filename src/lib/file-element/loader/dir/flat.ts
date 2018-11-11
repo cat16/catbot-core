@@ -1,24 +1,37 @@
+import DirLoader from ".";
+import FileElement from "../..";
+import { getDirectories, getFiles, requireFiles } from "../../../..";
+import FileElementFactory from "../../factory";
+
 export interface FlatLoadOptions {
   targetFile?: string;
 }
 
-export default class FlatDirLoader<E extends FileElement> {
+export default class FlatDirLoader<E extends FileElement> extends DirLoader<E> {
+  private factory: FileElementFactory<E>;
+  private targetFile?: string;
+
   constructor(
     directory: string,
-    generator: FileElementFactory<E>,
+    factory: FileElementFactory<E>,
     options: FlatLoadOptions = {}
   ) {
-    const targetFile = options.targetFile;
-    const files = targetFile
-      ? getDirectories(directory).filter(dir =>
-          getFiles(dir).includes(`${targetFile}.js`)
+    super(directory);
+    this.factory = factory;
+    this.targetFile = options.targetFile;
+  }
+
+  public load(): Map<string, E | Error> {
+    const files = this.targetFile
+      ? getDirectories(this.getDirectory()).filter(dir =>
+          getFiles(dir).includes(`${this.targetFile}.js`)
         )
-      : getFiles(directory).filter(file => file.endsWith("js"));
+      : getFiles(this.getDirectory()).filter(file => file.endsWith("js"));
     const elements = new Map<string, E | Error>();
     requireFiles(
-      files.map(file => (targetFile ? `${file}/${targetFile}` : file))
+      files.map(file => (this.targetFile ? `${file}/${this.targetFile}` : file))
     ).forEach((rawElement, fileName) => {
-      if (targetFile) {
+      if (this.targetFile) {
         fileName = fileName.slice(fileName.indexOf("/") + 1);
       }
       let element;
@@ -26,7 +39,7 @@ export default class FlatDirLoader<E extends FileElement> {
         element =
           rawElement instanceof Error
             ? rawElement
-            : generator.generate(rawElement, fileName);
+            : this.factory.create(rawElement, fileName);
       } catch (err) {
         element = err;
       }

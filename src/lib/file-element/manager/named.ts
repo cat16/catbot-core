@@ -1,7 +1,7 @@
-import FileElement from "../file-element";
+import FileElement from "..";
 import NamedElement from "../named-element";
 import RecursiveFileElement from "../recursive-file-element";
-import ElementDirectoryManager from "./directory";
+import ElementDirectoryGroup from "./group";
 
 export interface NamedElementSearchOptions {
   useAliases?: boolean;
@@ -15,14 +15,12 @@ export interface ElementSearchResult<E extends FileElement> {
 
 export default class NamedDirectoryElementManager<
   E extends FileElement & NamedElement
-> {
-  private managers: ElementDirectoryManager<E>;
-
+> extends ElementDirectoryGroup<E> {
   public search(
     name: string,
     options?: NamedElementSearchOptions
   ): ElementSearchResult<E> {
-    return this.findRecursive(name, options, this.getElements());
+    return this.findRecursive(name, options, this.getAll());
   }
 
   public find(
