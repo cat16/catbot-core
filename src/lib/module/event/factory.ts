@@ -1,10 +1,15 @@
 import Event from ".";
+import Bot from "../../bot";
 import FileElementFactory from "../../file-element/factory";
+import EventCreateInfo from "./create-info";
 
 export default class EventFactory implements FileElementFactory<Event> {
-  constructor() {}
+  private bot: Bot;
+  constructor(bot: Bot) {
+    this.bot = bot;
+  }
 
-  public create(rawElement: any, fileName: string) {
-    return new Event();
+  public create(rawElement: EventCreateInfo, fileName: string) {
+    return new Event(fileName, this.bot, rawElement);
   }
 }

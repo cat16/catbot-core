@@ -16,6 +16,8 @@ export default class Bot {
   private util: BotUtil;
   private activeDatabase: Database;
   private moduleManager: ModuleManager;
+  private commandManager: CommandManager;
+  private eventManager: EventManager;
   private client: Client;
   private config: Config;
 

@@ -1,8 +1,7 @@
-import { EventType } from ".";
+import EventContext from "./context";
 
-export type EventRunFunc = (context: EventContext) => void
+export type EventRunFunc = (context: EventContext) => void;
 
 export default interface EventCreateInfo {
-  type: EventType;
-  run: 
+  run: EventRunFunc;
 }

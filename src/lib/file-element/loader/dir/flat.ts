@@ -24,7 +24,7 @@ export default class FlatDirLoader<E extends FileElement> extends DirLoader<E> {
   public load(): Map<string, E | Error> {
     const files = this.targetFile
       ? getDirectories(this.getDirectory()).filter(dir =>
-          getFiles(dir).includes(`${this.targetFile}.js`)
+          getFiles(dir).find(file => file === `${this.targetFile}.js`)
         )
       : getFiles(this.getDirectory()).filter(file => file.endsWith("js"));
     const elements = new Map<string, E | Error>();

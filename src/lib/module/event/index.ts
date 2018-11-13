@@ -1,39 +1,28 @@
 import Bot from "../../bot";
 import FileElement from "../../file-element";
+import EventContext from "./context";
+import EventCreateInfo, { EventRunFunc } from "./create-info";
 
-export enum EventType {
-  Client
-}
-
-export interface EventConstructionData {
-  fileName: string;
-  bot: Bot;
-}
-
-export interface EventOptions {
-  type: EventType;
-}
-
-export default abstract class Event extends FileElement {
-  private type: EventType;
+export default class Event extends FileElement {
   private bot: Bot;
+  private name: string;
+  private runFunc: EventRunFunc;
 
-  constructor(data: EventConstructionData, options: EventOptions) {
-    super(data.fileName);
-    this.type = options.type;
+  constructor(fileName: string, bot: Bot, createInfo: EventCreateInfo) {
+    super(fileName);
+    this.bot = bot;
+    this.runFunc = createInfo.run;
   }
 
-  public abstract run(bot: Bot, ...args): void;
-
-  public getTriggers(): string[] {
-    return [name];
-  }
-
-  public getType(): EventType {
-    return this.type;
+  public run(context: EventContext): void {
+    this.runFunc.call({ bot: this.bot }, context);
   }
 
   public getBot(): Bot {
     return this.bot;
+  }
+
+  public getName() {
+    return this.name;
   }
 }
