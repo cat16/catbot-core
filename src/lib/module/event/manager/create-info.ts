@@ -1,4 +1,4 @@
-import EventContext from "./context";
+import EventContext from "../context";
 
 export type EventRunFunc = (context: EventContext) => void;
 

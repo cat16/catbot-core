@@ -1,6 +1,6 @@
 import FileElement from "../..";
 
-export default abstract class DirLoader<E extends FileElement> {
+export default abstract class ElementDirectoryLoader<E extends FileElement> {
   private directory: string;
   constructor(directory: string) {
     this.directory = directory;

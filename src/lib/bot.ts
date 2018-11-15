@@ -3,12 +3,12 @@ import * as fs from "fs";
 
 import Config from "./config";
 import Database from "./database/client-database";
+import Module from "./module";
 import { CommandManager } from "./module/command/manager";
-import { EventManager } from "./module/event/manager";
+import { EventLoader } from "./module/event/manager";
 import { ModuleManager } from "./module/manager";
-import Module from "./module/module";
+import BotUtil, { createDirectory, getInput, pathExists } from "./util";
 import Logger from "./util/logger";
-import BotUtil, { createDirectory, getInput, pathExists } from "./util/util";
 
 export default class Bot {
   private directory: string;
@@ -17,7 +17,7 @@ export default class Bot {
   private activeDatabase: Database;
   private moduleManager: ModuleManager;
   private commandManager: CommandManager;
-  private eventManager: EventManager;
+  private eventManager: EventLoader;
   private client: Client;
   private config: Config;
 
@@ -37,14 +37,6 @@ export default class Bot {
       this.logger.log("Loading...");
       this.util = new BotUtil(this);
       this.loadConfig("config.json");
-      this.activeDatabase = new DatabaseClient(
-        {
-          password: this.config.dbPassword,
-          uri: this.config.dbURI,
-          user: this.config.dbUser
-        },
-        this.logger
-      );
       if (!pathExists(this.directory)) {
         createDirectory(this.directory);
       }
@@ -161,7 +153,7 @@ export default class Bot {
     return this.commandManager;
   }
 
-  public getEventManager(): EventManager {
+  public getEventManager(): EventLoader {
     return this.eventManager;
   }
 

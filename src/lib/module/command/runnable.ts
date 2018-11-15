@@ -4,7 +4,7 @@ import Arg from "./arg";
 import CommandContext from "./context";
 import RunnableCommandCreateInfo, {
   CommandRunFunc
-} from "./runnable-create-info";
+} from "./manager/runnable-create-info";
 
 export default class RunnableCommand extends Command {
   private args: Arg[];

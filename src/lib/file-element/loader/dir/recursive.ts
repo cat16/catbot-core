@@ -1,11 +1,11 @@
-import DirLoader from ".";
-import { getDirectories, getFiles, requireFiles } from "../../../..";
+import ElementDirectoryLoader from ".";
+import { getDirectories, getFiles, requireFiles } from "../../../util";
 import RecursiveElementFactory from "../../factory/recursive";
 import RecursiveFileElement from "../../recursive-file-element";
 
-export default class RecursiveDirLoader<
+export default class RecursiveElementDirectoryLoader<
   E extends RecursiveFileElement<E>
-> extends DirLoader<E> {
+> extends ElementDirectoryLoader<E> {
   private factory: RecursiveElementFactory<E>;
 
   constructor(directory: string, factory: RecursiveElementFactory<E>) {

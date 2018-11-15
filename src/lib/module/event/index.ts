@@ -1,7 +1,7 @@
 import Bot from "../../bot";
 import FileElement from "../../file-element";
 import EventContext from "./context";
-import EventCreateInfo, { EventRunFunc } from "./create-info";
+import EventCreateInfo, { EventRunFunc } from "./manager/create-info";
 
 export default class Event extends FileElement {
   private bot: Bot;

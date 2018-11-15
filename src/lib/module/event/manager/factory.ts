@@ -1,6 +1,6 @@
-import Event from ".";
-import Bot from "../../bot";
-import FileElementFactory from "../../file-element/factory";
+import Event from "..";
+import Bot from "../../../bot";
+import FileElementFactory from "../../../file-element/factory";
 import EventCreateInfo from "./create-info";
 
 export default class EventFactory implements FileElementFactory<Event> {

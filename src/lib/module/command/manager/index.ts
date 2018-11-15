@@ -1,30 +1,33 @@
 import chalk from "chalk";
 import { Message, User } from "eris";
 
-import Command from ".";
-import Bot from "../../bot";
-import NamedDirectoryElementManager from "../../file-element/manager/named";
-import Logger from "../../util/logger";
-import { startsWithAny } from "../../util/util";
-import ArgList from "./arg/list";
-import ArgType from "./arg/type";
-import CommandContext from "./context";
-import DBK from "./dbk";
-import CommandError from "./error";
-import CustomError from "./error/custom";
-import InvalidArgumentProvided from "./error/invalid-arg-provided";
-import NoArgumentProvided from "./error/no-arg-provided";
-import NoCommandProvided from "./error/no-command-provided";
-import UnknownCommand from "./error/unknownCommand";
+import Command from "..";
+import Bot from "../../../bot";
+import NamedDirectoryElementManager from "../../../file-element/manager/named-dir";
+import { startsWithAny } from "../../../util";
+import Logger from "../../../util/logger";
+import ArgList from "../arg/list";
+import ArgType from "../arg/type";
+import CommandContext from "../context";
+import DBK from "../dbk";
+import CommandError from "../error";
+import CustomError from "../error/custom";
+import InvalidArgumentProvided from "../error/invalid-arg-provided";
+import NoArgumentProvided from "../error/no-arg-provided";
+import NoCommandProvided from "../error/no-command-provided";
+import UnknownCommand from "../error/unknownCommand";
+import CommandResult from "../result";
+import RunnableCommand from "../runnable";
+import Trigger from "../trigger";
 import CommandLoader from "./loader";
-import CommandResult from "./result";
-import RunnableCommand from "./runnable";
-import Trigger from "./trigger";
 
 export type PermCheck = (command: Command, user: User) => boolean;
 
 // move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
-export class CommandManager extends NamedDirectoryElementManager<Command> {
+export default class CommandManager extends NamedDirectoryElementManager<
+  Command,
+  CommandLoader
+> {
   private permChecks: PermCheck[];
   private bot: Bot;
   private logger: Logger;
@@ -32,8 +35,8 @@ export class CommandManager extends NamedDirectoryElementManager<Command> {
   private prefixes: string[];
   private lastTriggered: object;
 
-  constructor(directories: string[], bot: Bot) {
-    super(directories.map(dir => new CommandLoader(dir, bot)));
+  constructor(directory: string, bot: Bot) {
+    super(new CommandLoader(directory, bot));
     this.prefixes = [`${bot.getClient().user.mention} `];
     this.lastTriggered = {};
     this.bot = bot;

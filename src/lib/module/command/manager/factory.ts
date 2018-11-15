@@ -1,7 +1,7 @@
-import Command from ".";
-import Bot from "../../bot";
-import RecursiveElementFactory from "../../file-element/factory/recursive";
-import RunnableCommand from "./runnable";
+import Command from "../.";
+import Bot from "../../../bot";
+import RecursiveElementFactory from "../../../file-element/factory/recursive";
+import RunnableCommand from "../runnable";
 import RunnableCommandCreateInfo from "./runnable-create-info";
 
 export default class CommandFactory

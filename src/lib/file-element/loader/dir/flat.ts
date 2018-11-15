@@ -1,13 +1,15 @@
-import DirLoader from ".";
+import ElementDirectoryLoader from ".";
 import FileElement from "../..";
-import { getDirectories, getFiles, requireFiles } from "../../../..";
+import { getDirectories, getFiles, requireFiles } from "../../../util";
 import FileElementFactory from "../../factory";
 
 export interface FlatLoadOptions {
   targetFile?: string;
 }
 
-export default class FlatDirLoader<E extends FileElement> extends DirLoader<E> {
+export default class FlatElementDirectoryLoader<
+  E extends FileElement
+> extends ElementDirectoryLoader<E> {
   private factory: FileElementFactory<E>;
   private targetFile?: string;
 
