@@ -1,10 +1,10 @@
-import Module from "..";
-import Bot from "../../bot";
-import NamedElement from "../../file-element/named-element";
-import RecursiveFileElement from "../../file-element/recursive-file-element";
-import Logger from "../../util/logger";
+import Bot from "../bot";
+import Module from "../module";
+import NamedElement from "../util/file-element/named-element";
+import RecursiveFileElement from "../util/file-element/recursive-file-element";
+import Logger from "../util/logger";
 import CommandContext from "./context";
-import CommandCreateInfo from "./manager/create-info";
+import CommandCreateInfo from "./dir-manager/create-info";
 
 export default class Command extends RecursiveFileElement<Command>
   implements NamedElement {

@@ -1,42 +1,36 @@
 import chalk from "chalk";
-import { Message, User } from "eris";
+import { Message } from "eris";
+import Command from ".";
+import Bot from "../bot";
+import DatabaseVariable from "../database/database-variable";
+import { startsWithAny } from "../util";
+import NamedElementSearcher from "../util/file-element/searcher";
+import Logger from "../util/logger";
+import ArgList from "./arg/list";
+import ArgType from "./arg/type";
+import CommandContext from "./context";
+import CommandDBKs from "./dbk";
+import CommandError from "./error";
+import CustomError from "./error/custom";
+import InvalidArgumentProvided from "./error/invalid-arg-provided";
+import NoArgumentProvided from "./error/no-arg-provided";
+import NoCommandProvided from "./error/no-command-provided";
+import UnknownCommand from "./error/unknownCommand";
+import CommandSuccess from "./result";
+import RunnableCommand from "./runnable";
+import Trigger from "./trigger";
 
-import Command from "..";
-import Bot from "../../../bot";
-import NamedDirectoryElementManager from "../../../file-element/manager/named-dir";
-import { startsWithAny } from "../../../util";
-import Logger from "../../../util/logger";
-import ArgList from "../arg/list";
-import ArgType from "../arg/type";
-import CommandContext from "../context";
-import DBK from "../dbk";
-import CommandError from "../error";
-import CustomError from "../error/custom";
-import InvalidArgumentProvided from "../error/invalid-arg-provided";
-import NoArgumentProvided from "../error/no-arg-provided";
-import NoCommandProvided from "../error/no-command-provided";
-import UnknownCommand from "../error/unknownCommand";
-import CommandResult from "../result";
-import RunnableCommand from "../runnable";
-import Trigger from "../trigger";
-import CommandLoader from "./loader";
+export type CommandResult = CommandSuccess | CommandError;
 
-export type PermCheck = (command: Command, user: User) => boolean;
-
-// move this the hecc out due to me adding pro find functionality and then just make a parser class for this like u said u were gonna
-export default class CommandManager extends NamedDirectoryElementManager<
-  Command,
-  CommandLoader
-> {
-  private permChecks: PermCheck[];
+export default class CommandManager extends NamedElementSearcher<Command> {
   private bot: Bot;
   private logger: Logger;
 
   private prefixes: string[];
   private lastTriggered: object;
 
-  constructor(directory: string, bot: Bot) {
-    super(new CommandLoader(directory, bot));
+  constructor(bot: Bot) {
+    super(" ");
     this.prefixes = [`${bot.getClient().user.mention} `];
     this.lastTriggered = {};
     this.bot = bot;
@@ -47,7 +41,10 @@ export default class CommandManager extends NamedDirectoryElementManager<
     return new Promise(async (resolve, reject) => {
       const result = this.parseFull(msg.content);
       if (result && (await this.shouldRespond(result))) {
-        const cooldown: number = await this.getValue(DBK.CommandCooldown, 0);
+        const cooldown: number = await this.getValue(
+          CommandDBKs.CommandCooldown,
+          0
+        );
         if (cooldown !== 0) {
           const lastTriggered: Trigger = this.lastTriggered[msg.author.id];
           if (lastTriggered != null) {
@@ -84,22 +81,22 @@ export default class CommandManager extends NamedDirectoryElementManager<
     });
   }
 
-  public shouldRespond(result: CommandResult | CommandError): Promise<boolean> {
+  public shouldRespond(result: CommandResult): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      const silent = await this.getValue(DBK.Silent, false);
+      const silent = await this.getValue(CommandDBKs.Silent, false);
       const respondToUnknownCommands = await this.getValue(
-        DBK.RespondToUnknownCommands,
+        CommandDBKs.RespondToUnknownCommands,
         false
       );
       resolve(
         !(silent && result instanceof CommandError) &&
-          (result || respondToUnknownCommands)
+          (result != null || respondToUnknownCommands)
       );
     });
   }
 
   public runResult(
-    result: CommandResult | CommandError,
+    result: CommandResult,
     msg: Message,
     sudo: boolean = false
   ): Promise<boolean> {
@@ -111,7 +108,7 @@ export default class CommandManager extends NamedDirectoryElementManager<
             .createMessage(msg.channel.id, result.getMessage());
         }
         resolve(true);
-      } else if (result instanceof CommandResult) {
+      } else if (result instanceof CommandSuccess) {
         const command = result.command;
         if (sudo || (await this.checkPerms(command, msg.author))) {
           try {
@@ -155,7 +152,7 @@ export default class CommandManager extends NamedDirectoryElementManager<
     });
   }
 
-  public parseFull(msgContent: string): CommandResult | CommandError {
+  public parseFull(msgContent: string): CommandResult {
     const prefix = startsWithAny(msgContent, this.prefixes);
     if (prefix) {
       const result = this.parseContent(msgContent.slice(prefix.length));
@@ -164,7 +161,7 @@ export default class CommandManager extends NamedDirectoryElementManager<
     return null;
   }
 
-  public parseContent(content: string): CommandResult | CommandError {
+  public parseContent(content: string): CommandResult {
     const result = this.search(content);
     const command = result.element;
     if (command) {
@@ -196,18 +193,21 @@ export default class CommandManager extends NamedDirectoryElementManager<
     });
   }
 
-  public async getValue(key: DBK, defaultValue?: any): Promise<any> {
-    return this.bot.getDatabase().get(key.getKey(), defaultValue);
+  public async getValue<T>(
+    key: CommandDBKs<T>,
+    defaultValue?: any
+  ): Promise<T> {
+    return this.bot.getDatabase().get(key, defaultValue);
   }
 
-  public async setValue(key: DBK, value: any): Promise<void> {
-    return this.bot.getDatabase().set(key.getKey(), value);
+  public async setValue<T>(key: CommandDBKs<T>, value: any): Promise<void> {
+    return this.bot.getDatabase().set(key, value);
   }
 
   private handleCommand(
     command: RunnableCommand,
     content: string
-  ): CommandResult | CommandError {
+  ): CommandResult {
     const args = new Map<string, any>();
     if (command.getArgs().length > 0) {
       for (const arg of command.getArgs()) {
@@ -248,6 +248,8 @@ export default class CommandManager extends NamedDirectoryElementManager<
         }
       }
     }
-    return new CommandResult(command, new ArgList(args, content));
+    return new CommandSuccess(command, new ArgList(args, content));
   }
+
+  private createVariable<T>(name): DatabaseVariable<T> {}
 }

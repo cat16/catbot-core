@@ -1,4 +1,4 @@
-import Bot from "../../../bot";
+import Bot from "../../bot";
 import ArgResult from "./result";
 
 export type ValidateFunction = (text: string, bot: Bot) => ArgResult;
