@@ -1,6 +1,6 @@
 import Module from "..";
 import Bot from "../../bot";
-import FlatElementDirectoryLoader from "../../file-element/loader/dir/flat";
+import FlatElementDirectoryLoader from "../../util/file-element/loader/dir/flat";
 import ModuleFactory from "./factory";
 
 export default class ModuleLoader extends FlatElementDirectoryLoader<Module> {

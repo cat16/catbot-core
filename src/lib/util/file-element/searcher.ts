@@ -20,18 +20,16 @@ export interface ElementSearchResults<E extends NamedElement> {
   incompleteAliases: ElementSearchResult<E>[];
 }
 
-export default class NamedElementSearcher<E extends NamedElement> {
+export default abstract class NamedElementSearcher<E extends NamedElement> {
   private separator: string;
   constructor(separator: string = " ") {
     this.separator = separator;
   }
 
-  public find(
-    elements: E[],
-    name: string,
-    options?: NamedElementSearchOptions
-  ): E {
-    const result = this.search(elements, name, options);
+  public abstract getElements(): E[];
+
+  public find(name: string, options?: NamedElementSearchOptions): E {
+    const result = this.search(name, options);
     if (!result.exact) {
       return null;
     }
@@ -39,16 +37,15 @@ export default class NamedElementSearcher<E extends NamedElement> {
   }
 
   public search(
-    elements: E[],
     name: string,
     options?: NamedElementSearchOptions
   ): ElementSearchResults<E> {
-    return this.searchRecursive(name, elements, options);
+    return this.searchRecursive(name, null, options);
   }
 
   private searchRecursive(
     name: string,
-    elements: E[],
+    elements: E[] = this.getElements(),
     {
       allowAliases = true,
       allowIncomplete = true,

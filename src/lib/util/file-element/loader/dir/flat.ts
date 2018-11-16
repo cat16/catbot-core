@@ -1,6 +1,6 @@
 import ElementDirectoryLoader from ".";
 import FileElement from "../..";
-import { getDirectories, getFiles, requireFiles } from "../../../util";
+import { getDirectories, getFiles, requireFiles } from "../../..";
 import FileElementFactory from "../../factory";
 
 export interface FlatLoadOptions {

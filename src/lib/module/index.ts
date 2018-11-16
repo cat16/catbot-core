@@ -1,16 +1,16 @@
 import Bot from "../bot";
-import FileElement from "../file-element";
-import NamedElement from "../file-element/named-element";
-import CommandManager from "./command/manager";
-import EventManager from "./event/manager";
-import ModuleCreateInfo from "./manager/create-info";
+import CommandDirectoryManager from "../command/dir-manager";
+import EventDirectoryManager from "../event/dir-manager";
+import FileElement from "../util/file-element";
+import NamedElement from "../util/file-element/named-element";
+import ModuleCreateInfo from "./dir-manager/create-info";
 
 export default class Module extends FileElement implements NamedElement {
   private bot: Bot;
   private name: string;
   private aliases: string[];
-  private commandLoader: CommandManager;
-  private eventDirManager: EventManager;
+  private commandLoader: CommandDirectoryManager;
+  private eventDirManager: EventDirectoryManager;
 
   constructor(
     fileName: string,
@@ -19,11 +19,22 @@ export default class Module extends FileElement implements NamedElement {
     createInfo: ModuleCreateInfo
   ) {
     super(fileName);
-    this.commandLoader = new CommandManager(`${directory}/commands`, bot);
-    this.eventDirManager = new EventManager(`${directory}/events`, bot);
+    this.commandLoader = new CommandDirectoryManager(
+      `${directory}/commands`,
+      bot
+    );
+    this.eventDirManager = new EventDirectoryManager(
+      `${directory}/events`,
+      bot
+    );
     this.name = fileName;
     this.aliases = createInfo.aliases;
     this.bot = bot;
+  }
+
+  public load(): void {
+    this.commandLoader.load();
+    this.eventDirManager.load();
   }
 
   public getAliases(): string[] {
@@ -38,11 +49,11 @@ export default class Module extends FileElement implements NamedElement {
     return this.bot;
   }
 
-  public getCommandManager(): CommandManager {
+  public getCommandManager(): CommandDirectoryManager {
     return this.commandLoader;
   }
 
-  public getEventManager(): EventManager {
+  public getEventManager(): EventDirectoryManager {
     return this.eventDirManager;
   }
 }

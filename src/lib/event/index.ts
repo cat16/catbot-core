@@ -1,5 +1,5 @@
-import Bot from "../../bot";
-import FileElement from "../../file-element";
+import Bot from "../bot";
+import FileElement from "../util/file-element";
 import EventContext from "./context";
 import EventCreateInfo, { EventRunFunc } from "./dir-manager/create-info";
 

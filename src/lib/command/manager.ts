@@ -9,7 +9,6 @@ import Logger from "../util/logger";
 import ArgList from "./arg/list";
 import ArgType from "./arg/type";
 import CommandContext from "./context";
-import CommandDBKs from "./dbk";
 import CommandError from "./error";
 import CustomError from "./error/custom";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
@@ -23,28 +22,41 @@ import Trigger from "./trigger";
 export type CommandResult = CommandSuccess | CommandError;
 
 export default class CommandManager extends NamedElementSearcher<Command> {
-  private bot: Bot;
-  private logger: Logger;
+  public readonly bot: Bot;
+  public readonly logger: Logger;
 
-  private prefixes: string[];
+  public readonly prefixes: DatabaseVariable<string[]>;
+  public readonly silent: DatabaseVariable<boolean>;
+  public readonly respondToUnknownCommands: DatabaseVariable<boolean>;
+  public readonly cooldown: DatabaseVariable<number>;
+
   private lastTriggered: object;
 
   constructor(bot: Bot) {
     super(" ");
-    this.prefixes = [`${bot.getClient().user.mention} `];
+    this.prefixes = this.createVariable("prefixes", [
+      `${bot.getClient().user.mention} `
+    ]);
+    this.silent = this.createVariable("silent", false);
+    this.respondToUnknownCommands = this.createVariable(
+      "respondToUnkownCommands",
+      false
+    );
+    this.cooldown = this.createVariable("cooldown", 0);
     this.lastTriggered = {};
     this.bot = bot;
     this.logger = new Logger("command-manager", bot.getLogger());
+  }
+
+  public getElements() {
+    return this.bot.getModuleManager();
   }
 
   public handleMessage(msg: Message): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       const result = this.parseFull(msg.content);
       if (result && (await this.shouldRespond(result))) {
-        const cooldown: number = await this.getValue(
-          CommandDBKs.CommandCooldown,
-          0
-        );
+        const cooldown = this.cooldown.getValue();
         if (cooldown !== 0) {
           const lastTriggered: Trigger = this.lastTriggered[msg.author.id];
           if (lastTriggered != null) {
@@ -83,14 +95,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   public shouldRespond(result: CommandResult): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      const silent = await this.getValue(CommandDBKs.Silent, false);
-      const respondToUnknownCommands = await this.getValue(
-        CommandDBKs.RespondToUnknownCommands,
-        false
-      );
       resolve(
-        !(silent && result instanceof CommandError) &&
-          (result != null || respondToUnknownCommands)
+        !(this.silent.getValue() && result instanceof CommandError) &&
+          (result != null || this.respondToUnknownCommands.getValue())
       );
     });
   }
@@ -153,7 +160,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   public parseFull(msgContent: string): CommandResult {
-    const prefix = startsWithAny(msgContent, this.prefixes);
+    const prefix = startsWithAny(msgContent, this.prefixes.getValue());
     if (prefix) {
       const result = this.parseContent(msgContent.slice(prefix.length));
       return result;
@@ -179,29 +186,6 @@ export default class CommandManager extends NamedElementSearcher<Command> {
       return new UnknownCommand(content);
     }
     return new NoCommandProvided();
-  }
-
-  // TODO: move to bot
-  public checkPerms(command: Command, user: User): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      for (const permCheck of this.permChecks) {
-        if (!permCheck(command, user)) {
-          return resolve(false);
-        }
-      }
-      resolve(true);
-    });
-  }
-
-  public async getValue<T>(
-    key: CommandDBKs<T>,
-    defaultValue?: any
-  ): Promise<T> {
-    return this.bot.getDatabase().get(key, defaultValue);
-  }
-
-  public async setValue<T>(key: CommandDBKs<T>, value: any): Promise<void> {
-    return this.bot.getDatabase().set(key, value);
   }
 
   private handleCommand(
@@ -251,5 +235,13 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     return new CommandSuccess(command, new ArgList(args, content));
   }
 
-  private createVariable<T>(name): DatabaseVariable<T> {}
+  private createVariable<T>(
+    key: string | string[],
+    defaultValue?: T
+  ): DatabaseVariable<T> {
+    return this.bot.createDatabaseVariable(
+      ["command-manager"].concat(typeof key === "string" ? [key] : key),
+      defaultValue
+    );
+  }
 }

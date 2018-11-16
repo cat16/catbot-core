@@ -13,8 +13,8 @@ export default class ElementDirectoryManager<
     this.loader = loader;
   }
 
-  public load() {
-    this.loader.load();
+  public load(): Map<string, E | Error> {
+    return this.loader.load();
   }
 
   public getDirectory(): string {

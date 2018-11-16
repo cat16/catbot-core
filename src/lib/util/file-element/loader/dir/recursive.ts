@@ -1,5 +1,5 @@
 import ElementDirectoryLoader from ".";
-import { getDirectories, getFiles, requireFiles } from "../../../util";
+import { getDirectories, getFiles, requireFiles } from "../../..";
 import RecursiveElementFactory from "../../factory/recursive";
 import RecursiveFileElement from "../../recursive-file-element";
 

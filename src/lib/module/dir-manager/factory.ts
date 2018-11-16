@@ -1,6 +1,6 @@
 import Module from "..";
 import Bot from "../../bot";
-import FileElementFactory from "../../file-element/factory";
+import FileElementFactory from "../../util/file-element/factory";
 import ModuleCreateInfo from "./create-info";
 
 export default class ModuleFactory implements FileElementFactory<Module> {

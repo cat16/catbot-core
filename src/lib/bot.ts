@@ -1,12 +1,13 @@
 import { Client } from "eris";
 import * as fs from "fs";
 
+import CommandManager from "./command/manager";
 import Config from "./config";
 import Database from "./database/client-database";
+import DatabaseVariable from "./database/database-variable";
+import EventManager from "./event/manager";
 import Module from "./module";
-import { CommandManager } from "./module/command/manager";
-import { EventLoader } from "./module/event/manager";
-import { ModuleManager } from "./module/manager";
+import ModuleManager from "./module/manager";
 import BotUtil, { createDirectory, getInput, pathExists } from "./util";
 import Logger from "./util/logger";
 
@@ -17,7 +18,7 @@ export default class Bot {
   private activeDatabase: Database;
   private moduleManager: ModuleManager;
   private commandManager: CommandManager;
-  private eventManager: EventLoader;
+  private eventManager: EventManager;
   private client: Client;
   private config: Config;
 
@@ -149,11 +150,15 @@ export default class Bot {
     this.client.disconnect({ reconnect: false });
   }
 
+  public getModuleManager(): ModuleManager {
+    return this.moduleManager;
+  }
+
   public getCommandManager(): CommandManager {
     return this.commandManager;
   }
 
-  public getEventManager(): EventLoader {
+  public getEventManager(): EventManager {
     return this.eventManager;
   }
 
@@ -167,6 +172,13 @@ export default class Bot {
 
   public getDatabase(): Database {
     return this.activeDatabase;
+  }
+
+  public createDatabaseVariable<T>(
+    key: string[],
+    defaultValue?: T
+  ): DatabaseVariable<T> {
+    return new DatabaseVariable<T>(this.getDatabase(), key, defaultValue);
   }
 
   public getClient() {

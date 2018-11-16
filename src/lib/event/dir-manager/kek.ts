@@ -1,6 +1,6 @@
 import Event from "..";
-import Bot from "../../../bot";
-import ElementDirectoryManager from "../../../file-element/manager/dir";
+import Bot from "../../bot";
+import ElementDirectoryManager from "../../util/file-element/manager/dir";
 import EventContext from "../context";
 import EventLoader from "./loader";
 
