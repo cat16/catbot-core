@@ -5,8 +5,8 @@ import EventContext from "../context";
 import EventLoader from "./loader";
 
 export class EventManager extends ElementDirectoryManager<Event, EventLoader> {
-  public bot: Bot;
-  public addedEvents: string[];
+  public readonly bot: Bot;
+  private addedEvents: string[];
 
   constructor(directory: string, bot: Bot) {
     super(new EventLoader(directory, bot));
@@ -15,9 +15,9 @@ export class EventManager extends ElementDirectoryManager<Event, EventLoader> {
 
   public refreshEvents() {
     this.getElements().forEach(event => {
-      if (!this.addedEvents.find(e => e === event.getName())) {
-        this.bot.getClient().on(event.getName(), (...data: any[]) => {
-          this.runEvent(event.getName(), data);
+      if (!this.addedEvents.find(e => e === event.name)) {
+        this.bot.client.on(event.name, (...data: any[]) => {
+          this.runEvent(event.name, data);
         });
       }
     });
@@ -25,7 +25,7 @@ export class EventManager extends ElementDirectoryManager<Event, EventLoader> {
 
   public runEvent(name: string, data: any[]) {
     this.getElements().forEach(event => {
-      if (event.getName() === name) {
+      if (event.name === name) {
         event.run(new EventContext(data));
       }
     });

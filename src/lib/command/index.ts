@@ -1,62 +1,60 @@
 import Bot from "../bot";
+import DatabaseVariable from "../database/database-variable";
 import Module from "../module";
+import { array } from "../util";
 import NamedElement from "../util/file-element/named-element";
 import RecursiveFileElement from "../util/file-element/recursive-file-element";
 import Logger from "../util/logger";
-import CommandContext from "./context";
-import CommandCreateInfo from "./dir-manager/create-info";
+import CommandCreateInfo from "./create-info";
 
 export default class Command extends RecursiveFileElement<Command>
   implements NamedElement {
-  private aliases: string[];
-  private module: Module;
+  public readonly logger: Logger;
+  public readonly bot: Bot;
+  public readonly module: Module;
+  public readonly name: string;
 
-  private silent: boolean;
-  private logger: Logger;
+  public readonly aliases: DatabaseVariable<string[]>;
+  public readonly silent: DatabaseVariable<boolean>;
 
   constructor(
     fileName: string,
     parent: Command,
     bot: Bot,
+    module2: Module,
     createInfo: CommandCreateInfo
   ) {
     super(fileName, parent);
+    this.bot = bot;
+    this.module = module2;
+    this.name = fileName;
 
-    this.aliases = createInfo.aliases || [];
-    this.silent = createInfo.silent || false;
-    this.module = null;
+    this.aliases = this.createVariable("aliases", createInfo.aliases || []);
+    this.silent = this.createVariable("silent", createInfo.silent || false);
 
-    this.logger = new Logger(
-      `command::${this.getFilePath(" ")}`,
-      bot.getLogger()
-    );
+    this.logger = new Logger(`command::${this.getFilePath(" ")}`, bot.logger);
   }
 
   public getName(): string {
-    return this.getFileName();
+    return this.name;
   }
 
-  public getTriggers(): string[] {
-    return [this.getName(), ...this.getAliases()];
+  public getAliases(): string[] {
+    return this.aliases.getValue();
   }
 
   public getFullName(): string {
     return this.getFilePath(" ");
   }
 
-  public hasPermission(context: CommandContext): Promise<boolean> | boolean {
-    return false;
-  }
-
-  public getAliases(): string[] {
-    return this.aliases;
-  }
-
-  public getModule(): Module {
-    return this.module;
-  }
-
-  public isSilent(): boolean {
-    return this.silent;
+  private createVariable<T>(
+    key: string | string[],
+    defaultValue?: T
+  ): DatabaseVariable<T> {
+    return new DatabaseVariable<T>(
+      this.bot.getDatabase(),
+      ["command", ...array(key)],
+      defaultValue
+    );
   }
 }

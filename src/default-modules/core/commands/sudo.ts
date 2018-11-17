@@ -1,26 +1,19 @@
-import { Command, CommandConstructionData, CommandContext } from "../../..";
+import { CommandCreateInfo } from "../../..";
 
-export default class extends Command {
-  constructor(data: CommandConstructionData) {
-    super(data, {
-      name: "sudo",
-      silent: true,
-    });
-  }
-  public async run(context: CommandContext) {
-    const bot = context.bot;
-    const commandManager = bot.getCommandManager();
+const createInfo: CommandCreateInfo = {
+  run(context) {
+    const commandManager = this.bot.commandManager;
     commandManager.runResult(
-      commandManager.parseContent(
-        context.args.content,
-        commandManager.getAllElements(),
-        commandManager.find("sudo").data.element,
-      ),
+      commandManager.parseContent(context.args.content),
       context.msg,
-      true,
+      true
+    );
+  },
+  silent: true,
+  async hasPermission(context): Promise<boolean> {
+    return (
+      context.msg.author.id ===
+      (await context.bot.getClient().getOAuthApplication()).owner.id
     );
   }
-  public async hasPermission(context: CommandContext): Promise<boolean> {
-    return context.msg.author.id === (await context.bot.getClient().getOAuthApplication()).owner.id;
-  }
-}
+};

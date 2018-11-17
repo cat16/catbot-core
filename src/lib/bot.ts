@@ -12,14 +12,16 @@ import BotUtil, { createDirectory, getInput, pathExists } from "./util";
 import Logger from "./util/logger";
 
 export default class Bot {
-  private directory: string;
-  private logger: Logger;
-  private util: BotUtil;
+  public readonly directory: string;
+  public readonly logger: Logger;
+  public readonly util: BotUtil;
+
+  public readonly client: Client;
+  public readonly moduleManager: ModuleManager;
+  public readonly commandManager: CommandManager;
+  public readonly eventManager: EventManager;
+
   private activeDatabase: Database;
-  private moduleManager: ModuleManager;
-  private commandManager: CommandManager;
-  private eventManager: EventManager;
-  private client: Client;
   private config: Config;
 
   constructor(directory: string) {
@@ -27,29 +29,22 @@ export default class Bot {
     this.logger = new Logger("bot-core");
     this.util = new BotUtil(this);
     this.activeDatabase = null;
-    this.moduleManager = new ModuleManager(this);
+    this.moduleManager = new ModuleManager(directory, this);
     this.client = new Client(this.config.token, {});
     this.config = null;
   }
 
   public load(): Promise<void> {
     return new Promise(async (resolve, reject) => {
-      this.logger = new Logger("bot-core");
       this.logger.log("Loading...");
-      this.util = new BotUtil(this);
       this.loadConfig("config.json");
       if (!pathExists(this.directory)) {
         createDirectory(this.directory);
       }
-      this.moduleManager.loadDirectory(`${__dirname}/default-modules`);
-      this.moduleManager.addLoader(new ModuleLoader(this.directory, this));
+      this.moduleManager.load();
       this.logger.success("Successfully loaded.");
       resolve();
     });
-  }
-
-  public getModule(name: string): Module {
-    return this.moduleManager.find(name).data.element;
   }
 
   public connect(): Promise<void> {
@@ -150,28 +145,12 @@ export default class Bot {
     this.client.disconnect({ reconnect: false });
   }
 
-  public getModuleManager(): ModuleManager {
-    return this.moduleManager;
-  }
-
-  public getCommandManager(): CommandManager {
-    return this.commandManager;
-  }
-
-  public getEventManager(): EventManager {
-    return this.eventManager;
-  }
-
-  public getLogger(): Logger {
-    return this.logger;
-  }
-
-  public getUtil(): BotUtil {
-    return this.util;
-  }
-
   public getDatabase(): Database {
     return this.activeDatabase;
+  }
+
+  public getConfig() {
+    return this.config;
   }
 
   public createDatabaseVariable<T>(
@@ -179,13 +158,5 @@ export default class Bot {
     defaultValue?: T
   ): DatabaseVariable<T> {
     return new DatabaseVariable<T>(this.getDatabase(), key, defaultValue);
-  }
-
-  public getClient() {
-    return this.client;
-  }
-
-  public getConfig() {
-    return this.config;
   }
 }

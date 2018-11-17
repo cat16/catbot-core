@@ -3,8 +3,8 @@ import FileElement from ".";
 export default abstract class RecursiveFileElement<
   T extends RecursiveFileElement<T>
 > extends FileElement {
-  private parent?: T;
-  private children: T[];
+  public readonly parent?: T;
+  public readonly children: T[];
 
   constructor(fileName: string, parent?: T) {
     super(fileName);
@@ -16,18 +16,6 @@ export default abstract class RecursiveFileElement<
     return this.parent
       ? `${this.parent.getFilePath()}${separator}${this.getFileName()}`
       : this.getFileName();
-  }
-
-  public getParent(): T {
-    return this.parent;
-  }
-
-  public getChildren(): T[] {
-    return this.children;
-  }
-
-  public addChildren(...children: T[]): void {
-    this.children.push(...children);
   }
 
   public removeChild(child: T): void {

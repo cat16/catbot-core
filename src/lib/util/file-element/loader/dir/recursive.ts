@@ -33,7 +33,7 @@ export default class RecursiveElementDirectoryLoader<
               if (pair[1] instanceof Error) {
                 elements.set(`${dir}/${pair[0]}`, pair[1]);
               } else {
-                element.addChildren(pair[1]);
+                element.children.push(pair[1]);
               }
             }
             dirs.splice(dirs.indexOf(dir), 1);
@@ -51,7 +51,7 @@ export default class RecursiveElementDirectoryLoader<
         if (pair[1] instanceof Error) {
           elements.set(`${dir}/${pair[0]}`, pair[1]);
         } else {
-          element.addChildren(pair[1]);
+          element.children.push(pair[1]);
         }
       }
       elements.set(dir, element);

@@ -1,10 +1,11 @@
 import Command from ".";
 import Bot from "../bot";
+import Module from "../module";
 import Arg from "./arg";
 import CommandContext from "./context";
 import RunnableCommandCreateInfo, {
   CommandRunFunc
-} from "./dir-manager/runnable-create-info";
+} from "./runnable-create-info";
 
 export default class RunnableCommand extends Command {
   private args: Arg[];
@@ -14,9 +15,10 @@ export default class RunnableCommand extends Command {
     fileName: string,
     parent: Command,
     bot: Bot,
+    module2: Module,
     createInfo: RunnableCommandCreateInfo
   ) {
-    super(fileName, parent, bot, createInfo);
+    super(fileName, parent, bot, module2, createInfo);
     this.runFunc = createInfo.run;
   }
   public run(context: CommandContext) {

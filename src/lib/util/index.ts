@@ -24,7 +24,7 @@ export default class BotUtil {
     if (userString.startsWith("!")) {
       userString = userString.slice(1);
     }
-    const user = this.bot.getClient().users.find(u => u.id === userString);
+    const user = this.bot.client.users.find(u => u.id === userString);
     if (user) {
       return user;
     } else {
@@ -36,7 +36,7 @@ export default class BotUtil {
     if (channelString.startsWith("<#") && channelString.endsWith(">")) {
       channelString = channelString.slice(2, -1);
     }
-    const channel = this.bot.getClient().getChannel(channelString);
+    const channel = this.bot.client.getChannel(channelString);
     if (channel) {
       return channel;
     } else {
@@ -178,4 +178,8 @@ export function startsWithAny(str: string, arr: string[]): string {
     }
   });
   return longest.length === 0 ? null : longest;
+}
+
+export function array<T>(x: T | T[]): T[] {
+  return x instanceof Array ? x : [x];
 }

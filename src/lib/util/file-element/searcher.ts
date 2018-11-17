@@ -8,16 +8,16 @@ export interface NamedElementSearchOptions {
   recursive?: boolean;
 }
 
-export interface ElementSearchResult<E extends NamedElement> {
+export interface ElementMatch<E extends NamedElement> {
   element?: E;
   leftover: string;
 }
 
 export interface ElementSearchResults<E extends NamedElement> {
-  exact?: ElementSearchResult<E>;
-  aliases: ElementSearchResult<E>[];
-  incompleteExacts: ElementSearchResult<E>[];
-  incompleteAliases: ElementSearchResult<E>[];
+  exact?: ElementMatch<E>;
+  aliases: ElementMatch<E>[];
+  incompleteExacts: ElementMatch<E>[];
+  incompleteAliases: ElementMatch<E>[];
 }
 
 export default abstract class NamedElementSearcher<E extends NamedElement> {
@@ -29,11 +29,22 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
   public abstract getElements(): E[];
 
   public find(name: string, options?: NamedElementSearchOptions): E {
-    const result = this.search(name, options);
-    if (!result.exact) {
-      return null;
-    }
-    return result.exact.element;
+    const match = this.findMatch(name, options);
+    return match ? match.element : null;
+  }
+
+  public findMatch(
+    name: string,
+    options?: NamedElementSearchOptions
+  ): ElementMatch<E> {
+    const matches = this.search(name, options);
+    return (
+      matches.exact ||
+      matches.aliases[0] ||
+      matches.incompleteExacts[0] ||
+      matches.incompleteAliases[0] ||
+      null
+    );
   }
 
   public search(
@@ -80,7 +91,7 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
         if (name.startsWith(`${element.getName()}${this.separator}`)) {
           const results2 = this.searchRecursive(
             name.slice(element.getName().length + this.separator.length),
-            element.getChildren(),
+            element.children,
             options,
             element
           );
@@ -96,7 +107,7 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
         ) {
           const results2 = this.searchRecursive(
             name.split(this.separator, 2)[1],
-            element.getChildren(),
+            element.children,
             options,
             element
           );
@@ -126,7 +137,7 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
             if (name.startsWith(`${alias}${this.separator}`)) {
               const results2 = this.searchRecursive(
                 name.slice(alias.length + this.separator.length),
-                element.getChildren(),
+                element.children,
                 options,
                 element
               );
@@ -144,7 +155,7 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
             ) {
               const results2 = this.searchRecursive(
                 name.slice(alias.length + this.separator.length),
-                element.getChildren(),
+                element.children,
                 options,
                 element
               );

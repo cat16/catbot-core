@@ -1,12 +1,9 @@
-import { Command, CommandConstructionData, CommandContext } from "../../../src";
+import { CommandCreateInfo } from "../../../src";
 
-export default class extends Command {
-  constructor(data: CommandConstructionData) {
-    super(data, {
-      name: "test"
-    });
-  }
-  public async run(context: CommandContext) {
+const createInfo: CommandCreateInfo = {
+  run(context) {
     context.say("the test command was run");
   }
-}
+};
+
+export default createInfo;

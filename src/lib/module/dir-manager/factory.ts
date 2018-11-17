@@ -1,11 +1,11 @@
 import Module from "..";
 import Bot from "../../bot";
 import FileElementFactory from "../../util/file-element/factory";
-import ModuleCreateInfo from "./create-info";
+import ModuleCreateInfo from "../create-info";
 
 export default class ModuleFactory implements FileElementFactory<Module> {
-  private bot: Bot;
-  private directory: string;
+  public readonly bot: Bot;
+  public readonly directory: string;
 
   constructor(bot: Bot, directory: string) {
     this.bot = bot;

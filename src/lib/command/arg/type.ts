@@ -10,8 +10,8 @@ export default class ArgType {
   });
   public static USER = new ArgType({
     validate: (text, bot) => {
-      const parts = text.split(/ (.+)/);
-      const user = bot.getUtil().getUser(parts[0]);
+      const parts = text.split(" ", 2);
+      const user = bot.util.getUser(parts[0]);
       if (user) {
         return new ArgResult(false, user, parts[1]);
       } else {
@@ -24,8 +24,8 @@ export default class ArgType {
   });
   public static TEXT_CHANNEL = new ArgType({
     validate: (text, bot) => {
-      const parts = text.split(/ (.+)/);
-      const channel = bot.getUtil().getTextChannel(parts[0]);
+      const parts = text.split(" ", 2);
+      const channel = bot.util.getTextChannel(parts[0]);
       if (channel) {
         return new ArgResult(false, channel, parts[1]);
       } else {
@@ -38,8 +38,8 @@ export default class ArgType {
   });
   public static DM_CHANNEL = new ArgType({
     validate: (text, bot) => {
-      const parts = text.split(/ (.+)/);
-      const channel = bot.getUtil().getDMChannel(parts[0]);
+      const parts = text.split(" ", 2);
+      const channel = bot.util.getDMChannel(parts[0]);
       if (channel) {
         return new ArgResult(false, channel, parts[1]);
       } else {
@@ -52,8 +52,8 @@ export default class ArgType {
   });
   public static VOICE_CHANNEL = new ArgType({
     validate: (text, bot) => {
-      const parts = text.split(/ (.+)/);
-      const channel = bot.getUtil().getVoiceChannel(parts[0]);
+      const parts = text.split(" ", 2);
+      const channel = bot.util.getVoiceChannel(parts[0]);
       if (channel) {
         return new ArgResult(false, channel, parts[1]);
       } else {
@@ -66,9 +66,11 @@ export default class ArgType {
   });
   public static COMMAND = new ArgType({
     validate: (text, bot) => {
-      const result = bot.getCommandManager().search(text);
-      if (result) {
-        return new ArgResult(false, result.element, result.leftover);
+      const match = bot.commandManager.findMatch(text, {
+        allowIncomplete: false
+      });
+      if (match) {
+        return new ArgResult(false, match.element, match.leftover);
       } else {
         return new ArgResult(true, `'${text}' is not a command`);
       }

@@ -3,12 +3,10 @@ import Bot from "../bot";
 import ArgList from "./arg/list";
 
 export default class CommandContext {
-  public bot: Bot;
   public msg: Message;
   public args: ArgList;
 
-  constructor(bot, msg, args: ArgList) {
-    this.bot = bot;
+  constructor(msg, args: ArgList) {
     this.msg = msg;
     this.args = args;
   }

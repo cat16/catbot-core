@@ -1,16 +1,20 @@
 import Bot from "../bot";
 import CommandDirectoryManager from "../command/dir-manager";
+import DatabaseVariable from "../database/database-variable";
 import EventDirectoryManager from "../event/dir-manager";
+import { array } from "../util";
 import FileElement from "../util/file-element";
 import NamedElement from "../util/file-element/named-element";
-import ModuleCreateInfo from "./dir-manager/create-info";
+import ModuleCreateInfo from "./create-info";
 
 export default class Module extends FileElement implements NamedElement {
-  private bot: Bot;
-  private name: string;
-  private aliases: string[];
-  private commandLoader: CommandDirectoryManager;
-  private eventDirManager: EventDirectoryManager;
+  public readonly bot: Bot;
+  public readonly name: string;
+
+  public readonly commandDirManager: CommandDirectoryManager;
+  public readonly eventDirManager: EventDirectoryManager;
+
+  public readonly aliases: DatabaseVariable<string[]>;
 
   constructor(
     fileName: string,
@@ -19,41 +23,41 @@ export default class Module extends FileElement implements NamedElement {
     createInfo: ModuleCreateInfo
   ) {
     super(fileName);
-    this.commandLoader = new CommandDirectoryManager(
+    this.commandDirManager = new CommandDirectoryManager(
       `${directory}/commands`,
-      bot
+      bot,
+      this
     );
     this.eventDirManager = new EventDirectoryManager(
       `${directory}/events`,
       bot
     );
     this.name = fileName;
-    this.aliases = createInfo.aliases;
+    this.aliases = this.createVariable(createInfo.aliases, []);
     this.bot = bot;
   }
 
   public load(): void {
-    this.commandLoader.load();
+    this.commandDirManager.load();
     this.eventDirManager.load();
-  }
-
-  public getAliases(): string[] {
-    return this.aliases;
   }
 
   public getName(): string {
     return this.name;
   }
 
-  public getBot(): Bot {
-    return this.bot;
+  public getAliases(): string[] {
+    return this.aliases.getValue();
   }
 
-  public getCommandManager(): CommandDirectoryManager {
-    return this.commandLoader;
-  }
-
-  public getEventManager(): EventDirectoryManager {
-    return this.eventDirManager;
+  private createVariable<T>(
+    name: string | string[],
+    defaultValue?: T
+  ): DatabaseVariable<T> {
+    return new DatabaseVariable(
+      this.bot.getDatabase(),
+      array(name),
+      defaultValue
+    );
   }
 }

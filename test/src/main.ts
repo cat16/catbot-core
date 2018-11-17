@@ -4,7 +4,7 @@ process.on("unhandledRejection", (reason, p) => {
   );
 });
 
-import { Bot, getInput } from "../../src";
+import { Bot } from "../../src";
 
 const a = (async () => {
   process.stdout.write("Input the following:\n");
