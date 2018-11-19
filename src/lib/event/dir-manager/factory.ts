@@ -1,7 +1,7 @@
 import Event from "..";
 import Bot from "../../bot";
 import FileElementFactory from "../../util/file-element/factory";
-import EventCreateInfo from "../create-info";
+import EventCreateInfo, { isEventCreateInfo } from "../create-info";
 
 export default class EventFactory implements FileElementFactory<Event> {
   public readonly bot: Bot;
@@ -10,6 +10,9 @@ export default class EventFactory implements FileElementFactory<Event> {
   }
 
   public create(rawElement: EventCreateInfo, fileName: string) {
-    return new Event(fileName, this.bot, rawElement);
+    if (isEventCreateInfo(rawElement)) {
+      return new Event(fileName, this.bot, rawElement);
+    }
+    return null;
   }
 }

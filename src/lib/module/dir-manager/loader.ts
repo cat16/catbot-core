@@ -6,7 +6,8 @@ import ModuleFactory from "./factory";
 export default class ModuleLoader extends FlatElementDirectoryLoader<Module> {
   constructor(directory: string, bot: Bot) {
     super(directory, new ModuleFactory(bot, directory), {
-      targetFile: "module"
+      targetFile: "module",
+      createWithoutTargetFile: true
     });
   }
 }

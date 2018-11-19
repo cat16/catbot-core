@@ -3,12 +3,13 @@ import { Message } from "eris";
 import Command from ".";
 import Bot from "../bot";
 import DatabaseVariable from "../database/database-variable";
-import { array, startsWithAny } from "../util";
+import { array, reportErrors, startsWithAny } from "../util";
 import NamedElementSearcher from "../util/file-element/searcher";
 import Logger from "../util/logger";
+import Arg from "./arg";
 import ArgList from "./arg/list";
+import ArgFailure from "./arg/result/fail";
 import ArgType from "./arg/type";
-import CommandContext from "./context";
 import CommandError from "./error";
 import CustomError from "./error/custom";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
@@ -16,6 +17,7 @@ import NoArgumentProvided from "./error/no-arg-provided";
 import NoCommandProvided from "./error/no-command-provided";
 import UnknownCommand from "./error/unknownCommand";
 import CommandSuccess from "./result";
+import CommandRunContext from "./run-context";
 import RunnableCommand from "./runnable";
 import Trigger from "./trigger";
 
@@ -34,8 +36,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   constructor(bot: Bot) {
     super(" ");
-    this.prefixes = this.createVariable("prefixes", [
-      `${bot.client.user.mention} `
+    this.bot = bot;
+    this.prefixes = this.createVariable("prefixes", () => [
+      `${bot.getClient().user.mention} `
     ]);
     this.silent = this.createVariable("silent", false);
     this.respondToUnknownCommands = this.createVariable(
@@ -44,13 +47,23 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     );
     this.cooldown = this.createVariable("cooldown", 0);
     this.lastTriggered = {};
-    this.bot = bot;
     this.logger = new Logger("command-manager", bot.logger);
   }
 
-  public getElements() {
+  public load() {
+    this.bot.moduleManager
+      .getElements()
+      .forEach(m =>
+        reportErrors(this.logger, "command", m.commandDirManager.load())
+      );
+    this.logger.success(
+      `Successfully loaded ${this.getElements().length} commands.`
+    );
+  }
+
+  public getElements(): Command[] {
     return [].concat(
-      ...this.bot.commandManager
+      ...this.bot.moduleManager
         .getElements()
         .map(m => m.commandDirManager.getElements())
     );
@@ -59,7 +72,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public handleMessage(msg: Message): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       const result = this.parseFull(msg.content);
-      if (result && (await this.shouldRespond(result))) {
+      if (result) {
         const cooldown = this.cooldown.getValue();
         if (cooldown !== 0) {
           const lastTriggered: Trigger = this.lastTriggered[msg.author.id];
@@ -72,10 +85,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                 const seconds = Math.ceil(
                   (cooldown - (now - lastTriggered.time)) / 1000
                 );
-                this.bot.client.createMessage(
-                  msg.channel.id,
-                  `:clock1: Please wait before using another command (${seconds} seconds left)`
-                );
+                this.bot
+                  .getClient()
+                  .createMessage(
+                    msg.channel.id,
+                    `:clock1: Please wait before using another command (${seconds} seconds left)`
+                  );
                 this.lastTriggered[msg.author.id] = {
                   alreadyTold: true,
                   time: lastTriggered.time
@@ -95,13 +110,14 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     });
   }
 
-  public shouldRespond(result: CommandResult): Promise<boolean> {
-    return new Promise(async (resolve, reject) => {
-      resolve(
-        !(this.silent.getValue() && result instanceof CommandError) &&
-          (result != null || this.respondToUnknownCommands.getValue())
-      );
-    });
+  public shouldRespond(result: CommandResult): boolean {
+    return (
+      !(this.silent.getValue() && result instanceof CommandError) &&
+      !(
+        result instanceof UnknownCommand &&
+        !this.respondToUnknownCommands.getValue()
+      )
+    );
   }
 
   public runResult(
@@ -111,15 +127,28 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   ): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       if (result instanceof CommandError) {
-        if (await this.shouldRespond(result)) {
-          this.bot.client.createMessage(msg.channel.id, result.getMessage());
+        if (
+          !this.silent.getValue() &&
+          (result instanceof UnknownCommand &&
+            !this.respondToUnknownCommands.getValue())
+        ) {
+          this.bot
+            .getClient()
+            .createMessage(msg.channel.id, result.getMessage());
         }
         resolve(true);
       } else if (result instanceof CommandSuccess) {
         const command = result.command;
-        if (sudo || (await this.checkPerms(command, msg.author))) {
+        if (
+          sudo ||
+          (await this.bot.hasPermission({
+            user: msg.author,
+            command,
+            member: msg.member
+          }))
+        ) {
           try {
-            await command.run(new CommandContext(msg, result.args));
+            await command.run(new CommandRunContext(msg, result.args));
             if (!command.silent.getValue()) {
               const user = chalk.magenta(
                 `${msg.author.username}#${msg.author.discriminator}`
@@ -144,10 +173,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
             `'${user}' did not have permission to run command '${commandName}'`
           );
           if (!command.silent.getValue()) {
-            this.bot.client.createMessage(
-              msg.channel.id,
-              ":lock: You do not have permission to use this command"
-            );
+            this.bot
+              .getClient()
+              .createMessage(
+                msg.channel.id,
+                ":lock: You do not have permission to use this command"
+              );
           }
         }
         resolve(true);
@@ -190,7 +221,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     command: RunnableCommand,
     content: string
   ): CommandResult {
-    const args = new Map<string, any>();
+    const args = new Map<Arg<any>, any>();
     if (command.getArgs().length > 0) {
       for (const arg of command.getArgs()) {
         const types = arg.types;
@@ -202,24 +233,21 @@ export default class CommandManager extends NamedElementSearcher<Command> {
           );
           for (const type of types) {
             const result = type.validate(content, this.bot);
-            if (result.failed) {
+            if (result instanceof ArgFailure) {
               if (types.length === 1) {
-                finalResult = new CustomError(result.data as string, command);
+                finalResult = new CustomError(result.reason, command);
               }
             } else {
-              args.set(arg.name, result.data);
-              if (result.subcontent == null) {
-                result.subcontent = "";
-              }
-              content = result.subcontent.trim();
+              args.set(arg, result.data);
+              content = result.remaining ? result.remaining.trim() : "";
               finalResult = null;
               break;
             }
           }
           if (finalResult) {
-            if (types.find(type => type === ArgType.ANY)) {
+            if (types.find(type => type === ArgType.WORD)) {
               const parts = content.split(" ", 2);
-              args.set(arg.name, parts[0]);
+              args.set(arg, parts[0]);
               content = parts[1];
             } else {
               return finalResult;
@@ -235,7 +263,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   private createVariable<T>(
     key: string | string[],
-    defaultValue?: T
+    defaultValue?: T | (() => T)
   ): DatabaseVariable<T> {
     return this.bot.createDatabaseVariable(
       ["command-manager", ...array(key)],

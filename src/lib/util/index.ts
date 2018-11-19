@@ -24,7 +24,7 @@ export default class BotUtil {
     if (userString.startsWith("!")) {
       userString = userString.slice(1);
     }
-    const user = this.bot.client.users.find(u => u.id === userString);
+    const user = this.bot.getClient().users.find(u => u.id === userString);
     if (user) {
       return user;
     } else {
@@ -36,7 +36,7 @@ export default class BotUtil {
     if (channelString.startsWith("<#") && channelString.endsWith(">")) {
       channelString = channelString.slice(2, -1);
     }
-    const channel = this.bot.client.getChannel(channelString);
+    const channel = this.bot.getClient().getChannel(channelString);
     if (channel) {
       return channel;
     } else {
@@ -99,20 +99,44 @@ export function isDirectory(source: string): boolean {
   return fs.lstatSync(source).isDirectory();
 }
 
-export function getFiles(directory: string): string[] {
+export interface GetFilesOptions {
+  extensions?: string[];
+  trimExtension?: boolean;
+}
+
+export function getFiles(
+  directory: string,
+  { extensions = null, trimExtension = false }: GetFilesOptions = {}
+): string[] {
   const files = fs
     .readdirSync(directory)
     .map(name => join(directory, name))
     .filter(isFile);
+  const finalFiles: string[] = [];
   for (const file in files) {
     if (files.hasOwnProperty(file)) {
-      files[file] = files[file].slice(directory.length + 1);
+      let newFile = files[file];
+      const extension = newFile.split(".").pop();
+      if (!(extensions && extensions.find(e => e === extension))) {
+        continue;
+      }
+      newFile = newFile.slice(directory.length + 1);
+      if (trimExtension) {
+        newFile = newFile
+          .split(".")
+          .slice(0, -1)
+          .join(".");
+      }
+      finalFiles.push(newFile);
     }
   }
-  return files;
+  return finalFiles;
 }
 
 export function getDirectories(directory: string): string[] {
+  if (directory.endsWith("\\") || directory.endsWith("/")) {
+    directory = directory.slice(0, -1);
+  }
   const dirs = fs
     .readdirSync(directory)
     .map(name => join(directory, name))
@@ -141,27 +165,43 @@ export function loadFile(path: string): any {
   }
 }
 
-export async function getInput(
-  msg?: string,
-  logger = new Logger("util", null, "getInput")
-): Promise<any> {
-  return new Promise<any>((resolve, reject) => {
-    if (msg) {
-      logger.log(msg);
-    }
-    process.stdin.once("readable", () => {
-      const chunk = process.stdin.read();
-      resolve(chunk);
-    });
+export function getInput(): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const poll = () => {
+      process.stdin.once("readable", () => {
+        const chunk = process.stdin.read();
+        if (chunk === null) {
+          poll();
+        } else {
+          resolve(chunk.toString().trim());
+        }
+      });
+    };
+    poll();
   });
 }
 
-export function requireFiles(paths: string[]): Map<string, any | Error> {
+export function requireFiles(
+  directory: string,
+  paths: string[]
+): Map<string, any | Error> {
   const results: Map<string, any | Error> = new Map();
   for (const path of paths) {
+    if (
+      !(
+        pathExists(`${directory}/${path}.js`) ||
+        pathExists(`${directory}/${path}.ts`)
+      )
+    ) {
+      results.set(path, undefined);
+      continue;
+    }
     let result;
     try {
-      result = require(path);
+      result = require(`${directory}/${path}`);
+      if (result.default !== undefined) {
+        result = result.default;
+      }
     } catch (err) {
       result = err;
     }
@@ -182,4 +222,19 @@ export function startsWithAny(str: string, arr: string[]): string {
 
 export function array<T>(x: T | T[]): T[] {
   return x instanceof Array ? x : [x];
+}
+
+export function reportErrors(
+  logger: Logger,
+  itemName: string,
+  errors: Map<string, Error>
+) {
+  if (itemName.length > 0) {
+    itemName = itemName.charAt(0).toUpperCase() + itemName.slice(1);
+  }
+  for (const errorPair of errors) {
+    logger.warn(
+      `${itemName} '${errorPair[0]}' could not be loaded: ${errorPair[1]}`
+    );
+  }
 }

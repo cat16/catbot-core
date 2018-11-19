@@ -16,6 +16,6 @@ export default class Event extends FileElement {
   }
 
   public run(context: EventContext): void {
-    this.runFunc.call({ bot: this.bot }, context);
+    this.runFunc.call(this, context);
   }
 }

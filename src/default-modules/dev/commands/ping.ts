@@ -1,19 +1,16 @@
-import { Command, CommandConstructionData, CommandContext } from "../../..";
+import { CommandCreateInfo } from "../../..";
 
-export default class extends Command {
-  constructor(data: CommandConstructionData) {
-    super(data, {
-      name: "ping"
-    });
-  }
-  public run(data: CommandContext) {
+const createInfo: CommandCreateInfo = {
+  run(context) {
     const now = new Date();
-    data.say("Ping: loading...").then(sent => {
+    context.say("Ping: loading...").then(sent => {
       const then = new Date();
       sent.edit(`Ping: ${then.getTime() - now.getTime()}ms`);
     });
-  }
-  public hasPermission(): boolean {
+  },
+  async hasPermission(context) {
     return true;
   }
-}
+};
+
+export default createInfo;

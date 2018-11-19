@@ -1,12 +1,13 @@
-import { Command, CommandConstructionData, CommandContext } from "../../..";
+import { CommandCreateInfo } from "../../..";
 
-export default class extends Command {
-    constructor(data: CommandConstructionData) {
-        super(data, {
-            name: "invite",
-        });
-    }
-    public run(context: CommandContext) {
-        context.say(`Invite: https://discordapp.com/oauth2/authorize?client_id=${context.bot.getClient().user.id}&permissions=0&scope=bot`);
-    }
-}
+const createInfo: CommandCreateInfo = {
+  run(context) {
+    context.say(
+      `Invite: https://discordapp.com/oauth2/authorize?client_id=${
+        this.bot.getClient().user.id
+      }&permissions=0&scope=bot`
+    );
+  }
+};
+
+export default createInfo;

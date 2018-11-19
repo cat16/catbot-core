@@ -2,13 +2,16 @@ import { Client } from "eris";
 import * as fs from "fs";
 
 import CommandManager from "./command/manager";
+import { CommandPermissionContext } from "./command/permission-context";
 import Config from "./config";
-import Database from "./database/client-database";
+import Database from "./database/database-interface";
 import DatabaseVariable from "./database/database-variable";
+import RuntimeDatabase from "./database/runtime-database";
 import EventManager from "./event/manager";
-import Module from "./module";
+import DatabaseModule from "./module/database-module";
 import ModuleManager from "./module/manager";
-import BotUtil, { createDirectory, getInput, pathExists } from "./util";
+import PermissionModule from "./module/permission-module";
+import BotUtil, { array, createDirectory, getInput, pathExists } from "./util";
 import Logger from "./util/logger";
 
 export default class Bot {
@@ -16,100 +19,52 @@ export default class Bot {
   public readonly logger: Logger;
   public readonly util: BotUtil;
 
-  public readonly client: Client;
+  public readonly database: Database;
   public readonly moduleManager: ModuleManager;
   public readonly commandManager: CommandManager;
   public readonly eventManager: EventManager;
 
-  private activeDatabase: Database;
+  public readonly admins: DatabaseVariable<string[]>;
+
+  private client: Client;
+
+  private activePermCheck: (
+    context: CommandPermissionContext
+  ) => Promise<boolean>;
   private config: Config;
 
   constructor(directory: string) {
     this.directory = directory;
     this.logger = new Logger("bot-core");
     this.util = new BotUtil(this);
-    this.activeDatabase = null;
-    this.moduleManager = new ModuleManager(directory, this);
-    this.client = new Client(this.config.token, {});
     this.config = null;
-  }
-
-  public load(): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      this.logger.log("Loading...");
-      this.loadConfig("config.json");
-      if (!pathExists(this.directory)) {
-        createDirectory(this.directory);
-      }
-      this.moduleManager.load();
-      this.logger.success("Successfully loaded.");
-      resolve();
-    });
-  }
-
-  public connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.logger.log("Connecting...");
-      this.client.on("ready", () => {
-        this.logger.success("Successfully connected.");
-        resolve();
-      });
-      this.client.connect();
-    });
-  }
-
-  public async loadConfig(file: string): Promise<void> {
-    const writeConfig = config => {
-      fs.writeFileSync(
-        `${this.directory}/${file}`,
-        JSON.stringify(config, null, "\t")
-      );
-    };
-
-    if (fs.existsSync(`${this.directory}/${file}`)) {
-      const config = require(`${this.directory}/${file}`);
-      let updated = false;
-      const neededConfig = new Config();
-      for (const key in neededConfig) {
-        if (config[key] == null && neededConfig[key] === undefined) {
-          if (!updated) {
-            this.logger.warn(
-              `Config is not completed! Please fill in the following values...`
-            );
-          }
-          process.stdout.write(this.logger.getLogString(key));
-          config[key] = await getInput();
-          updated = true;
-        }
-      }
-      if (updated) {
-        writeConfig(config);
-        this.logger.success("Config file updated.");
-      }
-      this.config = config;
-    } else {
-      this.logger.warn("No config file detected!\nCreating new config file...");
-      const config = new Config();
-      for (const key in config) {
-        if (config.hasOwnProperty(key)) {
-          process.stdout.write(this.logger.getLogString(`Enter ${key}: `));
-          if (config[key] == null) {
-            config[key] = await getInput();
-          }
-        }
-      }
-      writeConfig(config);
-      this.logger.success("Config file generated");
-      this.config = config;
-    }
+    this.client = null;
+    this.database = new Database();
+    this.moduleManager = new ModuleManager(directory, this);
+    this.commandManager = new CommandManager(this);
+    this.eventManager = new EventManager(this);
+    this.admins = this.createVariable<string[]>("admins", []);
   }
 
   public start(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       this.logger.info("Starting bot...");
-      this.load().then(() => {
-        this.connect().then(resolve, reject);
-      }, reject);
+      this.logger.log("Loading...");
+      if (!pathExists(this.directory)) {
+        createDirectory(this.directory);
+      }
+      await this.loadConfig("config.json");
+      this.client = new Client(this.config.token, {});
+      await this.connect();
+      this.moduleManager.load();
+      await this.loadDBFromModule();
+      this.loadPermCheckFromModule();
+      this.commandManager.load();
+      this.eventManager.load();
+      this.logger.success(
+        `Successfully loaded ${await this.database.load()} database variables.`
+      );
+      this.logger.success("Successfully loaded.");
     });
   }
 
@@ -124,8 +79,8 @@ export default class Bot {
             delete require.cache[key];
           }
         });
-        const NewCatbot = require(__filename).default;
-        const bot = new NewCatbot(this.directory);
+        const NewBot = require(__filename).default;
+        const bot = new NewBot(this.directory);
         bot.start().then(
           () => {
             resolve(bot);
@@ -146,17 +101,130 @@ export default class Bot {
   }
 
   public getDatabase(): Database {
-    return this.activeDatabase;
+    return this.database;
+  }
+
+  public getClient(): Client {
+    return this.client;
   }
 
   public getConfig() {
     return this.config;
   }
 
+  public hasPermission(context: CommandPermissionContext) {
+    return this.activePermCheck(context);
+  }
+
+  public async isAdmin(id: string): Promise<boolean> {
+    return (
+      this.admins.getValue().some(admin => admin === id) ||
+      id === (await this.getClient().getOAuthApplication()).owner.id
+    );
+  }
+
   public createDatabaseVariable<T>(
     key: string[],
-    defaultValue?: T
+    defaultValue?: T | (() => T)
   ): DatabaseVariable<T> {
     return new DatabaseVariable<T>(this.getDatabase(), key, defaultValue);
+  }
+
+  private createVariable<T>(
+    key: string | string[],
+    defaultValue?: T | (() => T)
+  ): DatabaseVariable<T> {
+    return this.createDatabaseVariable<T>(["bot", ...array(key)], defaultValue);
+  }
+
+  private connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.logger.log("Connecting...");
+      this.client.on("ready", () => {
+        this.logger.success("Successfully connected.");
+        resolve();
+      });
+      this.client.connect();
+    });
+  }
+
+  private loadPermCheckFromModule() {
+    const permModuleExists = this.moduleManager.getElements().some(module2 => {
+      if (module2 instanceof PermissionModule) {
+        this.activePermCheck = module2.hasPermission;
+        return true;
+      }
+    });
+    if (!permModuleExists) {
+      this.activePermCheck = context => {
+        return context.command.hasPermission.call(context.command, context);
+      };
+    }
+  }
+
+  private async loadDBFromModule() {
+    const dbModuleExists = this.moduleManager.getElements().some(module2 => {
+      if (module2 instanceof DatabaseModule) {
+        this.database.setDB(module2.getDatabase());
+        return true;
+      }
+    });
+    if (!dbModuleExists) {
+      this.database.setDB(new RuntimeDatabase());
+      this.logger.warn(
+        "No database module detected; defaulting to runtime database."
+      );
+    }
+  }
+
+  private async loadConfig(file: string): Promise<void> {
+    const writeConfig = config => {
+      fs.writeFileSync(
+        `${this.directory}/${file}`,
+        JSON.stringify(config, null, "\t")
+      );
+    };
+
+    if (fs.existsSync(`${this.directory}/${file}`)) {
+      const config = require(`${this.directory}/${file}`);
+      let updated = false;
+      const neededConfig = new Config();
+      for (const key in neededConfig) {
+        if (config[key] == null && neededConfig[key] === undefined) {
+          if (!updated) {
+            this.logger.warn(
+              `Config is not completed! Please fill in the following values...`
+            );
+          }
+          config[key] = await this.logger.getInput(`Enter ${key}: `);
+          updated = true;
+        }
+      }
+      if (updated) {
+        writeConfig(config);
+        this.logger.success("Config file updated.");
+      }
+      this.config = config;
+    } else {
+      this.logger.warn("No config file detected!\nCreating new config file...");
+      const config = new Config();
+      for (const key in config) {
+        if (config.hasOwnProperty(key)) {
+          if (config[key] == null) {
+            config[key] = await this.logger.getInput(`Enter ${key}: `);
+          }
+        }
+      }
+      writeConfig(config);
+      this.logger.success("Config file generated");
+      this.config = config;
+    }
+  }
+
+  private loadModules() {
+    if (!pathExists(this.directory)) {
+      createDirectory(this.directory);
+    }
+    this.moduleManager.load();
   }
 }

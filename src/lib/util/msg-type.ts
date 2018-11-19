@@ -6,6 +6,7 @@ export default class MsgType {
   public static WARN = new MsgType("warn", chalk.yellow);
   public static ERROR = new MsgType("error", chalk.red);
   public static DEBUG = new MsgType("debug", chalk.yellow);
+  public static INPUT = new MsgType("input", chalk.yellow);
 
   public readonly name: string;
   public readonly color: Chalk;

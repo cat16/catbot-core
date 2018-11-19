@@ -8,6 +8,6 @@ export class ModuleDirectoryManager extends ElementDirectoryManager<
   ModuleLoader
 > {
   constructor(directory: string, bot: Bot) {
-    super(new ModuleLoader(`${directory}/bot_modules`, bot));
+    super(new ModuleLoader(directory, bot));
   }
 }

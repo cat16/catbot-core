@@ -20,7 +20,7 @@ export default class Module extends FileElement implements NamedElement {
     fileName: string,
     bot: Bot,
     directory: string,
-    createInfo: ModuleCreateInfo
+    createInfo: ModuleCreateInfo = {}
   ) {
     super(fileName);
     this.commandDirManager = new CommandDirectoryManager(
@@ -32,9 +32,9 @@ export default class Module extends FileElement implements NamedElement {
       `${directory}/events`,
       bot
     );
-    this.name = fileName;
-    this.aliases = this.createVariable(createInfo.aliases, []);
     this.bot = bot;
+    this.name = fileName;
+    this.aliases = this.createVariable("aliases", []);
   }
 
   public load(): void {
@@ -56,7 +56,7 @@ export default class Module extends FileElement implements NamedElement {
   ): DatabaseVariable<T> {
     return new DatabaseVariable(
       this.bot.getDatabase(),
-      array(name),
+      ["module", this.name, ...array(name)],
       defaultValue
     );
   }

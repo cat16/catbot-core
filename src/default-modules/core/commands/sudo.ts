@@ -9,11 +9,12 @@ const createInfo: CommandCreateInfo = {
       true
     );
   },
-  silent: true,
-  async hasPermission(context): Promise<boolean> {
+  async hasPermission(context) {
     return (
-      context.msg.author.id ===
-      (await context.bot.getClient().getOAuthApplication()).owner.id
+      context.user.id ===
+      (await this.bot.getClient().getOAuthApplication()).owner.id
     );
   }
 };
+
+export default createInfo;

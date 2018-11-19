@@ -1,22 +1,31 @@
 import Logger from "../util/logger";
-import ClientDatabase from "./client-database";
+import DatabaseInterface from "./database-interface";
 
 export default class DatabaseVariable<T> {
   private static readonly usedKeys: Map<number, string[][]>;
 
-  private readonly logger: Logger;
-  private readonly db: ClientDatabase;
-  private readonly defaultValue?: T;
+  public readonly key: string[];
+  public readonly dbi: DatabaseInterface;
 
-  private readonly key: string[];
+  private readonly logger: Logger;
+  private readonly initValue?: T | (() => T);
   private value: T;
 
-  constructor(db: ClientDatabase, key: string[], defaultValue?: T) {
-    this.logger = new Logger(`database-${db.getId()}`, null, key.join("."));
-    this.db = db;
+  constructor(
+    dbi: DatabaseInterface,
+    key: string[],
+    initValue?: T | (() => T)
+  ) {
+    this.logger = new Logger(`database`, null, key.join("."));
+    this.dbi = dbi;
     let times = 0;
     const OG = key[key.length];
-    while (DatabaseVariable.usedKeys.get(db.getId()).find(k => k === key)) {
+    while (
+      dbi
+        .getDBKs()
+        .map(dbk => dbk.getKey())
+        .find(k => k === key)
+    ) {
       times++;
       key[key.length - 1] = OG + (times + 1);
     }
@@ -24,13 +33,13 @@ export default class DatabaseVariable<T> {
       this.logger.warn(
         `Key '${key}' used ${times} time${
           times > 1 ? "s" : ""
-        } already; renaming one key to ${OG + (times + 1)}`
+        } already; renaming one key to ${OG + (times + 1)}.`
       );
     }
     this.key = key;
 
-    this.defaultValue = defaultValue;
-    this.db.registerDBK(this);
+    this.initValue = initValue;
+    this.dbi.registerDBK(this);
   }
 
   public getKey(): string[] {
@@ -43,15 +52,21 @@ export default class DatabaseVariable<T> {
 
   public async setValue(value: T): Promise<void> {
     this.value = value;
-    return this.db.set(this, value);
+    return this.dbi.set(this, value);
   }
 
-  public getDefaultValue(): T {
-    return this.defaultValue;
+  public getInitValue(): T {
+    return this.initValue instanceof Function
+      ? this.initValue()
+      : this.initValue;
   }
 
-  public async update(): Promise<T> {
-    const newValue = await this.db.get(this, this.defaultValue);
+  public async load(): Promise<T> {
+    let newValue = await this.dbi.get(this);
+    if (newValue === undefined) {
+      newValue = this.getInitValue();
+      await this.dbi.set(this, newValue);
+    }
     this.value = newValue;
     return newValue;
   }

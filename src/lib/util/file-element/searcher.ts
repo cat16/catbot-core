@@ -51,7 +51,7 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
     name: string,
     options?: NamedElementSearchOptions
   ): ElementSearchResults<E> {
-    return this.searchRecursive(name, null, options);
+    return this.searchRecursive(name, undefined, options);
   }
 
   private searchRecursive(
@@ -77,7 +77,6 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
       incompleteExacts: [],
       incompleteAliases: []
     };
-
     // first, search for equal names
     for (const element of elements) {
       // if it's directly equal

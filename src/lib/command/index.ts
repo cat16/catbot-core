@@ -53,7 +53,7 @@ export default class Command extends RecursiveFileElement<Command>
   ): DatabaseVariable<T> {
     return new DatabaseVariable<T>(
       this.bot.getDatabase(),
-      ["command", ...array(key)],
+      ["command", this.name, ...array(key)],
       defaultValue
     );
   }

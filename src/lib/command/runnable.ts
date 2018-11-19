@@ -2,14 +2,17 @@ import Command from ".";
 import Bot from "../bot";
 import Module from "../module";
 import Arg from "./arg";
-import CommandContext from "./context";
+import { CommandPermissionContext } from "./permission-context";
+import CommandRunContext from "./run-context";
 import RunnableCommandCreateInfo, {
+  CommandPermissionFunc,
   CommandRunFunc
 } from "./runnable-create-info";
 
 export default class RunnableCommand extends Command {
   private args: Arg[];
   private runFunc: CommandRunFunc;
+  private hasPermFunc: CommandPermissionFunc;
 
   constructor(
     fileName: string,
@@ -20,9 +23,16 @@ export default class RunnableCommand extends Command {
   ) {
     super(fileName, parent, bot, module2, createInfo);
     this.runFunc = createInfo.run;
+    this.hasPermFunc = createInfo.hasPermission || (async () => true);
+    this.args = createInfo.args || [];
   }
-  public run(context: CommandContext) {
-    this.runFunc(context);
+
+  public async run(context: CommandRunContext): Promise<void> {
+    return this.runFunc(context);
+  }
+
+  public hasPermission(context: CommandPermissionContext): Promise<boolean> {
+    return this.hasPermFunc.call(this, context);
   }
 
   public getArgs(): Arg[] {

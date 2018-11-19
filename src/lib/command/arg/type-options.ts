@@ -1,8 +1,12 @@
 import Bot from "../../bot";
-import ArgResult from "./result";
+import ArgFailure from "./result/fail";
+import ArgSuccess from "./result/success";
 
-export type ValidateFunction = (text: string, bot: Bot) => ArgResult;
+export type ValidateFunction<T> = (
+  text: string,
+  bot: Bot
+) => ArgSuccess<T> | ArgFailure;
 
-export default class ArgTypeOptions {
-  public validate: ValidateFunction;
+export default class ArgTypeOptions<T> {
+  public validate: ValidateFunction<T>;
 }

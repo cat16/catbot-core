@@ -3,7 +3,9 @@ import Bot from "../../bot";
 import Module from "../../module";
 import RecursiveElementFactory from "../../util/file-element/factory/recursive";
 import RunnableCommand from "../runnable";
-import RunnableCommandCreateInfo from "../runnable-create-info";
+import RunnableCommandCreateInfo, {
+  isRunnableCommandCreateInfo
+} from "../runnable-create-info";
 
 export default class CommandFactory
   implements RecursiveElementFactory<Command> {
@@ -20,13 +22,16 @@ export default class CommandFactory
     fileName: string,
     parent?: Command
   ) {
-    return new RunnableCommand(
-      fileName,
-      parent,
-      this.bot,
-      this.module,
-      rawElement
-    );
+    if (isRunnableCommandCreateInfo(rawElement)) {
+      return new RunnableCommand(
+        fileName,
+        parent,
+        this.bot,
+        this.module,
+        rawElement
+      );
+    }
+    return null;
   }
   public createDir(dirName: string, parent: Command) {
     return new Command(dirName, parent, this.bot, this.module, {});

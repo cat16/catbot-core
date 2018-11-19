@@ -17,28 +17,33 @@ export default class RecursiveElementDirectoryLoader<
     directory: string = this.getDirectory(),
     parent?: E
   ): Map<string, E | Error> {
-    const files = getFiles(directory).filter(file => file.endsWith("ts"));
+    const files = getFiles(directory, {
+      extensions: ["js", "ts"],
+      trimExtension: true
+    });
     const dirs = getDirectories(directory);
     const elements = new Map<string, E | Error>();
-    requireFiles(files).forEach((rawElement, fileName) => {
+    requireFiles(directory, files).forEach((rawElement, fileName) => {
       if (rawElement instanceof Error) {
         elements.set(fileName, rawElement);
       } else {
         try {
           const element: E = this.factory.create(rawElement, fileName, parent);
-          const dir = dirs.find(dirName => dirName === fileName);
-          if (dir) {
-            const contents = this.load(`${directory}/${dir}`, parent);
-            for (const pair of contents) {
-              if (pair[1] instanceof Error) {
-                elements.set(`${dir}/${pair[0]}`, pair[1]);
-              } else {
-                element.children.push(pair[1]);
+          if (element != null) {
+            const dir = dirs.find(dirName => dirName === fileName);
+            if (dir) {
+              const contents = this.load(`${directory}/${dir}`, parent);
+              for (const pair of contents) {
+                if (pair[1] instanceof Error) {
+                  elements.set(`${dir}/${pair[0]}`, pair[1]);
+                } else {
+                  element.children.push(pair[1]);
+                }
               }
+              dirs.splice(dirs.indexOf(dir), 1);
             }
-            dirs.splice(dirs.indexOf(dir), 1);
+            elements.set(fileName, element);
           }
-          elements.set(fileName, element);
         } catch (err) {
           elements.set(fileName, err);
         }
@@ -46,7 +51,7 @@ export default class RecursiveElementDirectoryLoader<
     });
     dirs.forEach(dir => {
       const element = this.factory.createDir(dir, parent);
-      const contents = this.load(`${directory}/${dir}`, parent);
+      const contents = this.load(`${directory}/${dir}`, element);
       for (const pair of contents) {
         if (pair[1] instanceof Error) {
           elements.set(`${dir}/${pair[0]}`, pair[1]);

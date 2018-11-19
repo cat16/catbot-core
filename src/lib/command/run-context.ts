@@ -2,7 +2,7 @@ import { Message, MessageContent } from "eris";
 import Bot from "../bot";
 import ArgList from "./arg/list";
 
-export default class CommandContext {
+export default class CommandRunContext {
   public msg: Message;
   public args: ArgList;
 

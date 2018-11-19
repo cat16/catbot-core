@@ -1,16 +1,17 @@
 import { Message } from "eris";
-import { Bot, Event, EventType } from "../../..";
+import { EventCreateInfo } from "../../..";
 
-export default class extends Event {
-  constructor() {
-    super({
-      name: "messageCreate",
-      type: EventType.Client,
-    });
+const createInfo: EventCreateInfo = {
+  async run(context) {
+    const msg: Message = context.get(0);
+    if (msg.author.id === this.bot.getClient().user.id) {
+      return;
+    }
+    if (msg.author.bot /*&& !bot.get('disableBotInput', false)*/) {
+      return;
+    }
+    this.bot.commandManager.handleMessage(msg);
   }
-  public run(bot: Bot, msg: Message) {
-    if (msg.author.id === bot.getClient().user.id) { return; }
-    if (msg.author.bot /*&& !bot.get('disableBotInput', false)*/) { return; }
-    bot.getCommandManager().handleMessage(msg);
-  }
-}
+};
+
+export default createInfo;

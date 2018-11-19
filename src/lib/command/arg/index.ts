@@ -1,12 +1,15 @@
-import ArgOptions from "./options";
+import { array } from "../../util";
 import ArgType from "./type";
 
 export default class Arg {
   public name: string;
-  public types: ArgType[];
+  public types: ArgType<any>[];
 
-  constructor(options: ArgOptions) {
-    this.name = options.name;
-    this.types = options.types || [ArgType.ANY];
+  constructor(
+    name: string,
+    types: ArgType<any> | ArgType<any>[] = [ArgType.WORD]
+  ) {
+    this.name = name;
+    this.types = array(types);
   }
 }

@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { getInput } from ".";
 import MsgType from "./msg-type";
 
 const twoDigit = (num: string) => {
@@ -81,5 +82,10 @@ export default class Logger {
         process.stderr.write(`${send}${newLine ? `\n` : ``}`);
         break;
     }
+  }
+
+  public getInput(msg?: string): Promise<string> {
+    this.log(msg || "", false, MsgType.INPUT);
+    return getInput();
   }
 }
