@@ -7,8 +7,7 @@
   "scripts": {
     "test": "ts-node test/src/main --debug",
     "test-dist": "node dist/test/src/main --debug",
-    "build": "tsc",
-    "prepublish": "npm run build"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",

@@ -8,5 +8,5 @@ export { default as Module } from "./lib/module";
 export { default as Command } from "./lib/command";
 export { default as Event } from "./lib/event";
 export { default as Arg } from "./lib/command/arg";
-export { default as ArgType } from "./lib/command/arg/type";
+export { default as ArgType } from "./lib/command/arg/validation";
 export { default as Logger } from "./lib/util/logger";

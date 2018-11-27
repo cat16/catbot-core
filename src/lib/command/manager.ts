@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { Message } from "eris";
+import { GuildChannel, Message } from "eris";
 import Command from ".";
 import Bot from "../bot";
 import DatabaseVariable from "../database/database-variable";
@@ -9,7 +9,6 @@ import Logger from "../util/logger";
 import Arg from "./arg";
 import ArgList from "./arg/list";
 import ArgFailure from "./arg/result/fail";
-import ArgType from "./arg/type";
 import CommandError from "./error";
 import CustomError from "./error/custom";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
@@ -71,7 +70,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   public handleMessage(msg: Message): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      const result = this.parseFull(msg.content);
+      const result = this.parseFull(msg);
       if (result) {
         const cooldown = this.cooldown.getValue();
         if (cooldown !== 0) {
@@ -188,21 +187,21 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     });
   }
 
-  public parseFull(msgContent: string): CommandResult {
-    const prefix = startsWithAny(msgContent, this.prefixes.getValue());
+  public parseFull(msg: Message): CommandResult {
+    const prefix = startsWithAny(msg.content, this.prefixes.getValue());
     if (prefix) {
-      const result = this.parseContent(msgContent.slice(prefix.length));
+      const result = this.parseContent(msg.content.slice(prefix.length), msg);
       return result;
     }
     return null;
   }
 
-  public parseContent(content: string): CommandResult {
+  public parseContent(content: string, msg: Message): CommandResult {
     const match = this.findMatch(content, { allowIncomplete: false });
     const command = match.element;
     if (command) {
       if (command instanceof RunnableCommand) {
-        return this.handleCommand(command, match.leftover);
+        return this.handleCommand(command, match.leftover, msg);
       } else {
         if (match.leftover.length === 0) {
           return new NoCommandProvided(command);
@@ -219,39 +218,34 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   private handleCommand(
     command: RunnableCommand,
-    content: string
+    content: string,
+    msg: Message
   ): CommandResult {
     const args = new Map<Arg<any>, any>();
     if (command.getArgs().length > 0) {
       for (const arg of command.getArgs()) {
-        const types = arg.types;
+        const validators = arg.validationFuncs;
         if (content != null && content.length > 0) {
-          let finalResult: CommandError = new InvalidArgumentProvided(
-            arg.name,
-            content,
-            command
-          );
-          for (const type of types) {
-            const result = type.validate(content, this.bot);
+          let failures: ArgFailure[] = [];
+          for (const validator of validators) {
+            const result = validator.validate(
+              content,
+              this.bot,
+              msg.channel instanceof GuildChannel
+                ? msg.channel.guild
+                : msg.author
+            );
             if (result instanceof ArgFailure) {
-              if (types.length === 1) {
-                finalResult = new CustomError(result.reason, command);
-              }
+              failures.push(result);
             } else {
               args.set(arg, result.data);
               content = result.remaining ? result.remaining.trim() : "";
-              finalResult = null;
+              failures = [];
               break;
             }
           }
-          if (finalResult) {
-            if (types.find(type => type === ArgType.WORD)) {
-              const parts = content.split(" ", 2);
-              args.set(arg, parts[0]);
-              content = parts[1];
-            } else {
-              return finalResult;
-            }
+          if (failures.length > 0) {
+            return new InvalidArgumentProvided(arg, failures, command);
           }
         } else {
           return new NoArgumentProvided(arg.name, command);

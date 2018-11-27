@@ -10,7 +10,7 @@ import RunnableCommandCreateInfo, {
 } from "./runnable-create-info";
 
 export default class RunnableCommand extends Command {
-  private args: Arg[];
+  private args: Arg<any>[];
   private runFunc: CommandRunFunc;
   private hasPermFunc: CommandPermissionFunc;
 
@@ -35,7 +35,7 @@ export default class RunnableCommand extends Command {
     return this.hasPermFunc.call(this, context);
   }
 
-  public getArgs(): Arg[] {
+  public getArgs(): Arg<any>[] {
     return this.args;
   }
 }

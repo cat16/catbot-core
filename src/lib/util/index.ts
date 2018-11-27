@@ -1,5 +1,8 @@
 import {
   AnyChannel,
+  Guild,
+  GuildChannel,
+  Member,
   PrivateChannel,
   TextChannel,
   User,
@@ -10,6 +13,12 @@ import { join } from "path";
 import Bot from "../bot";
 import Logger from "./logger";
 
+export enum ChannelType {
+  TEXT = 0,
+  PRIVATE = 1,
+  VOICE = 2
+}
+
 export default class BotUtil {
   public bot: Bot;
 
@@ -17,52 +26,148 @@ export default class BotUtil {
     this.bot = bot;
   }
 
+  public syncUsers(guild: Guild): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (guild.unavailable) {
+        reject(
+          new Error(`Guild '${guild.name}' (id: ${guild.id}) unavaliable`)
+        );
+      }
+      if (guild.memberCount === 0) {
+        resolve();
+      }
+      guild.fetchAllMembers();
+      const check = () => {
+        guild.shard.once("guildMemberChunk", (g: Guild) => {
+          if (g.id === guild.id) {
+            if (g.members.size === g.memberCount) {
+              resolve();
+            } else {
+              check();
+            }
+          }
+        });
+      };
+      check();
+    });
+  }
+
+  /**
+   * This should only be used if options.getAllUsers is set to true in the options passed to the eris client
+   * @param userString
+   */
   public getUser(userString: string): User {
-    if (userString.startsWith("<@") && userString.endsWith(">")) {
-      userString = userString.slice(2, -1);
-    }
-    if (userString.startsWith("!")) {
-      userString = userString.slice(1);
-    }
-    const user = this.bot.getClient().users.find(u => u.id === userString);
-    if (user) {
-      return user;
-    } else {
-      return null;
-    }
+    userString = this.trimID(userString, "@");
+    return this.bot.getClient().users.find(u => u.id === userString);
   }
 
-  public getChannel(channelString: string): AnyChannel {
-    if (channelString.startsWith("<#") && channelString.endsWith(">")) {
-      channelString = channelString.slice(2, -1);
+  public async fetchUser(userString: string): Promise<User> {
+    userString = this.trimID(userString, "@");
+    for (const r of this.bot.getClient().relationships.values()) {
+      if (r.user.id === userString) {
+        return r.user;
+      }
     }
+    for (const g of this.bot.getClient().guilds.values()) {
+      await this.syncUsers(g);
+      g.members.forEach(m => {
+        if (m.id === userString) {
+          return m.user;
+        }
+      });
+    }
+    return null;
+  }
+
+  public async fetchMember(
+    userString: string,
+    guild: Guild,
+    username: boolean = false
+  ): Promise<Member> {
+    if (guild.unavailable) {
+      return null;
+    }
+    userString = this.trimID(userString, "@");
+    await this.syncUsers(guild);
+    return (
+      guild.members.find(m => m.id === userString) ||
+      (username && guild.members.find(m => m.username.startsWith(userString)))
+    );
+  }
+
+  public getChannel(
+    channelString: string,
+    types?: ChannelType | ChannelType[]
+  ): AnyChannel {
+    types = array(types);
+    channelString = this.trimID(channelString, "#");
     const channel = this.bot.getClient().getChannel(channelString);
-    if (channel) {
-      return channel;
+    return types
+      ? channel && types.some(t => t === channel.type)
+        ? channel
+        : null
+      : channel;
+  }
+
+  public getGuildChannel(
+    channelString: string,
+    type?: ChannelType.TEXT | ChannelType.VOICE,
+    guild?: Guild
+  ): GuildChannel {
+    if (guild) {
+      channelString = this.trimID(channelString, "#");
+      const channel = guild.channels.get(channelString);
+      if (!type || channel.type === type) {
+        return channel;
+      } else {
+        return null;
+      }
     } else {
+      for (const channelId in this.bot.getClient().channelGuildMap) {
+        if (channelId === channelString) {
+          const types = type ? type : [ChannelType.TEXT, ChannelType.VOICE];
+          return this.getChannel(channelString, types) as GuildChannel;
+        }
+      }
       return null;
     }
   }
 
-  public getChannelWithType(channelString: string, id: number): AnyChannel {
-    const channel = this.getChannel(channelString);
-    if (channel && channel.type === 0) {
-      return channel;
-    } else {
-      return null;
+  public getTextChannel(channelString: string, guild?: Guild): TextChannel {
+    return this.getGuildChannel(
+      channelString,
+      ChannelType.TEXT,
+      guild
+    ) as TextChannel;
+  }
+
+  public getDMChannel(channelString: string): Promise<PrivateChannel> {
+    channelString = this.trimID(channelString, "@");
+    return this.bot.getClient().getDMChannel(channelString);
+  }
+
+  public getVoiceChannel(channelString: string, guild?: Guild): VoiceChannel {
+    return this.getGuildChannel(
+      channelString,
+      ChannelType.VOICE,
+      guild
+    ) as VoiceChannel;
+  }
+
+  public getGuild(guildString: string) {
+    return this.bot.getClient().guilds.get(guildString);
+  }
+
+  private trimID(id: string, symbols: string | string[]): string {
+    for (const symbol of array(symbols)) {
+      if (id.startsWith(`<${symbol}`) && id.endsWith(">")) {
+        id = id.slice(2, -1);
+        if (id.startsWith("!")) {
+          id = id.slice(1);
+        }
+      }
     }
-  }
-
-  public getTextChannel(channelString: string): TextChannel {
-    return this.getChannelWithType(channelString, 0) as TextChannel;
-  }
-
-  public getDMChannel(channelString: string): PrivateChannel {
-    return this.getChannelWithType(channelString, 1) as PrivateChannel;
-  }
-
-  public getVoiceChannel(channelString: string): VoiceChannel {
-    return this.getChannelWithType(channelString, 2) as VoiceChannel;
+    return id;
   }
 }
 

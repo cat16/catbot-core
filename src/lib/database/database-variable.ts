@@ -61,13 +61,12 @@ export default class DatabaseVariable<T> {
       : this.initValue;
   }
 
-  public async load(): Promise<T> {
+  public async load(): Promise<void> {
     let newValue = await this.dbi.get(this);
     if (newValue === undefined) {
       newValue = this.getInitValue();
       await this.dbi.set(this, newValue);
     }
     this.value = newValue;
-    return newValue;
   }
 }

@@ -1,11 +1,6 @@
 import { Arg, ArgType, CommandCreateInfo } from "../../../..";
 
-const args = [
-  new Arg({
-    name: "test",
-    types: [ArgType.BOOLEAN(), ArgType.COMMAND]
-  })
-];
+const args = [new Arg("eee", ArgType.COMMAND()).or(ArgType.BOOLEAN())];
 
 const createInfo: CommandCreateInfo = {
   args,
