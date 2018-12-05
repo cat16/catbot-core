@@ -1,6 +1,6 @@
 import Arg from ".";
 import ArgValidator from "./validator";
-import WordValidator from "./validators/word";
+import WordValidator from "./validator/types/word";
 
 export default class DefaultArg extends Arg<string> {
   constructor(name: string) {

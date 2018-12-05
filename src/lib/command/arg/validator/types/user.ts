@@ -1,11 +1,12 @@
 import { User } from "eris";
-import Bot from "../../../bot";
-import ArgFailure from "../result/fail";
-import ArgSuccess from "../result/success";
-import ArgValidator from "../validator";
+import ArgFailure from "../../result/fail";
+import ArgSuccess from "../../result/success";
+import ValidatorContext from "../context";
+import GenericArgValidator from "../generic";
 
-export default class UserValidator extends ArgValidator<User> {
-  public validate(text: string, bot: Bot) {
+export default class UserValidator extends GenericArgValidator<User> {
+  public validate(text: string, context: ValidatorContext) {
+    const bot = context.bot;
     const parts = text.split(" ", 2);
     const user = bot.util.getUser(parts[0]);
     if (user) {

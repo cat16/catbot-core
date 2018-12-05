@@ -1,11 +1,14 @@
-import { Arg, ArgType, CommandCreateInfo } from "../../../..";
+import { Arg, ArgValidator, CommandCreateInfo } from "../../../..";
 
-const args = [new Arg("eee", ArgType.COMMAND()).or(ArgType.BOOLEAN())];
+const eee = new Arg("eee")
+  .with(new ArgValidator.COMMAND())
+  .or(new ArgValidator.BOOLEAN());
 
 const createInfo: CommandCreateInfo = {
-  args,
+  args: [eee],
   run(context) {
-    const test = context.args.get(args[0]);
+    const test = eee.from(context);
+    context.say(typeof test === "boolean" ? `${test}` : test.name);
   }
 };
 

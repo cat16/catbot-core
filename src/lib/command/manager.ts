@@ -1,6 +1,12 @@
 import chalk from "chalk";
-import { GuildChannel, Message } from "eris";
-import Command from ".";
+import {
+  GuildChannel,
+  Message,
+  PrivateChannel,
+  TextableChannel,
+  User
+} from "eris";
+import Command, { CommandChannelType } from ".";
 import Bot from "../bot";
 import DatabaseVariable from "../database/database-variable";
 import { array, reportErrors, startsWithAny } from "../util";
@@ -9,18 +15,25 @@ import Logger from "../util/logger";
 import Arg from "./arg";
 import ArgList from "./arg/list";
 import ArgFailure from "./arg/result/fail";
+import ValidatorContext from "./arg/validator/context";
+import DMValidatorContext from "./arg/validator/dm-context";
+import GuildValidatorContext from "./arg/validator/guild-context";
 import CommandError from "./error";
-import CustomError from "./error/custom";
+import CooldownError from "./error/cooldown";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
 import NoArgumentProvided from "./error/no-arg-provided";
 import NoCommandProvided from "./error/no-command-provided";
+import PermissionError from "./error/permission";
+import CommandErrorType from "./error/type";
 import UnknownCommand from "./error/unknownCommand";
-import CommandSuccess from "./result";
 import CommandRunContext from "./run-context";
 import RunnableCommand from "./runnable";
-import Trigger from "./trigger";
+import Cooldown from "./trigger";
 
-export type CommandResult = CommandSuccess | CommandError;
+export interface CommandMatch {
+  command: RunnableCommand;
+  content: string;
+}
 
 export default class CommandManager extends NamedElementSearcher<Command> {
   public readonly bot: Bot;
@@ -29,9 +42,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public readonly prefixes: DatabaseVariable<string[]>;
   public readonly silent: DatabaseVariable<boolean>;
   public readonly respondToUnknownCommands: DatabaseVariable<boolean>;
-  public readonly cooldown: DatabaseVariable<number>;
+  public readonly cooldownTime: DatabaseVariable<number>;
 
-  private lastTriggered: object;
+  private cooldowns: object;
 
   constructor(bot: Bot) {
     super(" ");
@@ -44,8 +57,8 @@ export default class CommandManager extends NamedElementSearcher<Command> {
       "respondToUnkownCommands",
       false
     );
-    this.cooldown = this.createVariable("cooldown", 0);
-    this.lastTriggered = {};
+    this.cooldownTime = this.createVariable("cooldown", 0);
+    this.cooldowns = {};
     this.logger = new Logger("command-manager", bot.logger);
   }
 
@@ -68,140 +81,137 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     );
   }
 
-  public handleMessage(msg: Message): Promise<boolean> {
+  public handleMessage(
+    msg: Message,
+    sudo: boolean = false,
+    silent: boolean = sudo ? true : false
+  ): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
-      const result = this.parseFull(msg);
-      if (result) {
-        const cooldown = this.cooldown.getValue();
-        if (cooldown !== 0) {
-          const lastTriggered: Trigger = this.lastTriggered[msg.author.id];
-          if (lastTriggered != null) {
-            const now = new Date().getTime();
-            if (now - lastTriggered.time < cooldown) {
-              if (lastTriggered.alreadyTold) {
-                return resolve(false);
+      const content = this.parseMessage(msg);
+      let error: CommandError = null;
+      if (content) {
+        const cooldown = this.cooldown(msg.author);
+        if (typeof cooldown === "boolean") {
+          if (cooldown) {
+            resolve(false);
+          } else {
+            const result = this.parseContent(content);
+            if (result instanceof CommandError) {
+              error = result;
+            } else {
+              const command = result.command;
+              const argList = this.parseArgs(result, msg);
+              if (argList instanceof CommandError) {
+                error = argList;
               } else {
-                const seconds = Math.ceil(
-                  (cooldown - (now - lastTriggered.time)) / 1000
-                );
-                this.bot
-                  .getClient()
-                  .createMessage(
-                    msg.channel.id,
-                    `:clock1: Please wait before using another command (${seconds} seconds left)`
-                  );
-                this.lastTriggered[msg.author.id] = {
-                  alreadyTold: true,
-                  time: lastTriggered.time
-                };
-                return resolve(true);
+                if (
+                  sudo ||
+                  (await this.bot.hasPermission({
+                    user: msg.author,
+                    command,
+                    member: msg.member
+                  }))
+                ) {
+                  try {
+                    await command.run(new CommandRunContext(msg, argList));
+                    if (!silent) {
+                      this.logger.log(
+                        `'${this.bot.util.formatUser(
+                          msg.author
+                        )}' ran command '${chalk.magenta(
+                          command.getFullName()
+                        )}'`
+                      );
+                    }
+                  } catch (err) {
+                    this.logger.error(
+                      `Command '${command.getFullName()}' crashed: ${err.stack}`
+                    );
+                  }
+                } else {
+                  error = new PermissionError(command);
+                }
               }
             }
           }
-        }
-        this.runResult(result, msg).then(resolve, reject);
-        this.lastTriggered[msg.author.id] = {
-          alreadyTold: false,
-          time: new Date().getTime()
-        };
-      }
-      resolve(false);
-    });
-  }
-
-  public shouldRespond(result: CommandResult): boolean {
-    return (
-      !(this.silent.getValue() && result instanceof CommandError) &&
-      !(
-        result instanceof UnknownCommand &&
-        !this.respondToUnknownCommands.getValue()
-      )
-    );
-  }
-
-  public runResult(
-    result: CommandResult,
-    msg: Message,
-    sudo: boolean = false
-  ): Promise<boolean> {
-    return new Promise(async (resolve, reject) => {
-      if (result instanceof CommandError) {
-        if (
-          !this.silent.getValue() &&
-          (result instanceof UnknownCommand &&
-            !this.respondToUnknownCommands.getValue())
-        ) {
-          this.bot
-            .getClient()
-            .createMessage(msg.channel.id, result.getMessage());
-        }
-        resolve(true);
-      } else if (result instanceof CommandSuccess) {
-        const command = result.command;
-        if (
-          sudo ||
-          (await this.bot.hasPermission({
-            user: msg.author,
-            command,
-            member: msg.member
-          }))
-        ) {
-          try {
-            await command.run(new CommandRunContext(msg, result.args));
-            if (!command.silent.getValue()) {
-              const user = chalk.magenta(
-                `${msg.author.username}#${msg.author.discriminator}`
-              );
-              this.logger.log(
-                `'${user}' ran command '${chalk.magenta(
-                  command.getFullName()
-                )}'`
-              );
-            }
-          } catch (err) {
-            this.logger.error(
-              `Command '${command.getFullName()}' crashed: ${err.stack}`
-            );
-          }
         } else {
-          const user = chalk.magenta(
-            `${msg.author.username}#${msg.author.discriminator}`
-          );
-          const commandName = chalk.magenta(command.getFullName());
-          this.logger.log(
-            `'${user}' did not have permission to run command '${commandName}'`
-          );
-          if (!command.silent.getValue()) {
-            this.bot
-              .getClient()
-              .createMessage(
-                msg.channel.id,
-                ":lock: You do not have permission to use this command"
-              );
-          }
+          error = new CooldownError(Math.ceil(cooldown));
         }
-        resolve(true);
-      } else {
-        resolve(false);
+      }
+      if (error) {
+        this.handleError(error, msg.author, msg.channel);
       }
     });
   }
 
-  public parseFull(msg: Message): CommandResult {
+  public handleError(
+    error: CommandError,
+    user: User,
+    channel: TextableChannel
+  ) {
+    if (error.type === CommandErrorType.PERMISSION) {
+      this.logger.log(
+        `'${this.bot.util.formatUser(user)}' tried to run ` + error.command
+          ? `command '${error.command.getFullName()}'`
+          : `an unknown command` + " but didn't have permission"
+      );
+    }
+    if (this.shouldRespond(error)) {
+      channel.createMessage(
+        error.type.length > 0 ? `${error} ` : "" + error.getMessage()
+      );
+    }
+  }
+
+  public cooldown(user: User): boolean | number {
+    const cooldownTime = this.cooldownTime.getValue();
+    if (cooldownTime === 0) {
+      return false;
+    }
+    const lastTriggered: Cooldown = this.cooldowns[user.id];
+    if (lastTriggered != null) {
+      const now = new Date().getTime();
+      if (now - lastTriggered.time < cooldownTime) {
+        if (lastTriggered.alreadyTold) {
+          return true;
+        } else {
+          const ms = cooldownTime - (now - lastTriggered.time);
+          this.cooldowns[user.id] = {
+            alreadyTold: true,
+            time: lastTriggered.time
+          };
+          return ms;
+        }
+      }
+    }
+    this.cooldowns[user.id] = {
+      alreadyTold: false,
+      time: new Date().getTime()
+    };
+    return false;
+  }
+
+  public shouldRespond(error?: CommandError): boolean {
+    return !this.silent.getValue() && (error && error instanceof CommandError)
+      ? error instanceof UnknownCommand &&
+          !this.respondToUnknownCommands.getValue()
+      : true;
+  }
+
+  public parseMessage(msg: Message): string {
     const prefix = startsWithAny(msg.content, this.prefixes.getValue());
     if (prefix) {
-      const result = this.parseContent(msg.content.slice(prefix.length), msg);
-      return result;
+      return msg.content.slice(prefix.length);
     }
     return null;
   }
 
-  public parseContent(content: string, msg: Message): CommandResult {
+  public parseContent(content: string): CommandError | CommandMatch {
     const match = this.findMatch(content, { allowIncomplete: false });
     const command = match.element;
     if (command) {
       if (command instanceof RunnableCommand) {
-        return this.handleCommand(command, match.leftover, msg);
+        return { command, content: match.leftover };
       } else {
         if (match.leftover.length === 0) {
           return new NoCommandProvided(command);
@@ -216,11 +226,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     return new NoCommandProvided();
   }
 
-  private handleCommand(
-    command: RunnableCommand,
-    content: string,
-    msg: Message
-  ): CommandResult {
+  private parseArgs(match: CommandMatch, msg: Message): CommandError | ArgList {
+    const command = match.command;
+    let content = match.content;
     const args = new Map<Arg<any>, any>();
     if (command.getArgs().length > 0) {
       for (const arg of command.getArgs()) {
@@ -228,13 +236,20 @@ export default class CommandManager extends NamedElementSearcher<Command> {
         if (content != null && content.length > 0) {
           let failures: ArgFailure[] = [];
           for (const validator of validators) {
-            const result = validator.validate(
-              content,
-              this.bot,
-              msg.channel instanceof GuildChannel
-                ? msg.channel.guild
-                : msg.author
-            );
+            const context: ValidatorContext = { bot: this.bot, msg };
+            let commandChannelType: CommandChannelType = CommandChannelType.ANY;
+            if (msg.channel instanceof GuildChannel && msg.member) {
+              (context as GuildValidatorContext).member = msg.member;
+              (context as GuildValidatorContext).channel = msg.channel;
+              (context as GuildValidatorContext).guild = msg.channel.guild;
+              commandChannelType = CommandChannelType.GUILD;
+            }
+            if (msg.channel instanceof PrivateChannel) {
+              (context as DMValidatorContext).channel = msg.channel;
+              (context as DMValidatorContext).user = msg.author;
+              commandChannelType = CommandChannelType.PRIVATE;
+            }
+            const result = validator.validate(content, context); // figure out how 2 context here (generate context that is one of the 2 types, 3rd doesn't care lel)
             if (result instanceof ArgFailure) {
               failures.push(result);
             } else {
@@ -252,7 +267,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
         }
       }
     }
-    return new CommandSuccess(command, new ArgList(args, content));
+    return new ArgList(args, content);
   }
 
   private createVariable<T>(

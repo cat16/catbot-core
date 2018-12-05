@@ -1,4 +1,5 @@
 import { array } from "../../util";
+import CommandRunContext from "../run-context";
 import ArgValidator from "./validator";
 
 export default class Arg<T> {
@@ -12,5 +13,9 @@ export default class Arg<T> {
 
   public or<T2>(validateFunc: ArgValidator<T2>): Arg<T | T2> {
     return new Arg<T | T2>(this.name, [...this.validationFuncs, validateFunc]);
+  }
+
+  public from(context: CommandRunContext): T {
+    return context.args.get(this);
   }
 }

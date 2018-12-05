@@ -1,8 +1,8 @@
-import ArgFailure from "../result/fail";
-import ArgSuccess from "../result/success";
-import ArgValidator from "../validator";
+import ArgFailure from "../../result/fail";
+import ArgSuccess from "../../result/success";
+import GenericArgValidator from "../generic";
 
-export default class StringValidator extends ArgValidator<string> {
+export default class StringValidator extends GenericArgValidator<string> {
   public readonly allowed: string[];
   constructor(allowed: string[]) {
     super();

@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import {
   AnyChannel,
   Guild,
@@ -156,6 +157,12 @@ export default class BotUtil {
 
   public getGuild(guildString: string) {
     return this.bot.getClient().guilds.get(guildString);
+  }
+
+  public formatUser(user: User, id: boolean = false): string {
+    return chalk.magenta(`${user.username}#${user.discriminator}`) + id
+      ? chalk.grey(` (id:${user.id})`)
+      : "";
   }
 
   private trimID(id: string, symbols: string | string[]): string {

@@ -1,5 +1,4 @@
-interface Trigger {
+export default interface Cooldown {
   time: number;
   alreadyTold: boolean;
 }
-export default Trigger;
