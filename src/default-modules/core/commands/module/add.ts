@@ -5,7 +5,7 @@ const args = [
 ];
 
 const createInfo: CommandCreateInfo = {
-  args,
+  args: [eee],
   run(context) {
     const test = context.getArg(args[0]);
   }

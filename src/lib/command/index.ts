@@ -7,6 +7,12 @@ import RecursiveFileElement from "../util/file-element/recursive-file-element";
 import Logger from "../util/logger";
 import CommandCreateInfo from "./create-info";
 
+export enum CommandChannelType {
+  ANY,
+  GUILD,
+  PRIVATE
+}
+
 export default class Command extends RecursiveFileElement<Command>
   implements NamedElement {
   public readonly logger: Logger;
@@ -15,7 +21,7 @@ export default class Command extends RecursiveFileElement<Command>
   public readonly name: string;
 
   public readonly aliases: DatabaseVariable<string[]>;
-  public readonly silent: DatabaseVariable<boolean>;
+  public readonly guildOnly: DatabaseVariable<CommandChannelType>;
 
   constructor(
     fileName: string,
@@ -30,7 +36,10 @@ export default class Command extends RecursiveFileElement<Command>
     this.name = fileName;
 
     this.aliases = this.createVariable("aliases", createInfo.aliases || []);
-    this.silent = this.createVariable("silent", createInfo.silent || false);
+    this.guildOnly = this.createVariable(
+      "guildOnly",
+      createInfo.guildOnly || CommandChannelType.ANY
+    );
 
     this.logger = new Logger(`command::${this.getFilePath(" ")}`, bot.logger);
   }

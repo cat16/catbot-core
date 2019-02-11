@@ -2,12 +2,9 @@ import { CommandCreateInfo } from "../../..";
 
 const createInfo: CommandCreateInfo = {
   run(context) {
-    const commandManager = this.bot.commandManager;
-    commandManager.runResult(
-      commandManager.parseContent(context.args.content),
-      context.msg,
-      true
-    );
+    const msg = context.msg;
+    msg.content = msg.content.split(`${this.getFileName()} `, 2).join("");
+    this.bot.commandManager.handleMessage(msg, true);
   },
   async hasPermission(context) {
     return (

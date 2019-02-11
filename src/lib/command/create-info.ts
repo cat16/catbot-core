@@ -1,6 +1,8 @@
+import { CommandChannelType } from ".";
+
 export default interface CommandCreateInfo {
   aliases?: string[];
-  silent?: boolean;
+  guildOnly?: CommandChannelType;
 }
 
 export function isCommandCreateInfo(object) {

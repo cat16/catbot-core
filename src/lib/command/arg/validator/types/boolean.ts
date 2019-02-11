@@ -1,9 +1,9 @@
-import { array } from "../../../util";
-import ArgFailure from "../result/fail";
-import ArgSuccess from "../result/success";
-import ArgValidator from "../validator";
+import { array } from "../../../../util";
+import ArgFailure from "../../result/fail";
+import ArgSuccess from "../../result/success";
+import GenericArgValidator from "../generic";
 
-export default class BooleanValidator extends ArgValidator<boolean> {
+export default class BooleanValidator extends GenericArgValidator<boolean> {
   public readonly trueStrs: string[];
   public readonly falseStrs: string[];
   constructor(
