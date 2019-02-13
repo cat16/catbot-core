@@ -2,39 +2,25 @@ import Logger from "../util/logger";
 import DatabaseInterface from "./database-interface";
 
 export default class DatabaseVariable<T> {
-  private static readonly usedKeys: Map<number, string[][]>;
-
-  public readonly key: string[];
+  public readonly key: string;
   public readonly dbi: DatabaseInterface;
-
-  private readonly logger: Logger;
-  private readonly initValue?: T | (() => T);
-  private value: T;
 
   constructor(
     dbi: DatabaseInterface,
-    key: string[],
+    key: string,
     initValue?: T | (() => T)
   ) {
-    this.logger = new Logger(`database`, null, key.join("."));
     this.dbi = dbi;
-    let times = 0;
-    const OG = key[key.length];
+    let times = 1;
+    const OG = key;
     while (
-      dbi
-        .getDBKs()
-        .map(dbk => dbk.getKey())
-        .find(k => k === key)
+      !dbi.registerKey(key)
     ) {
       times++;
-      key[key.length - 1] = OG + (times + 1);
+      key = OG + (times + 1);
     }
-    if (times > 0) {
-      this.logger.warn(
-        `Key '${key}' used ${times} time${
-          times > 1 ? "s" : ""
-        } already; renaming one key to ${OG + (times + 1)}.`
-      );
+    if (times > 1) {
+      
     }
     this.key = key;
 
