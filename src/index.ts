@@ -8,6 +8,6 @@ export { default as Module } from "./lib/module";
 export { default as Command } from "./lib/command";
 export { default as Event } from "./lib/event";
 export { default as Arg } from "./lib/command/arg";
-import * as ArgValidators from "./lib/command/arg/validators";
+import { default as ArgValidators } from "./lib/command/arg/validator/types";
 export { ArgValidators };
 export { default as Logger } from "./lib/util/logger";
