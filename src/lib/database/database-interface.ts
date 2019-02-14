@@ -6,7 +6,9 @@ export default class DatabaseInterface {
 
   private db: ModuleDatabase;
   private registeredKeys: string[];
-  private cache: Map<string, any>
+  private cache: Map<string, any>;
+
+  private loaded: boolean;
 
   constructor() {
     this.logger = new Logger(`db-client`);
@@ -22,13 +24,19 @@ export default class DatabaseInterface {
     this.cache = useCache ? new Map<string, any>() : null;
   }
 
+  public isLoaded(): boolean {
+    return this.loaded;
+  }
+
   public load(): Promise<number> {
     return new Promise((resolve, reject) => {
-      if(this.cache) {
+      if (this.cache) {
         this.registeredKeys.forEach(key => {
           this.cache.set(key, this.db.get(key));
-        })
+        });
       }
+      this.loaded = true;
+      resolve();
     });
   }
 

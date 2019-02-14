@@ -29,7 +29,7 @@ export default class DatabaseVariable<T> {
     return this.key;
   }
 
-  public get(): Promise<T> {
+  public async get(): Promise<T> {
     return this.dbi.get(this.key);
   }
 

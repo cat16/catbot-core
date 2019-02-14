@@ -29,6 +29,7 @@ import UnknownCommand from "./error/unknownCommand";
 import CommandRunContext from "./run-context";
 import RunnableCommand from "./runnable";
 import Cooldown from "./trigger";
+import SavedVariable from "../database/saved-variable";
 
 export interface CommandMatch {
   command: RunnableCommand;
@@ -39,10 +40,10 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public readonly bot: Bot;
   public readonly logger: Logger;
 
-  public readonly prefixes: DatabaseVariable<string[]>;
-  public readonly silent: DatabaseVariable<boolean>;
-  public readonly respondToUnknownCommands: DatabaseVariable<boolean>;
-  public readonly cooldownTime: DatabaseVariable<number>;
+  public readonly prefixes: SavedVariable<string[]>;
+  public readonly silent: SavedVariable<boolean>;
+  public readonly respondToUnknownCommands: SavedVariable<boolean>;
+  public readonly cooldownTime: SavedVariable<number>;
 
   private cooldowns: object;
 
@@ -164,7 +165,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   public cooldown(user: User): boolean | number {
-    const cooldownTime = await this.cooldownTime.get();
+    const cooldownTime = this.cooldownTime.getValue();
     if (cooldownTime === 0) {
       return false;
     }
@@ -194,12 +195,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public shouldRespond(error?: CommandError): boolean {
     return !this.silent.get() && (error && error instanceof CommandError)
       ? error instanceof UnknownCommand &&
-          !(await this.respondToUnknownCommands.get())
+          !this.respondToUnknownCommands.getValue()
       : true;
   }
 
   public parseMessage(msg: Message): string {
-    const prefix = startsWithAny(msg.content, (await this.prefixes.get()));
+    const prefix = startsWithAny(msg.content, this.prefixes.getValue());
     if (prefix) {
       return msg.content.slice(prefix.length);
     }
