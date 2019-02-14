@@ -3,31 +3,31 @@ dependencies:
   eris: 0.9.0
   mongodb: 3.1.13
   ts-node: 7.0.1
-  typescript: 3.4.0-dev.20190130
+  typescript: 3.4.0-dev.20190213
 devDependencies:
   '@types/mongodb': 3.1.19
-  '@types/node': 10.12.20
+  '@types/node': 10.12.26
   prettier: 1.14.2
   tslint: 5.12.1
-  tslint-config-prettier: 1.17.0
+  tslint-config-prettier: 1.18.0
 packages:
-  /@types/bson/1.0.11:
+  /@types/bson/4.0.0:
     dependencies:
-      '@types/node': 10.12.20
+      '@types/node': 10.12.26
     dev: true
     resolution:
-      integrity: sha512-j+UcCWI+FsbI5/FQP/Kj2CXyplWAz39ktHFkXk84h7dNblKRSoNJs95PZFRd96NQGqsPEPgeclqnznWZr14ZDA==
+      integrity: sha512-pq/rqJwJWkbS10crsG5bgnrisL8pML79KlMKQMoQwLUjlPAkrUHMvHJ3oGwE7WHR61Lv/nadMwXVAD2b+fpD8Q==
   /@types/mongodb/3.1.19:
     dependencies:
-      '@types/bson': 1.0.11
-      '@types/node': 10.12.20
+      '@types/bson': 4.0.0
+      '@types/node': 10.12.26
     dev: true
     resolution:
       integrity: sha512-H54hQEovAhyLrIZOhPNfGyCCDoTqKsjb8GQBy8nptJqfxrYCp5WVcPJf9v0kfTPR72xOhaz9+WcYxOXWwEg1Vg==
-  /@types/node/10.12.20:
+  /@types/node/10.12.26:
     dev: true
     resolution:
-      integrity: sha512-9spv6SklidqxevvZyOUGjZVz4QRXGu2dNaLyXIFzFYZW0AGDykzPRIUFJXTlQXyfzAucddwTcGtJNim8zqSOPA==
+      integrity: sha512-nMRqS+mL1TOnIJrL6LKJcNZPB8V3eTfRo9FQA2b5gDvrHurC8XbSA86KNe0dShlEL7ReWJv/OU9NL7Z0dnqWTg==
   /ansi-regex/2.1.1:
     dev: true
     engines:
@@ -398,13 +398,13 @@ packages:
     dev: true
     resolution:
       integrity: sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==
-  /tslint-config-prettier/1.17.0:
+  /tslint-config-prettier/1.18.0:
     dev: true
     engines:
       node: '>=4.0.0'
     hasBin: true
     resolution:
-      integrity: sha512-NKWNkThwqE4Snn4Cm6SZB7lV5RMDDFsBwz6fWUkTxOKGjMx8ycOHnjIbhn7dZd5XmssW3CwqUjlANR6EhP9YQw==
+      integrity: sha512-xPw9PgNPLG3iKRxmK7DWr+Ea/SzrvfHtjFt5LBl61gk2UBG/DB9kCXRjv+xyIU1rUtnayLeMUVJBcMX8Z17nDg==
   /tslint/5.12.1:
     dependencies:
       babel-code-frame: 6.26.0
@@ -440,13 +440,13 @@ packages:
     optional: true
     resolution:
       integrity: sha512-kcoMoKTPYnoeS50tzoqjPY3Uv9axeuuFAZY9M/9zFnhoVvRfxz9K29IMPD7jGmt2c8SW7i3gT9WqDl2+nV7p4A==
-  /typescript/3.4.0-dev.20190130:
+  /typescript/3.4.0-dev.20190213:
     dev: false
     engines:
       node: '>=4.2.0'
     hasBin: true
     resolution:
-      integrity: sha512-wl3HQGnXZbp2TJMT2cwSle8MnfR48MILO40ACyIrxzmrcN9JQd9B4gjvKJXWQmjWVeES1iHMjFxX6b6Ls3nc/w==
+      integrity: sha512-B9gJZx/RDWhKtA7Ygv6RMbqc0nTaNHIkLP0TVIuuScZTaMuGNtIGVd3fWsRK9GDl4plGGDD+d4LZDddlty1N5w==
   /wrappy/1.0.2:
     dev: true
     resolution:

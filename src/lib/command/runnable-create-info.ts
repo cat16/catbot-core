@@ -15,9 +15,9 @@ export type CommandPermissionFunc = (
 ) => Promise<boolean>;
 
 export default interface RunnableCommandCreateInfo extends CommandCreateInfo {
+  args?: Arg<any>[];
   run: CommandRunFunc;
   hasPermission?: CommandPermissionFunc;
-  args?: Arg<any>[];
 }
 
 export function isRunnableCommandCreateInfo(object) {

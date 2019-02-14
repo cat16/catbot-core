@@ -107,9 +107,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                 if (
                   sudo ||
                   (await this.bot.hasPermission({
-                    user: msg.author,
                     command,
-                    member: msg.member
+                    member: msg.member,
+                    user: msg.author
                   }))
                 ) {
                   try {
@@ -164,7 +164,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   public cooldown(user: User): boolean | number {
-    const cooldownTime = this.cooldownTime.getValue();
+    const cooldownTime = await this.cooldownTime.get();
     if (cooldownTime === 0) {
       return false;
     }
@@ -192,14 +192,14 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   public shouldRespond(error?: CommandError): boolean {
-    return !this.silent.getValue() && (error && error instanceof CommandError)
+    return !this.silent.get() && (error && error instanceof CommandError)
       ? error instanceof UnknownCommand &&
-          !this.respondToUnknownCommands.getValue()
+          !(await this.respondToUnknownCommands.get())
       : true;
   }
 
   public parseMessage(msg: Message): string {
-    const prefix = startsWithAny(msg.content, this.prefixes.getValue());
+    const prefix = startsWithAny(msg.content, (await this.prefixes.get()));
     if (prefix) {
       return msg.content.slice(prefix.length);
     }
@@ -271,12 +271,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   private createVariable<T>(
-    key: string | string[],
+    key: string,
     defaultValue?: T | (() => T)
   ): DatabaseVariable<T> {
-    return this.bot.createDatabaseVariable(
-      ["command-manager", ...array(key)],
-      defaultValue
-    );
+    return this.bot.createDBVariable(`command-manager.${key}`, defaultValue);
   }
 }

@@ -1,7 +1,6 @@
 import Bot from "../bot";
 import DatabaseVariable from "../database/database-variable";
 import Module from "../module";
-import { array } from "../util";
 import NamedElement from "../util/file-element/named-element";
 import RecursiveFileElement from "../util/file-element/recursive-file-element";
 import Logger from "../util/logger";
@@ -49,21 +48,17 @@ export default class Command extends RecursiveFileElement<Command>
   }
 
   public getAliases(): string[] {
-    return this.aliases.getValue();
+    return this.aliases.get();
   }
 
-  public getFullName(): string {
-    return this.getFilePath(" ");
+  public getFullName(separator: string = " "): string {
+    return this.getFilePath(separator);
   }
 
   private createVariable<T>(
-    key: string | string[],
+    key: string,
     defaultValue?: T
   ): DatabaseVariable<T> {
-    return new DatabaseVariable<T>(
-      this.bot.getDatabase(),
-      ["command", this.name, ...array(key)],
-      defaultValue
-    );
+    return this.bot.createDBVariable(`command[${this.getFullName(".")}].${key}`, defaultValue)
   }
 }

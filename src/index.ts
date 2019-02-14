@@ -11,3 +11,4 @@ export { default as Arg } from "./lib/command/arg";
 import { default as ArgValidators } from "./lib/command/arg/validator/types";
 export { ArgValidators };
 export { default as Logger } from "./lib/util/logger";
+export { tuple } from "./lib/util";

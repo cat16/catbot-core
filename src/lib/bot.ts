@@ -43,7 +43,7 @@ export default class Bot {
     this.moduleManager = new ModuleManager(directory, this);
     this.commandManager = new CommandManager(this);
     this.eventManager = new EventManager(this);
-    this.admins = this.createVariable<string[]>("admins", []);
+    this.admins = this.createDBVariable<string[]>("admins", []);
   }
 
   public start(): Promise<void> {
@@ -118,23 +118,16 @@ export default class Bot {
 
   public async isAdmin(id: string): Promise<boolean> {
     return (
-      this.admins.getValue().some(admin => admin === id) ||
+      (await this.admins.get()).some(admin => admin === id) ||
       id === (await this.getClient().getOAuthApplication()).owner.id
     );
   }
 
-  public createDatabaseVariable<T>(
-    key: string[],
+  public createDBVariable<T>(
+    key: string,
     defaultValue?: T | (() => T)
   ): DatabaseVariable<T> {
-    return new DatabaseVariable<T>(this.getDatabase(), key, defaultValue);
-  }
-
-  private createVariable<T>(
-    key: string | string[],
-    defaultValue?: T | (() => T)
-  ): DatabaseVariable<T> {
-    return this.createDatabaseVariable<T>(["bot", ...array(key)], defaultValue);
+    return new DatabaseVariable<T>(this.getDatabase(), `bot.${key}`, defaultValue);
   }
 
   private connect(): Promise<void> {

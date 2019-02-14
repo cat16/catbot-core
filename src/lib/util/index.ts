@@ -350,3 +350,5 @@ export function reportErrors(
     );
   }
 }
+
+export function tuple<T extends any[] & {"0": any}>(array: T): T { return array }

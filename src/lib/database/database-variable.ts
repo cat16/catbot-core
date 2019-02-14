@@ -23,36 +23,17 @@ export default class DatabaseVariable<T> {
       
     }
     this.key = key;
-
-    this.initValue = initValue;
-    this.dbi.registerDBK(this);
   }
 
-  public getKey(): string[] {
+  public getKey(): string {
     return this.key;
   }
 
-  public getValue(): T {
-    return this.value;
+  public get(): Promise<T> {
+    return this.dbi.get(this.key);
   }
 
-  public async setValue(value: T): Promise<void> {
-    this.value = value;
-    return this.dbi.set(this, value);
-  }
-
-  public getInitValue(): T {
-    return this.initValue instanceof Function
-      ? this.initValue()
-      : this.initValue;
-  }
-
-  public async load(): Promise<void> {
-    let newValue = await this.dbi.get(this);
-    if (newValue === undefined) {
-      newValue = this.getInitValue();
-      await this.dbi.set(this, newValue);
-    }
-    this.value = newValue;
+  public async set(value: T): Promise<void> {
+    return this.dbi.set(this.key, value);
   }
 }

@@ -46,18 +46,14 @@ export default class Module extends FileElement implements NamedElement {
     return this.name;
   }
 
-  public getAliases(): string[] {
-    return this.aliases.getValue();
+  public getAliases(): Promise<string[]> {
+    return this.aliases.get();
   }
 
   private createVariable<T>(
     name: string | string[],
     defaultValue?: T
   ): DatabaseVariable<T> {
-    return new DatabaseVariable(
-      this.bot.getDatabase(),
-      ["module", this.name, ...array(name)],
-      defaultValue
-    );
+    return this.bot.createDBVariable(`module[${this.name}].${name}`, defaultValue);
   }
 }
