@@ -1,6 +1,11 @@
 import Logger from "../util/logger";
 import DatabaseInterface from "./database-interface";
 
+export interface DatabaseVariableOptions<T> {
+  initValue?: T | (() => T);
+  unique?: boolean;
+}
+
 export default class DatabaseVariable<T> {
   public readonly key: string;
   public readonly dbi: DatabaseInterface;
@@ -8,21 +13,16 @@ export default class DatabaseVariable<T> {
   constructor(
     dbi: DatabaseInterface,
     key: string,
-    initValue?: T | (() => T)
+    { unique = true, initValue = undefined }: DatabaseVariableOptions<T> = {}
   ) {
     this.dbi = dbi;
-    let times = 1;
-    const OG = key;
-    while (
-      !dbi.registerKey(key)
-    ) {
-      times++;
-      key = OG + (times + 1);
-    }
-    if (times > 1) {
+
+    const newKey = unique ? this.dbi.createUniqueKey(key) : key;
+    if (key !== newKey) {
       
     }
-    this.key = key;
+    this.dbi.registerKey(newKey);
+    this.key = newKey;
   }
 
   public getKey(): string {

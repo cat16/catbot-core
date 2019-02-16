@@ -1,4 +1,5 @@
 import DatabaseVariable from "./database-variable";
+import DatabaseNotLoadedError from "./database-not-loaded";
 
 // this is going to be a db variable but stored in ram while the program is running so it's just a saved variable
 
@@ -7,7 +8,7 @@ export default class SavedVariable<T> extends DatabaseVariable<T> {
 
   public getValue(): T {
     if (!this.dbi.isLoaded()) {
-      throw new Error("Database not initialized");
+      throw new DatabaseNotLoadedError(this.dbi);
     }
     return this.value;
   }
