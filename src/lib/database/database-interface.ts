@@ -1,26 +1,26 @@
-import Logger from "../util/logger";
+import { mapPromiseAll } from "../util";
 import ModuleDatabase from "./module-database";
 
-export default class DatabaseInterface {
-  private logger: Logger;
+export type SyncFunc = (value: any) => void;
 
+export default class DatabaseInterface {
   private db: ModuleDatabase;
   private registeredKeys: string[];
   private cache: Map<string, any>;
-  private defaultValues: Map<string, any>;
+  private initValues: Map<string, any>;
+  private syncFuncs: Map<string, SyncFunc>;
 
   private loaded: boolean;
 
   constructor() {
-    this.logger = new Logger(`empty-db-interface`);
     this.db = null;
     this.registeredKeys = [];
-    this.defaultValues = new Map<string, any>();
+    this.initValues = new Map<string, any>();
+    this.syncFuncs = new Map<string, SyncFunc>();
   }
 
   public setDB(db: ModuleDatabase): void {
     this.db = db;
-    this.logger = new Logger(`db-${this.db.getId()}-interface`);
   }
 
   public getId(): number {
@@ -35,21 +35,17 @@ export default class DatabaseInterface {
     return this.loaded;
   }
 
-  public load(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      if (this.cache) {
-        this.registeredKeys.forEach(key => {
-          this.cache.set(key, this.db.get(key));
-        });
+  public async load(): Promise<void> {
+    await mapPromiseAll(this.initValues, async (key, value) => {
+      if ((await this.get(key)) === undefined && value !== undefined) {
+        await this.set(key, value);
       }
-      this.defaultValues.forEach((value, key) => {
-        if(this.get(key) === undefined) {
-          this.set(key, value);
-        }
-      })
-      this.loaded = true;
-      resolve();
     });
+    await mapPromiseAll(this.syncFuncs, async (key, func) => {
+      const value = await this.get(key);
+      await func(value);
+    });
+    this.loaded = true;
   }
 
   public createUniqueKey(key: string): string {
@@ -71,13 +67,21 @@ export default class DatabaseInterface {
     }
   }
 
-  public registerDefaultValue(key: string, value: any, override: boolean): boolean {
-    if(this.defaultValues.has(key) && !override) {
+  public registerInitValue(
+    key: string,
+    value: any,
+    override: boolean = false
+  ): boolean {
+    if (this.initValues.has(key) && !override) {
       return false;
     } else {
-      this.defaultValues.set(key, value);
+      this.initValues.set(key, value);
       return true;
     }
+  }
+
+  public addSyncFunction(key: string, func: SyncFunc) {
+    this.syncFuncs.set(key, func);
   }
 
   /**
@@ -85,7 +89,15 @@ export default class DatabaseInterface {
    * @param key - the key of the value you want to get
    */
   public async get(key: string): Promise<any> {
-    return this.db.get(key);
+    if (this.cache && this.cache.get(key) !== undefined) {
+      return this.cache.get(key);
+    } else {
+      const value = this.db.get(key);
+      if (this.cache) {
+        this.cache.set(key, value);
+      }
+      return value;
+    }
   }
 
   /**
@@ -94,7 +106,10 @@ export default class DatabaseInterface {
    * @param value - The value you want to set the data to; if undefined, it will delete the data instead
    */
   public async set(key: string, value: any): Promise<void> {
-    if(value === undefined) {
+    if (this.cache) {
+      this.cache.set(key, value);
+    }
+    if (value === undefined) {
       return this.delete(key);
     } else {
       return this.db.set(key, value);

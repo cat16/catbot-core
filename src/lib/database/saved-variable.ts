@@ -1,10 +1,21 @@
-import DatabaseVariable from "./database-variable";
+import DatabaseInterface from "./database-interface";
 import DatabaseNotLoadedError from "./database-not-loaded";
+import DatabaseVariable, { DatabaseVariableOptions } from "./database-variable";
 
-// this is going to be a db variable but stored in ram while the program is running so it's just a saved variable
-
+/**
+ * Basically a perminantly cached database variable
+ */
 export default class SavedVariable<T> extends DatabaseVariable<T> {
   private value: T;
+
+  constructor(
+    dbi: DatabaseInterface,
+    key: string,
+    options?: DatabaseVariableOptions<T>
+  ) {
+    super(dbi, key, options);
+    this.dbi.addSyncFunction(this.key, (value) => {this.value = value});
+  }
 
   public getValue(): T {
     if (!this.dbi.isLoaded()) {

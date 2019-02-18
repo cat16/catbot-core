@@ -8,8 +8,8 @@ import {
 } from "eris";
 import Command, { CommandChannelType } from ".";
 import Bot from "../bot";
-import DatabaseVariable from "../database/database-variable";
-import { array, reportErrors, startsWithAny } from "../util";
+import SavedVariable from "../database/saved-variable";
+import { reportErrors, startsWithAny } from "../util";
 import NamedElementSearcher from "../util/file-element/searcher";
 import Logger from "../util/logger";
 import Arg from "./arg";
@@ -29,7 +29,6 @@ import UnknownCommand from "./error/unknownCommand";
 import CommandRunContext from "./run-context";
 import RunnableCommand from "./runnable";
 import Cooldown from "./trigger";
-import SavedVariable from "../database/saved-variable";
 
 export interface CommandMatch {
   command: RunnableCommand;
@@ -50,9 +49,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   constructor(bot: Bot) {
     super(" ");
     this.bot = bot;
-    this.prefixes = this.createVariable("prefixes", () => [
-      `${bot.getClient().user.mention} `
-    ]);
+    this.prefixes = this.createVariable("prefixes", []);
     this.silent = this.createVariable("silent", false);
     this.respondToUnknownCommands = this.createVariable(
       "respondToUnkownCommands",
@@ -116,7 +113,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                   try {
                     await command.run(new CommandRunContext(msg, argList));
                     if (!silent) {
-                      this.logger.log(
+                      this.logger.info(
                         `'${this.bot.util.formatUser(
                           msg.author
                         )}' ran command '${chalk.magenta(
@@ -151,16 +148,15 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     channel: TextableChannel
   ) {
     if (error.type === CommandErrorType.PERMISSION) {
-      this.logger.log(
-        `'${this.bot.util.formatUser(user)}' tried to run ` + error.command
-          ? `command '${error.command.getFullName()}'`
-          : `an unknown command` + " but didn't have permission"
+      this.logger.info(
+        `'${this.bot.util.formatUser(user)}' tried to run ` +
+          (error.command
+            ? `command '${error.command.getFullName()}'`
+            : `an unknown command` + " but didn't have permission")
       );
     }
     if (this.shouldRespond(error)) {
-      channel.createMessage(
-        error.type.length > 0 ? `${error} ` : "" + error.getMessage()
-      );
+      channel.createMessage(`${error.type} ` + error.getMessage());
     }
   }
 
@@ -202,7 +198,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public parseMessage(msg: Message): string {
     const prefix = startsWithAny(msg.content, this.prefixes.getValue());
     if (prefix) {
-      return msg.content.slice(prefix.length);
+      return msg.content.slice(prefix.length).trim();
     }
     return null;
   }
@@ -271,10 +267,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     return new ArgList(args, content);
   }
 
-  private createVariable<T>(
-    key: string,
-    defaultValue?: T | (() => T)
-  ): DatabaseVariable<T> {
-    return this.bot.createDBVariable(`command-manager.${key}`, defaultValue);
+  private createVariable<T>(key: string, initValue?: T): SavedVariable<T> {
+    return this.bot.createSavedVariable(`command-manager.${key}`, initValue);
   }
 }

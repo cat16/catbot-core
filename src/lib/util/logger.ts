@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { getInput } from ".";
 import MsgType from "./msg-type";
+import { inspect } from "util";
 
 const twoDigit = (num: string) => {
   return num.length === 1 ? `0${num}` : num;
@@ -16,7 +17,10 @@ export default class Logger {
     this.name = name;
   }
 
-  public getLogString(msg: string, msgType: MsgType = MsgType.INFO) {
+  public getLogString(msg: any, msgType: MsgType = MsgType.INFO) {
+    if(typeof msg !== "string") {
+      msg = inspect(msg);
+    }
     const date = chalk.gray(this.getLogDateString(new Date()));
     const name = this.name;
     const type = msgType.getColoredName();
@@ -36,42 +40,42 @@ export default class Logger {
   /**
    * prints general information to the console
    */
-  public info(msg: string, newLine = true) {
+  public info(msg: any, newLine = true) {
     this.log(msg, newLine, MsgType.INFO);
   }
 
   /**
    * prints a success to the console
    */
-  public success(msg: string, newLine = true) {
+  public success(msg: any, newLine = true) {
     this.log(msg, newLine, MsgType.SUCCESS);
   }
 
   /**
    * prints a warning to the console
    */
-  public warn(msg: string, newLine = true) {
+  public warn(msg: any, newLine = true) {
     this.log(msg, newLine, MsgType.WARN);
   }
 
   /**
    * prints an error to the console
    */
-  public error(msg: string, newLine = true) {
+  public error(msg: any, newLine = true) {
     this.log(msg, newLine, MsgType.ERROR);
   }
 
   /**
    * prints debug information to the console
    */
-  public debug(msg: string, newLine = true) {
+  public debug(msg: any, newLine = true) {
     this.log(msg, newLine, MsgType.DEBUG);
   }
 
   /**
    * logs a message to the console
    */
-  public log(msg: string, newLine = true, type?: MsgType) {
+  public log(msg: any, newLine = true, type?: MsgType) {
     const send = this.getLogString(msg, type);
     switch (type) {
       default:

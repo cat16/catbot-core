@@ -1,5 +1,5 @@
 import Bot from "../bot";
-import DatabaseVariable from "../database/database-variable";
+import SavedVariable from "../database/saved-variable";
 import Module from "../module";
 import NamedElement from "../util/file-element/named-element";
 import RecursiveFileElement from "../util/file-element/recursive-file-element";
@@ -19,8 +19,8 @@ export default class Command extends RecursiveFileElement<Command>
   public readonly module: Module;
   public readonly name: string;
 
-  public readonly aliases: DatabaseVariable<string[]>;
-  public readonly guildOnly: DatabaseVariable<CommandChannelType>;
+  public readonly aliases: SavedVariable<string[]>;
+  public readonly guildOnly: SavedVariable<CommandChannelType>;
 
   constructor(
     fileName: string,
@@ -48,7 +48,7 @@ export default class Command extends RecursiveFileElement<Command>
   }
 
   public getAliases(): string[] {
-    return this.aliases.get();
+    return this.aliases.getValue();
   }
 
   public getFullName(separator: string = " "): string {
@@ -57,8 +57,8 @@ export default class Command extends RecursiveFileElement<Command>
 
   private createVariable<T>(
     key: string,
-    defaultValue?: T
-  ): DatabaseVariable<T> {
-    return this.bot.createDBVariable(`command[${this.getFullName(".")}].${key}`, defaultValue)
+    initValue?: T
+  ): SavedVariable<T> {
+    return this.bot.createSavedVariable(`command[${this.getFullName(".")}].${key}`, initValue)
   }
 }

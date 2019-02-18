@@ -1,17 +1,17 @@
 import { Client } from "eris";
 import * as fs from "fs";
-
 import CommandManager from "./command/manager";
 import { CommandPermissionContext } from "./command/permission-context";
 import Config from "./config";
 import Database from "./database/database-interface";
 import DatabaseVariable from "./database/database-variable";
 import RuntimeDatabase from "./database/runtime-database";
+import SavedVariable from "./database/saved-variable";
 import EventManager from "./event/manager";
 import DatabaseModule from "./module/database-module";
 import ModuleManager from "./module/manager";
 import PermissionModule from "./module/permission-module";
-import BotUtil, { array, createDirectory, getInput, pathExists } from "./util";
+import BotUtil, { createDirectory, pathExists } from "./util";
 import Logger from "./util/logger";
 
 export default class Bot {
@@ -43,29 +43,26 @@ export default class Bot {
     this.moduleManager = new ModuleManager(directory, this);
     this.commandManager = new CommandManager(this);
     this.eventManager = new EventManager(this);
-    this.admins = this.createDBVariable<string[]>("admins", []);
+    this.admins = this.createDatabaseVariable<string[]>("admins", []);
   }
 
-  public start(): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      this.logger.info("Starting bot...");
-      this.logger.log("Loading...");
-      if (!pathExists(this.directory)) {
-        createDirectory(this.directory);
-      }
-      await this.loadConfig("config.json");
-      this.client = new Client(this.config.token, {});
-      await this.connect();
-      this.moduleManager.load();
-      await this.loadDBFromModule();
-      this.loadPermCheckFromModule();
-      this.commandManager.load();
-      this.eventManager.load();
-      this.logger.success(
-        `Successfully loaded ${await this.database.load()} database variables.`
-      );
-      this.logger.success("Successfully loaded.");
-    });
+  public async start(): Promise<void> {
+    this.logger.info("Starting bot...");
+    this.logger.log("Loading...");
+    if (!pathExists(this.directory)) {
+      createDirectory(this.directory);
+    }
+    await this.loadConfig("config.json");
+    this.client = new Client(this.config.token, {});
+    this.moduleManager.load();
+    await this.loadDBFromModule();
+    this.loadPermCheckFromModule();
+    this.commandManager.load();
+    this.eventManager.load();
+    await this.database.load();
+    this.logger.success(`Successfully loaded database.`);
+    await this.connect();
+    this.logger.success("Successfully loaded.");
   }
 
   // replace with an exit, dummy, and find a way to make stop actually stop it
@@ -117,17 +114,22 @@ export default class Bot {
   }
 
   public async isAdmin(id: string): Promise<boolean> {
-    return (
-      (await this.admins.get()).some(admin => admin === id) ||
-      id === (await this.getClient().getOAuthApplication()).owner.id
-    );
+    return (await this.admins.get()).some(admin => admin === id);
   }
 
-  public createDBVariable<T>(
+  public createDatabaseVariable<T>(
     key: string,
-    defaultValue?: T | (() => T)
+    initValue?: T
   ): DatabaseVariable<T> {
-    return new DatabaseVariable<T>(this.getDatabase(), `bot.${key}`, defaultValue);
+    return new DatabaseVariable<T>(this.getDatabase(), `bot.${key}`, {
+      initValue
+    });
+  }
+
+  public createSavedVariable<T>(key: string, initValue?: T): SavedVariable<T> {
+    return new SavedVariable<T>(this.getDatabase(), `bot.${key}`, {
+      initValue
+    });
   }
 
   private connect(): Promise<void> {

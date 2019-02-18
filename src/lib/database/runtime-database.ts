@@ -15,4 +15,12 @@ export default class RuntimeDatabase extends ModuleDatabase {
   public async set(key: string, value: any) {
     this.variables.set(key, value);
   }
+
+  public async delete(key: string) {
+    const value = this.get(key);
+    this.variables.delete(key);
+    if (value !== undefined) {
+      return value;
+    }
+  }
 }

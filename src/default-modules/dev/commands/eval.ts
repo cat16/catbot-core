@@ -1,4 +1,5 @@
 import { MessageContent } from "eris";
+import * as ts from "typescript";
 import { inspect } from "util";
 import { Bot, CommandCreateInfo } from "../../..";
 
@@ -16,18 +17,18 @@ const createEvalMsg = (
       ? [
           {
             name: "Exception",
-            value: "```js\n" + content.message + "```"
+            value: "```ts\n" + content.message + "```"
           },
           {
             name: "Stack",
-            value: "```js\n" + content.stack.slice(0, 1000) + "```"
+            value: "```ts\n" + content.stack.slice(0, 1000) + "```"
           }
         ]
       : [
           {
             name: "Output",
             value:
-              "```js\n" +
+              "```ts\n" +
               content.replace(bot.getConfig().token, "[TOKEN]").slice(0, 1000) +
               "```"
           }
@@ -35,19 +36,19 @@ const createEvalMsg = (
   return {
     content: "",
     embed: {
+      color,
       fields: [
         {
           name: "Input",
-          value: "```js\n" + input + "```"
+          value: "```ts\n" + input + "```"
         },
         ...output,
         {
           name: "Type",
-          value: "```js\n" + type + "```"
+          value: "```ts\n" + type + "```"
         }
       ],
-      timestamp: new Date().toISOString(),
-      color
+      timestamp: new Date().toISOString()
     }
   };
 };
@@ -65,7 +66,7 @@ const createInfo: CommandCreateInfo = {
     );
     try {
       // tslint:disable-next-line:no-eval
-      const result = await eval(context.args.content);
+      const result = await eval(ts.transpile(context.args.content, {moduleResolution: ts.ModuleResolutionKind.NodeJs}));
       let output = result;
       if (typeof output !== "string") {
         output = inspect(result, { depth });

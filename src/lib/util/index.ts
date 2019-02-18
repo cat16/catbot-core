@@ -160,9 +160,10 @@ export default class BotUtil {
   }
 
   public formatUser(user: User, id: boolean = false): string {
-    return chalk.magenta(`${user.username}#${user.discriminator}`) + id
-      ? chalk.grey(` (id:${user.id})`)
-      : "";
+    return (
+      chalk.magenta(`${user.username}#${user.discriminator}`) +
+      (id ? chalk.grey(` (id:${user.id})`) : "")
+    );
   }
 
   private trimID(id: string, symbols: string | string[]): string {
@@ -176,31 +177,6 @@ export default class BotUtil {
     }
     return id;
   }
-}
-
-export function multiPromise(promises: Promise<any>[]): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const results = [];
-    let finished = 0;
-    const check = () => {
-      finished++;
-      if (finished === promises.length) {
-        resolve(results);
-      }
-    };
-    for (let i = 0; i < promises.length; i++) {
-      promises[i].then(
-        data => {
-          results[i] = data;
-          check();
-        },
-        err => {
-          results[i] = err;
-          check();
-        }
-      );
-    }
-  });
 }
 
 export function isFile(source: string): boolean {
@@ -265,8 +241,8 @@ export function pathExists(path: string): boolean {
   return fs.existsSync(path);
 }
 
-export function createDirectory(path: string): void {
-  fs.mkdirSync(path);
+export function existsDirectory(path: string) {
+  return pathExists(path) && fs.lstatSync(path).isDirectory();
 }
 
 export function loadFile(path: string): any {
@@ -351,4 +327,50 @@ export function reportErrors(
   }
 }
 
-export function tuple<T extends any[] & {"0": any}>(array: T): T { return array }
+export function tuple<T extends any[] & { "0": any }>(arr: T): T {
+  return arr;
+}
+
+export async function mapPromiseAll<K, V>(
+  map: Map<K, V>,
+  func: (key: K, value: V) => Promise<void>
+) {
+  const promises: Promise<void>[] = [];
+  map.forEach((value, key) => {
+    promises.push(func(key, value));
+  });
+  return Promise.all(promises);
+}
+
+export function copyDirectory(srcPath: string, destPath: string) {
+  fs.readdirSync(srcPath).forEach(file => {
+    const curSrcPath = `${srcPath}/${file}`;
+    const curDestPath = `${destPath}/${file}`;
+    if (fs.lstatSync(curSrcPath).isDirectory()) {
+      if (!fs.existsSync(curDestPath)) {
+        fs.mkdirSync(curDestPath);
+      }
+      copyDirectory(curSrcPath, curDestPath);
+    } else {
+      fs.copyFileSync(curSrcPath, curDestPath);
+    }
+  });
+}
+
+export function removeDirectory(path: string): void {
+  fs.readdirSync(path).forEach(file => {
+    const curPath = `${path}/${file}`;
+    if (fs.lstatSync(curPath).isDirectory()) {
+      removeDirectory(curPath);
+    } else {
+      fs.unlinkSync(curPath);
+    }
+  });
+  fs.rmdirSync(path);
+}
+
+export function createDirectory(path: string) {
+  if (!fs.existsSync(path)) {
+    fs.mkdirSync(path);
+  }
+}

@@ -1,8 +1,7 @@
 import Bot from "../bot";
 import CommandDirectoryManager from "../command/dir-manager";
-import DatabaseVariable from "../database/database-variable";
+import SavedVariable from "../database/saved-variable";
 import EventDirectoryManager from "../event/dir-manager";
-import { array } from "../util";
 import FileElement from "../util/file-element";
 import NamedElement from "../util/file-element/named-element";
 import ModuleCreateInfo from "./create-info";
@@ -14,7 +13,7 @@ export default class Module extends FileElement implements NamedElement {
   public readonly commandDirManager: CommandDirectoryManager;
   public readonly eventDirManager: EventDirectoryManager;
 
-  public readonly aliases: DatabaseVariable<string[]>;
+  public readonly aliases: SavedVariable<string[]>;
 
   constructor(
     fileName: string,
@@ -46,14 +45,14 @@ export default class Module extends FileElement implements NamedElement {
     return this.name;
   }
 
-  public getAliases(): Promise<string[]> {
-    return this.aliases.get();
+  public getAliases(): string[] {
+    return this.aliases.getValue();
   }
 
   private createVariable<T>(
     name: string | string[],
-    defaultValue?: T
-  ): DatabaseVariable<T> {
-    return this.bot.createDBVariable(`module[${this.name}].${name}`, defaultValue);
+    initValue?: T
+  ): SavedVariable<T> {
+    return this.bot.createSavedVariable(`module[${this.name}].${name}`, initValue);
   }
 }

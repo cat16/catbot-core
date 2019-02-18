@@ -1,5 +1,5 @@
 export default abstract class ModuleDatabase {
-  private static currentId: number;
+  private static currentId: number = 0;
 
   private readonly id: number;
 

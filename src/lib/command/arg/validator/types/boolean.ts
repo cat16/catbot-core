@@ -21,7 +21,7 @@ export default class BooleanValidator extends GenericArgValidator<boolean> {
     if (match) {
       return new ArgSuccess(
         match === trueMatch,
-        text.slice(trueMatch.length).trim()
+        text.slice(trueMatch ? trueMatch.length : falseMatch.length).trim()
       );
     } else {
       return new ArgFailure(this.getRequirements());
