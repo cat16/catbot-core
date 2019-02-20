@@ -26,7 +26,7 @@ export default class FlatElementDirectoryLoader<
     this.createWithoutTargetFile = options.createWithoutTargetFile || false;
   }
 
-  public load(): Map<string, E | Error> {
+  public loadAll(): Map<string, E | Error> {
     const files = this.targetFile
       ? getDirectories(this.getDirectory()).filter(
           dir =>

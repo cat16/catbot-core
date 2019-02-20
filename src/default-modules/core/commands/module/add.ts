@@ -1,3 +1,4 @@
+// tslint:disable-next-line: no-submodule-imports
 import * as simpleGit from "simple-git/promise";
 import { Arg, ArgValidators, CommandCreateInfo, tuple } from "../../../..";
 import {
@@ -47,6 +48,7 @@ const createInfo: CommandCreateInfo = {
         }
       }
       this.logger.debug(`Took ${delAttempts} tries to delete downloaded folder`)
+      this.bot.moduleManager.loadModule();
     } else {
       context.say(":x: Module already downloaded");
     }

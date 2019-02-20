@@ -19,7 +19,7 @@ export default class ElementDirectoryManager<
       return new Map<string, Error>();
     }
     const errors = new Map<string, Error>();
-    const elementPairs = this.loader.load();
+    const elementPairs = this.loader.loadAll();
     for (const elementPair of elementPairs) {
       if (elementPair[1] instanceof Error) {
         errors.set(elementPair[0], elementPair[1]);
@@ -28,6 +28,13 @@ export default class ElementDirectoryManager<
       }
     }
     return errors;
+  }
+
+  public add(name: string) {
+    if (!pathExists(this.getDirectory())) {
+      return new Map<string, Error>();
+    }
+
   }
 
   public getDirectory(): string {

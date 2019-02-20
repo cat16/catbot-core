@@ -43,6 +43,10 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     );
   }
 
+  public loadModule(name: string) {
+    this.dirManager;
+  }
+
   public loadMainModule() {
     this.mainModule = new Module(null, this.bot, this.directory, {});
   }
