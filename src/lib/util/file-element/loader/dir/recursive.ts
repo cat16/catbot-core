@@ -1,5 +1,5 @@
 import ElementDirectoryLoader from ".";
-import { getDirectories, getFiles, requireFiles } from "../../..";
+import { getDirectories, getFiles, requireFile } from "../../..";
 import RecursiveElementFactory from "../../factory/recursive";
 import RecursiveFileElement from "../../recursive-file-element";
 
@@ -17,79 +17,96 @@ export default class RecursiveElementDirectoryLoader<
     return this.loadDir(this.getDirectory());
   }
 
-  public load(fileName: string): E | Error {
-    
-  }
-
-  private loadRawElement(directory: string, rawElement: any, fileName: string, folder: boolean, parent?: E): [string, E | Error] {
-    try {
-      const element = this.factory.create(rawElement, fileName, parent);
-      if (element != null) {
-        if (folder) {
-          const contents = this.loadDir(`${directory}/${fileName}`, parent);
-          for (const pair of contents) {
-            if (pair[1] instanceof Error) {
-              return [`${fileName}/${pair[0]}`, pair[1]];
-            } else {
-              element.children.push(pair[1]);
-            }
-          }
-        }
-        return [fileName, element];
-      }
-    } catch (err) {
-      return [fileName, err];
+  public load(
+    fileName: string,
+    parent?: E
+  ): {element: E | Error, errors: Map<string, Error>} {
+    const fileElement = this.loadFileElement(
+      this.getDirectory(),
+      fileName,
+      parent
+    );
+    if (!(fileElement instanceof Error)) {
+      return this.loadDirElement(
+        this.getDirectory(),
+        fileName,
+        fileElement,
+        parent
+      );
     }
   }
 
-  private loadDir(
+  private loadFileElement(
     directory: string,
+    name: string,
     parent?: E
-  ): Map<string, E | Error> {
+  ): E | Error {
+    const path = `${directory}/${name}`;
+    const rawElement = requireFile(path);
+    if (rawElement instanceof Error || rawElement === undefined) {
+      return rawElement;
+    } else {
+      try {
+        const element = this.factory.create(rawElement, name, parent);
+        if (element !== null) {
+          return element;
+        } else {
+          return undefined;
+        }
+      } catch (err) {
+        return err;
+      }
+    }
+  }
+
+  private loadDirElement(
+    directory: string,
+    name: string,
+    element?: E,
+    parent?: E
+  ): {element: E | Error, errors: Map<string, Error>} {
+    const errors = new Map<string, Error>();
+    const contents = this.loadDir(`${directory}/${name}`, parent);
+    const children: E[] = [];
+    for (const [subname, subelement] of contents) {
+      if (subelement instanceof Error) {
+        errors.set(`${name}/${subname}`, subelement);
+      } else {
+        children.push(subelement);
+      }
+    }
+    if (children.length !== 0) {
+      if (element === undefined) {
+        element = this.factory.createDir(name, parent);
+      }
+      element.children.push(...children);
+    } else if (errors.size !== 0) {
+      errors.set(name, new Error("There were no children"));
+    }
+    return {element, errors};
+  }
+
+  private loadDir(directory: string, parent?: E): Map<string, E | Error> {
     const files = getFiles(directory, {
       extensions: ["js", "ts"],
       trimExtension: true
     });
     const dirs = getDirectories(directory);
     const elements = new Map<string, E | Error>();
-    requireFiles(directory, files).forEach((rawElement, fileName) => {
-      if (rawElement instanceof Error) {
-        elements.set(fileName, rawElement);
-      } else {
-          // TODO: am work here    
-        try {
-          const element = this.factory.create(rawElement, fileName, parent);
-          if (element != null) {
-            const dir = dirs.find(dirName => dirName === fileName);
-            if (dir) {
-              const contents = this.loadDir(`${directory}/${dir}`, parent);
-              for (const pair of contents) {
-                if (pair[1] instanceof Error) {
-                  elements.set(`${dir}/${pair[0]}`, pair[1]);
-                } else {
-                  element.children.push(pair[1]);
-                }
-              }
-              dirs.splice(dirs.indexOf(dir), 1);
-            }
-            elements.set(fileName, element);
-          }
-        } catch (err) {
-          elements.set(fileName, err);
-        }
-      }
+    files.forEach(file => {
+      elements.set(file, this.loadFileElement(directory, file, parent));
     });
     dirs.forEach(dir => {
-      const element = this.factory.createDir(dir, parent);
-      const contents = this.loadAll(`${directory}/${dir}`, element);
-      for (const pair of contents) {
-        if (pair[1] instanceof Error) {
-          elements.set(`${dir}/${pair[0]}`, pair[1]);
-        } else {
-          element.children.push(pair[1]);
-        }
-      }
-      elements.set(dir, element);
+      const elementName = [...elements.keys()].find(name => name === dir);
+      const fileElement = elementName ? elements.get(elementName) : undefined;
+      const {element, errors} = this.loadDirElement(
+        directory,
+        dir,
+        fileElement instanceof Error ? undefined : fileElement,
+        parent
+      );
+      elements.set(`${dir}/${}`);
+      errors.forEach((value, key) => elements.set(key, value));
     });
     return elements;
   }

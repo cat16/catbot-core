@@ -269,33 +269,25 @@ export function getInput(): Promise<string> {
   });
 }
 
-export function requireFiles(
-  directory: string,
-  paths: string[]
-): Map<string, any | Error> {
-  const results: Map<string, any | Error> = new Map();
-  for (const path of paths) {
-    if (
-      !(
-        pathExists(`${directory}/${path}.js`) ||
-        pathExists(`${directory}/${path}.ts`)
-      )
-    ) {
-      results.set(path, undefined);
-      continue;
-    }
-    let result;
-    try {
-      result = require(`${directory}/${path}`);
-      if (result.default !== undefined) {
-        result = result.default;
-      }
-    } catch (err) {
-      result = err;
-    }
-    results.set(path, result);
+export function requireFile(path: string): any | Error {
+  if (
+    !(
+      pathExists(`${path}.js`) ||
+      pathExists(`${path}.ts`)
+    )
+  ) {
+    return undefined;
   }
-  return results;
+  try {
+    const result = require(path);
+    if (result.default !== undefined) {
+      return result.default;
+    } else {
+      return result;
+    }
+  } catch (err) {
+    return err;
+  }
 }
 
 export function startsWithAny(str: string, arr: string[]): string {
