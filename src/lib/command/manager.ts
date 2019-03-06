@@ -18,7 +18,7 @@ import ArgFailure from "./arg/result/fail";
 import ValidatorContext from "./arg/validator/context";
 import DMValidatorContext from "./arg/validator/dm-context";
 import GuildValidatorContext from "./arg/validator/guild-context";
-import CommandError from "./error";
+import CommandError from "./error"; // lmao I might wanna add exprts to this so I don't have 200 import lines
 import CooldownError from "./error/cooldown";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
 import NoArgumentProvided from "./error/no-arg-provided";
@@ -64,7 +64,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     this.bot.moduleManager
       .getElements()
       .forEach(m =>
-        reportErrors(this.logger, "command", m.commandDirManager.load())
+        reportErrors(this.logger, "command", m.commandDirManager.loadAll())
       );
     this.logger.success(
       `Successfully loaded ${this.getElements().length} commands.`

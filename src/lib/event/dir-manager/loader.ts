@@ -1,6 +1,6 @@
 import Event from "../.";
 import Bot from "../../bot";
-import FlatElementDirectoryLoader from "../../util/file-element/loader/dir/flat";
+import FlatElementDirectoryLoader from "../../util/file-element/loader/default/flat";
 import EventFactory from "./factory";
 
 export default class EventLoader extends FlatElementDirectoryLoader<Event> {

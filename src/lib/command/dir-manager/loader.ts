@@ -1,7 +1,7 @@
 import Command from "..";
 import Bot from "../../bot";
 import Module from "../../module";
-import RecursiveElementDirectoryLoader from "../../util/file-element/loader/dir/recursive";
+import RecursiveElementDirectoryLoader from "../../util/file-element/loader/default/recursive";
 import CommandFactory from "./factory";
 
 export default class CommandLoader extends RecursiveElementDirectoryLoader<

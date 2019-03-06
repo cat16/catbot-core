@@ -1,11 +1,11 @@
-import ElementDirectoryLoader from ".";
 import { getDirectories, getFiles, requireFile } from "../../..";
 import RecursiveElementFactory from "../../factory/recursive";
 import RecursiveFileElement from "../../recursive-file-element";
+import RecursiveElementDirectoryLoader from "../recursive";
 
-export default class RecursiveElementDirectoryLoader<
+export default class DefaultRecursiveElementDirectoryLoader<
   E extends RecursiveFileElement<E>
-> extends ElementDirectoryLoader<E> {
+> extends RecursiveElementDirectoryLoader<E> {
   private factory: RecursiveElementFactory<E>;
 
   constructor(directory: string, factory: RecursiveElementFactory<E>) {
@@ -23,7 +23,7 @@ export default class RecursiveElementDirectoryLoader<
   ): {element: E | Error, errors: Map<string, Error>} {
     const fileElement = this.loadFileElement(
       this.getDirectory(),
-      fileName,
+      `${parent.getFilePath()}/${fileName}`,
       parent
     );
     if (!(fileElement instanceof Error)) {
@@ -80,8 +80,6 @@ export default class RecursiveElementDirectoryLoader<
         element = this.factory.createDir(name, parent);
       }
       element.children.push(...children);
-    } else if (errors.size !== 0) {
-      errors.set(name, new Error("There were no children"));
     }
     return {element, errors};
   }
@@ -105,7 +103,7 @@ export default class RecursiveElementDirectoryLoader<
         fileElement instanceof Error ? undefined : fileElement,
         parent
       );
-      elements.set(`${dir}/${}`);
+      elements.set(dir, element);
       errors.forEach((value, key) => elements.set(key, value));
     });
     return elements;

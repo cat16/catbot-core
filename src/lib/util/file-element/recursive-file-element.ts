@@ -14,7 +14,7 @@ export default abstract class RecursiveFileElement<
 
   public getFilePath(separator: string = "/"): string {
     return this.parent
-      ? `${this.parent.getFilePath()}${separator}${this.getFileName()}`
+      ? this.parent.getFilePath() + separator + this.getFileName()
       : this.getFileName();
   }
 

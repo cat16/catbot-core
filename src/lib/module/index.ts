@@ -37,8 +37,8 @@ export default class Module extends FileElement implements NamedElement {
   }
 
   public load(): void {
-    this.commandDirManager.load();
-    this.eventDirManager.load();
+    this.commandDirManager.loadAll();
+    this.eventDirManager.loadAll();
   }
 
   public getName(): string {

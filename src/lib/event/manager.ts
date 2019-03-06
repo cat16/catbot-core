@@ -19,7 +19,7 @@ export default class EventManager {
     this.bot.moduleManager
       .getElements()
       .forEach(m =>
-        reportErrors(this.logger, "event", m.eventDirManager.load())
+        reportErrors(this.logger, "event", m.eventDirManager.loadAll())
       );
     this.updateEvents();
     this.logger.success(

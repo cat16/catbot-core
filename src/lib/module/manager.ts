@@ -30,11 +30,11 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     const errors = new Map<string, Error>();
     this.loadMainModule();
     if (pathExists(this.dirManager.getDirectory())) {
-      this.dirManager.load().forEach((err, key) => {
+      this.dirManager.loadAll().forEach((err, key) => {
         errors.set(key, err);
       });
     }
-    this.defManager.load().forEach((err, key) => {
+    this.defManager.loadAll().forEach((err, key) => {
       errors.set(key, err);
     });
     reportErrors(this.logger, "module", errors);
