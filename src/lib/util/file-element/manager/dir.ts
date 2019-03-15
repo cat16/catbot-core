@@ -42,8 +42,9 @@ export default class ElementDirectoryManager<
     const loader = this.loader;
 
     if(loader instanceof FlatElementDirectoryLoader) {
-      const element = loader.load(name); //wtc
-    } else if (loader instanceof RecursiveElementDirectoryLoader) {
+      loader.load(name); //wtc
+    }
+    if (loader instanceof RecursiveElementDirectoryLoader) {
       loader.load(name);
     }
   }
