@@ -1,14 +1,15 @@
-import ElementDirectoryLoader, { LoadResult } from ".";
+import ElementDirectoryLoader from ".";
 import FileElement from "..";
 import { getDirectories, getFiles, requireFile } from "../..";
 import FileElementFactory from "../factory";
+import LoadResult from "./result";
 
 export interface FlatLoadOptions<E extends FileElement> {
   targetFile?: string;
   createWithoutTargetFile?: boolean;
 }
 
-export default class DefaultFlatElementDirectoryLoader<
+export default class FlatElementDirectoryLoader<
   E extends FileElement
 > extends ElementDirectoryLoader<E> {
   private factory: FileElementFactory<E>;
@@ -47,12 +48,12 @@ export default class DefaultFlatElementDirectoryLoader<
     const dirs = getDirectories(this.getDirectory());
     files.forEach(file => {
       const rawElement = requireFile(
-        this.targetFile ? `${file}/${this.targetFile}` : file
+        `${this.getDirectory()}/${this.targetFile ? `${file}/${this.targetFile}` : file}`
       );
-      if (rawElement instanceof Error || rawElement === undefined) {
-        return rawElement;
+      if (rawElement instanceof Error) {
+        elements.set(file, rawElement);
       } else {
-        let element: E | Error | null;
+        let element: E | Error | undefined;
         try {
           element = this.factory.create(rawElement, file);
         } catch (err) {
@@ -73,7 +74,7 @@ export default class DefaultFlatElementDirectoryLoader<
         : ""
     );
     if (rawElement instanceof Error || rawElement === undefined) {
-      return rawElement;
+      return {element: rawElement, found: true};
     } else {
       try {
         const element = this.factory.create(rawElement, fileName);

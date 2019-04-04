@@ -54,7 +54,7 @@ export default class Bot {
     }
     await this.loadConfig("config.json");
     this.client = new Client(this.config.token, {});
-    this.moduleManager.load();
+    this.moduleManager.loadAll();
     await this.loadDBFromModule();
     this.loadPermCheckFromModule();
     this.commandManager.load();
@@ -220,6 +220,6 @@ export default class Bot {
     if (!pathExists(this.directory)) {
       createDirectory(this.directory);
     }
-    this.moduleManager.load();
+    this.moduleManager.loadAll();
   }
 }

@@ -1,9 +1,10 @@
 import ElementDirectoryLoader from ".";
-import { getDirectories, getFiles, requireFile } from "../..";
+import { getDirectories, getFiles, pathExists, requireFile } from "../..";
 import RecursiveElementFactory from "../factory/recursive";
 import RecursiveFileElement from "../recursive-file-element";
+import RecursiveLoadResult from "./recursive-result";
 
-export default class DefaultRecursiveElementDirectoryLoader<
+export default class RecursiveElementDirectoryLoader<
   E extends RecursiveFileElement<E>
 > extends ElementDirectoryLoader<E> {
   private factory: RecursiveElementFactory<E>;
@@ -14,15 +15,15 @@ export default class DefaultRecursiveElementDirectoryLoader<
   }
 
   public loadAll(): Map<string, E | Error> {
-    return this.loadDir(this.getDirectory());
+    const contents = this.loadDir(this.getDirectory());
+    if (contents === null) {
+      // tslint:disable-next-line: object-literal-sort-keys
+      return new Map();
+    }
+    return contents;
   }
 
-  public load
-
-  public load(
-    fileName: string,
-    parent?: E
-  ): { element: E | Error; errors: Map<string, Error> } {
+  public load(fileName: string, parent?: E): RecursiveLoadResult<E> {
     const fileElement = this.loadFileElement(
       this.getDirectory(),
       `${parent.getFilePath()}/${fileName}`,
@@ -66,9 +67,13 @@ export default class DefaultRecursiveElementDirectoryLoader<
     name: string,
     element?: E,
     parent?: E
-  ): { element: E | Error; errors: Map<string, Error> } {
+  ): RecursiveLoadResult<E> {
     const errors = new Map<string, Error>();
     const contents = this.loadDir(`${directory}/${name}`, parent);
+    if (contents === null) {
+      // tslint:disable-next-line: object-literal-sort-keys
+      return { element: undefined, found: false, errors: new Map() };
+    }
     const children: E[] = [];
     for (const [subname, subelement] of contents) {
       if (subelement instanceof Error) {
@@ -83,10 +88,15 @@ export default class DefaultRecursiveElementDirectoryLoader<
       }
       element.children.push(...children);
     }
-    return { element, errors };
+    // I'm not sure how they haven't fixed this lmao (tslint 3586)
+    // tslint:disable-next-line: object-literal-sort-keys
+    return { element, found: true, errors };
   }
 
   private loadDir(directory: string, parent?: E): Map<string, E | Error> {
+    if (!pathExists(directory)) {
+      return null;
+    }
     const files = getFiles(directory, {
       extensions: ["js", "ts"],
       trimExtension: true

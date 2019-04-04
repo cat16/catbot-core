@@ -35,7 +35,11 @@ const createInfo: CommandCreateInfo = {
     if (!existsDirectory(moduleDir)) {
       createDirectory(tempLoc);
       const git = simpleGit(tempLoc);
-      await git.clone(repoUrl, tempDirName, []);
+      try {
+        await git.clone(repoUrl, tempDirName, []);
+      } catch(err) {
+        context.say(`You probably typed the url wrong xd: ${err.stack}`)
+      }
       createDirectory(moduleDir);
       copyDirectory(`${tempDir}/modules/${moduleName}`, moduleDir);
       let delAttempts = 1;
@@ -48,7 +52,15 @@ const createInfo: CommandCreateInfo = {
         }
       }
       this.logger.debug(`Took ${delAttempts} tries to delete downloaded folder`)
-      this.bot.moduleManager.loadModule();
+      const result = this.bot.moduleManager.loadModule(moduleName);
+      if(result.error) {
+        context.say(`Error loading module: ${result.error.stack}`);
+      } else if(!result.found) {
+        context.say("cat16's code is weak")
+      } else {
+        this.bot.moduleManager.loadModule(moduleName);
+        context.say(":white_check_mark: Module successfully added")
+      }
     } else {
       context.say(":x: Module already downloaded");
     }

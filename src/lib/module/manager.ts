@@ -26,7 +26,7 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     this.defManager = new ModuleDirectoryManager(DEF_DIR, bot);
   }
 
-  public load() {
+  public loadAll() {
     const errors = new Map<string, Error>();
     this.loadMainModule();
     if (pathExists(this.dirManager.getDirectory())) {
@@ -43,8 +43,14 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     );
   }
 
-  public loadModule(name: string) {
-    this.dirManager;
+  public loadModule(
+    name: string
+  ): { // TODO: this should probably be an interface
+    found: boolean;
+    error?: Error;
+    subErrors?: Map<string, Error>;
+  } {
+    return this.dirManager.load(name);
   }
 
   public loadMainModule() {

@@ -7,7 +7,8 @@
   "scripts": {
     "test": "ts-node test/src/main --debug",
     "test-dist": "node dist/test/src/main --debug",
-    "build": "tsc"
+    "build": "tsc",
+    "pretest": "npm run build && require-self"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^10.12.9",
     "prettier": "1.14.2",
+    "require-self": "^0.2.1",
     "tslint": "^5.11.0",
     "tslint-config-prettier": "^1.16.0"
   }

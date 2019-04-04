@@ -237,8 +237,19 @@ export function getDirectories(directory: string): string[] {
   return dirs;
 }
 
-export function pathExists(path: string): boolean {
-  return fs.existsSync(path);
+export function pathExists(
+  path: string,
+  possibleExtensions?: string[]
+): boolean {
+  if (possibleExtensions) {
+    for (const ext of possibleExtensions) {
+      if (fs.existsSync(`${path}.${ext}`)) {
+        return true;
+      }
+    }
+  } else {
+    return fs.existsSync(path);
+  }
 }
 
 export function existsDirectory(path: string) {
@@ -269,13 +280,8 @@ export function getInput(): Promise<string> {
   });
 }
 
-export function requireFile(path: string): any | Error {
-  if (
-    !(
-      pathExists(`${path}.js`) ||
-      pathExists(`${path}.ts`)
-    )
-  ) {
+export function requireFile(path: string): any | Error | undefined {
+  if (!pathExists(path, ["js", "ts"])) {
     return undefined;
   }
   try {
@@ -314,7 +320,7 @@ export function reportErrors(
   }
   for (const errorPair of errors) {
     logger.warn(
-      `${itemName} '${errorPair[0]}' could not be loaded: ${errorPair[1]}`
+      `${itemName} '${errorPair[0]}' could not be loaded: ${errorPair[1].stack}`
     );
   }
 }

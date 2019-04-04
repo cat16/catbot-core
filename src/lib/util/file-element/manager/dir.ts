@@ -1,8 +1,7 @@
 import FileElement from "..";
 import { pathExists } from "../..";
 import ElementDirectoryLoader from "../loader";
-import FlatElementDirectoryLoader from "../loader/flat";
-import RecursiveElementDirectoryLoader from "../loader/recursive";
+import RecursiveLoadResult from "../loader/recursive-result";
 
 export default class ElementDirectoryManager<
   E extends FileElement,
@@ -32,20 +31,17 @@ export default class ElementDirectoryManager<
     return errors;
   }
 
-  public load(name: string): { status: boolean | Error, subErrors?: Map<string, Error> } {
+  public load(name: string): { found: boolean, error?: Error, subErrors?: Map<string, Error> } {
     if (!pathExists(this.getDirectory())) {
       return {
-        status: false
+        found: false
       };
-    }
-
-    const loader = this.loader;
-
-    if(loader instanceof FlatElementDirectoryLoader) {
-      loader.load(name); //wtc
-    }
-    if (loader instanceof RecursiveElementDirectoryLoader) {
-      loader.load(name);
+    } else {
+      const result = this.loader.load(name);
+      const found = result.found;
+      const error = result.element instanceof Error ? result.element : undefined;
+      const subErrors = result instanceof RecursiveLoadResult ? result.errors : undefined;
+      return { found, error, subErrors }
     }
   }
 

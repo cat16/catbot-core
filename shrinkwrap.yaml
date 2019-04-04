@@ -7,6 +7,7 @@ dependencies:
 devDependencies:
   '@types/node': 10.12.26
   prettier: 1.14.2
+  require-self: 0.2.1
   tslint: 5.12.1
   tslint-config-prettier: 1.18.0
 packages:
@@ -263,6 +264,11 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-McHPg0n1pIke+A/4VcaS2en+pTNjy4xF+Uuq86u/5dyDO59/TtFZtQ708QIRkEZ3qwKz3GVkVa6mpxK/CpB8Rg==
+  /require-self/0.2.1:
+    dev: true
+    hasBin: true
+    resolution:
+      integrity: sha512-UtdzH3nSUepBgtIGSoGs3MJOooh3zMYG5qZ3YVv0+1yocJ1oBliUXYoQkR+eKOpCfaGw84jHmGXX5GC8WhdGSA==
   /resolve/1.10.0:
     dependencies:
       path-parse: 1.0.6
@@ -411,6 +417,7 @@ specifiers:
   chalk: ^2.4.1
   eris: ^0.9.0
   prettier: 1.14.2
+  require-self: ^0.2.1
   simple-git: ^1.107.0
   ts-node: ^7.0.1
   tslint: ^5.11.0

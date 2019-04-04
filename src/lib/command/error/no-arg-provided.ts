@@ -8,7 +8,7 @@ export default class NoArgumentProvided extends CommandError {
     this.arg = arg;
   }
   public getMessage() {
-    return `Nothing was provided for argument'${
+    return `Nothing was provided for argument '${
       this.arg
     }' of command '${this.command.getFullName()}'`;
   }
