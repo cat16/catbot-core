@@ -59,6 +59,6 @@ export default class Command extends RecursiveFileElement<Command>
     key: string,
     initValue?: T
   ): SavedVariable<T> {
-    return this.bot.createSavedVariable(`command[${this.getFullName(".")}].${key}`, initValue)
+    return this.module.createVariable(`command[${this.getFullName(".")}].${key}`, initValue)
   }
 }

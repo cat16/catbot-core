@@ -34,13 +34,13 @@ export default class Bot {
   private config: Config;
 
   constructor(directory: string) {
-    this.directory = directory;
+    this.directory = directory.replace(/\\/g, "/");
     this.logger = new Logger("bot-core");
     this.util = new BotUtil(this);
     this.config = null;
     this.client = null;
     this.database = new Database();
-    this.moduleManager = new ModuleManager(directory, this);
+    this.moduleManager = new ModuleManager(this.directory, this);
     this.commandManager = new CommandManager(this);
     this.eventManager = new EventManager(this);
     this.admins = this.createDatabaseVariable<string[]>("admins", []);

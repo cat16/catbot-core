@@ -46,6 +46,7 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
   public loadModule(
     name: string
   ): { // TODO: this should probably be an interface
+    element?: Module,
     found: boolean;
     error?: Error;
     subErrors?: Map<string, Error>;
@@ -54,13 +55,13 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
   }
 
   public loadMainModule() {
-    this.mainModule = new Module(null, this.bot, this.directory, {});
+    this.mainModule = new Module(this.directory.split("/").pop(), this.bot, this.directory, {});
   }
 
   public getElements(): Module[] {
     return [this.mainModule].concat(
-      this.dirManager.getElements(),
-      this.defManager.getElements()
+      this.defManager.getElements(),
+      this.dirManager.getElements()
     );
   }
 }

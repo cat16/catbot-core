@@ -4,7 +4,7 @@ process.on("unhandledRejection", (error, p) => {
   );
 });
 
-import { Bot } from "../../src";
+import { Bot } from "../../../src";
 
 const a = (async () => {
   const bot = new Bot(__dirname);

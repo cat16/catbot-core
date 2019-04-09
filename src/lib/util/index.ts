@@ -166,6 +166,11 @@ export default class BotUtil {
     );
   }
 
+  public async getOwner(): Promise<User> {
+    // TODO: shard problems xdd
+    return this.getUser((await this.bot.getClient().getOAuthApplication()).owner.id);
+  }
+
   private trimID(id: string, symbols: string | string[]): string {
     for (const symbol of array(symbols)) {
       if (id.startsWith(`<${symbol}`) && id.endsWith(">")) {

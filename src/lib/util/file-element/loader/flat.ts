@@ -73,9 +73,12 @@ export default class FlatElementDirectoryLoader<
         ? `/${this.targetFile}`
         : ""
     );
-    if (rawElement instanceof Error || rawElement === undefined) {
+    if (rawElement instanceof Error) {
       return {element: rawElement, found: true};
     } else {
+      if(rawElement === undefined && !this.createWithoutTargetFile) {
+        return {element: undefined, found: false};
+      }
       try {
         const element = this.factory.create(rawElement, fileName);
         if (element !== null) {

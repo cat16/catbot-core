@@ -33,7 +33,7 @@ export default class Module extends FileElement implements NamedElement {
     );
     this.bot = bot;
     this.name = fileName;
-    this.aliases = this.createVariable("aliases", []);
+    this.aliases = this.createVariable("aliases", createInfo.aliases || []);
   }
 
   public load(): void {
@@ -49,7 +49,7 @@ export default class Module extends FileElement implements NamedElement {
     return this.aliases.getValue();
   }
 
-  private createVariable<T>(
+  public createVariable<T>(
     name: string | string[],
     initValue?: T
   ): SavedVariable<T> {

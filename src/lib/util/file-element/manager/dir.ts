@@ -31,17 +31,21 @@ export default class ElementDirectoryManager<
     return errors;
   }
 
-  public load(name: string): { found: boolean, error?: Error, subErrors?: Map<string, Error> } {
+  public load(name: string): { element?: E, found: boolean, error?: Error, subErrors?: Map<string, Error> } {
     if (!pathExists(this.getDirectory())) {
       return {
         found: false
       };
     } else {
       const result = this.loader.load(name);
+      const element = result.element instanceof Error ? undefined : result.element;
       const found = result.found;
       const error = result.element instanceof Error ? result.element : undefined;
       const subErrors = result instanceof RecursiveLoadResult ? result.errors : undefined;
-      return { found, error, subErrors }
+      if(!(result.element instanceof Error) && result.found) {
+        this.elements.push(result.element);
+      }
+      return { element, found, error, subErrors }
     }
   }
 

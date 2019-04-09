@@ -1,4 +1,4 @@
-import { CommandCreateInfo } from "../../../src";
+import { CommandCreateInfo } from "../../../../src";
 
 const createInfo: CommandCreateInfo = {
   run(context) {

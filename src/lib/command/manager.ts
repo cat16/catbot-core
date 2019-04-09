@@ -9,7 +9,7 @@ import {
 import Command, { CommandChannelType } from ".";
 import Bot from "../bot";
 import SavedVariable from "../database/saved-variable";
-import { reportErrors, startsWithAny } from "../util";
+import { reportErrors, startsWithAny, ChannelType } from "../util";
 import NamedElementSearcher from "../util/file-element/searcher";
 import Logger from "../util/logger";
 import Arg from "./arg";
@@ -110,8 +110,9 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                     user: msg.author
                   }))
                 ) {
+                  const context = new CommandRunContext(msg, argList);
                   try {
-                    await command.run(new CommandRunContext(msg, argList));
+                    await command.run(context);
                     if (!silent) {
                       this.logger.info(
                         `'${this.bot.util.formatUser(
@@ -122,9 +123,15 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                       );
                     }
                   } catch (err) {
-                    this.logger.error(
-                      `Command '${command.getFullName()}' crashed: ${err.stack}`
+                    const report = `Command '${command.getFullName()}' crashed: ${
+                      err.stack
+                    }`;
+                    this.logger.error(report);
+                    context.say(
+                      ":exclamation: The command crashed! A report was sent to the author of this bot."
                     );
+                    // TODO: lmao await chains
+                    (await (await this.bot.util.getOwner()).getDMChannel()).createMessage(`\`\`\`ts\n${report}\`\`\``);
                   }
                 } else {
                   error = new PermissionError(command);
@@ -195,10 +202,17 @@ export default class CommandManager extends NamedElementSearcher<Command> {
       : true;
   }
 
+  /**
+   * extracts a command string from a message
+   * @param msg the message you want to extract a command from
+   */
   public parseMessage(msg: Message): string {
     const prefix = startsWithAny(msg.content, this.prefixes.getValue());
     if (prefix) {
       return msg.content.slice(prefix.length).trim();
+    }
+    if (msg.channel.type === ChannelType.PRIVATE) {
+      return msg.content;
     }
     return null;
   }
