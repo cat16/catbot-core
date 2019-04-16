@@ -1,6 +1,6 @@
 dependencies:
   chalk: 2.4.2
-  eris: 0.9.0
+  discord.js: 11.4.2
   simple-git: 1.107.0
   ts-node: 7.0.1
   typescript: 3.4.0-dev.20190213
@@ -127,17 +127,26 @@ packages:
       node: '>=0.3.1'
     resolution:
       integrity: sha512-A46qtFgd+g7pDZinpnwiRJtxbC1hpgf0uzP3iG89scHk0AUC7A1TGxf5OiiOUv/JMZR8GOt8hL900hV0bOy5xA==
-  /eris/0.9.0:
+  /discord.js/11.4.2:
     dependencies:
-      ws: 6.1.3
+      long: 4.0.0
+      prism-media: 0.0.3
+      snekfetch: 3.6.4
+      tweetnacl: 1.0.1
+      ws: 4.1.0
     dev: false
     engines:
-      node: '>=4.0.0'
-    optionalDependencies:
-      opusscript: 0.0.4
-      tweetnacl: 1.0.1
+      node: '>=6.0.0'
+    peerDependencies:
+      bufferutil: ^3.0.3
+      erlpack: discordapp/erlpack
+      libsodium-wrappers: ^0.7.3
+      node-opus: ^0.2.7
+      opusscript: ^0.0.6
+      sodium: ^2.0.3
+      uws: ^9.14.0
     resolution:
-      integrity: sha512-U3/fv/wF2nA7Pc003v2cMXfTXvz8OySZYE21Zpx3ipm5sKbHWjcwDGdNXbp2Nb7fUip/IIjA/5540YDcqyQSvQ==
+      integrity: sha512-MDwpu0lMFTjqomijDl1Ed9miMQe6kB4ifKdP28QZllmLv/HVOJXhatRgjS8urp/wBlOfx+qAYSXcdI5cKGYsfg==
   /escape-string-regexp/1.0.5:
     engines:
       node: '>=0.8.0'
@@ -207,6 +216,10 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-um46hB9wNOKlwkHgiuyEVAybXBjwFUV0Z/RaHJblRd9DXltue9FTYvzCr9ErQrK9Adz5MU4gHWVaNUfdmrC8qA==
+  /long/4.0.0:
+    dev: false
+    resolution:
+      integrity: sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
   /make-error/1.3.5:
     dev: false
     resolution:
@@ -242,11 +255,6 @@ packages:
     dev: true
     resolution:
       integrity: sha1-WDsap3WWHUsROsF9nFC6753Xa9E=
-  /opusscript/0.0.4:
-    dev: false
-    optional: true
-    resolution:
-      integrity: sha512-bEPZFE2lhUJYQD5yfTFO4RhbRZ937x6hRwBC1YoGacT35bwDVwKFP1+amU8NYfZL/v4EU7ZTU3INTqzYAnuP7Q==
   /path-is-absolute/1.0.1:
     dev: true
     engines:
@@ -264,6 +272,10 @@ packages:
     hasBin: true
     resolution:
       integrity: sha512-McHPg0n1pIke+A/4VcaS2en+pTNjy4xF+Uuq86u/5dyDO59/TtFZtQ708QIRkEZ3qwKz3GVkVa6mpxK/CpB8Rg==
+  /prism-media/0.0.3:
+    dev: false
+    resolution:
+      integrity: sha512-c9KkNifSMU/iXT8FFTaBwBMr+rdVcN+H/uNv1o+CuFeTThNZNTOrQ+RgXA1yL/DeLk098duAeRPP3QNPNbhxYQ==
   /require-self/0.2.1:
     dev: true
     hasBin: true
@@ -275,6 +287,10 @@ packages:
     dev: true
     resolution:
       integrity: sha512-3sUr9aq5OfSg2S9pNtPA9hL1FVEAjvfOC4leW0SNf/mpnaakz2a9femSd6LqAww2RaFctwyf1lCqnTHuF1rxDg==
+  /safe-buffer/5.1.2:
+    dev: false
+    resolution:
+      integrity: sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==
   /semver/5.6.0:
     dev: true
     hasBin: true
@@ -286,6 +302,11 @@ packages:
     dev: false
     resolution:
       integrity: sha512-t4OK1JRlp4ayKRfcW6owrWcRVLyHRUlhGd0uN6ZZTqfDq8a5XpcUdOKiGRNobHEuMtNqzp0vcJNvhYWwh5PsQA==
+  /snekfetch/3.6.4:
+    deprecated: use node-fetch instead
+    dev: false
+    resolution:
+      integrity: sha512-NjxjITIj04Ffqid5lqr7XdgwM7X61c/Dns073Ly170bPQHLm6jkmelye/eglS++1nfTWktpP6Y2bFXjdPlQqdw==
   /source-map-support/0.5.10:
     dependencies:
       buffer-from: 1.1.1
@@ -383,7 +404,6 @@ packages:
       integrity: sha512-g5JVHCIJwzfISaXpXE1qvNalca5Jwob6FjI4AoPlqMusJ6ftFE7IkkFoMhVLRgK+4Kx3gkzb8UZK5t5yTTvEmA==
   /tweetnacl/1.0.1:
     dev: false
-    optional: true
     resolution:
       integrity: sha512-kcoMoKTPYnoeS50tzoqjPY3Uv9axeuuFAZY9M/9zFnhoVvRfxz9K29IMPD7jGmt2c8SW7i3gT9WqDl2+nV7p4A==
   /typescript/3.4.0-dev.20190213:
@@ -397,12 +417,13 @@ packages:
     dev: true
     resolution:
       integrity: sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=
-  /ws/6.1.3:
+  /ws/4.1.0:
     dependencies:
       async-limiter: 1.0.0
+      safe-buffer: 5.1.2
     dev: false
     resolution:
-      integrity: sha512-tbSxiT+qJI223AP4iLfQbkbxkwdFcneYinM2+x46Gx2wgvbaOMO36czfdfVUBRTHvzAMRhDd98sA5d/BuWbQdg==
+      integrity: sha512-ZGh/8kF9rrRNffkLFV4AzhvooEclrOH0xaugmqGsIfFgOE/pIz4fMc4Ef+5HSQqTEug2S9JZIWDR47duDSLfaA==
   /yn/2.0.0:
     dev: false
     engines:
@@ -415,7 +436,7 @@ shrinkwrapVersion: 3
 specifiers:
   '@types/node': ^10.12.9
   chalk: ^2.4.1
-  eris: ^0.9.0
+  discord.js: ^11.4.2
   prettier: 1.14.2
   require-self: ^0.2.1
   simple-git: ^1.107.0

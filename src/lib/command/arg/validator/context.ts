@@ -1,4 +1,4 @@
-import { Message } from "eris";
+import { Message } from "discord.js";
 import Bot from "../../../bot";
 
 export default class ValidatorContext {

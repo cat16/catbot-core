@@ -5,7 +5,7 @@ const createInfo: EventCreateInfo = {
     this.bot.commandManager.prefixes.set(
       this.bot.commandManager.prefixes
         .getValue()
-        .concat(this.bot.getClient().user.mention)
+        .concat(this.bot.getClient().user.toString())
     );
   }
 };

@@ -8,5 +8,5 @@ import { Bot } from "../../../src";
 
 const a = (async () => {
   const bot = new Bot(__dirname);
-  bot.start();
+  await bot.start();
 })();

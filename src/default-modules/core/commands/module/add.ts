@@ -38,7 +38,7 @@ const createInfo: CommandCreateInfo = {
       try {
         await git.clone(repoUrl, tempDirName, []);
       } catch (err) {
-        context.say(`You probably typed the url wrong xd: ${err.stack}`);
+        context.error(`You probably typed the url wrong xd: ${err.stack}`);
       }
       createDirectory(moduleDir);
       copyDirectory(`${tempDir}/modules/${moduleName}`, moduleDir);
@@ -60,23 +60,23 @@ const createInfo: CommandCreateInfo = {
         const evtErrors = result.element.eventDirManager.loadAll();
       }
       if (result.error) {
-        context.say(`Error loading module: ${result.error.stack}`);
+        context.error(`Error loading module: ${result.error.stack}`);
       } else if (!result.found) {
-        context.say("cat16's code is weak");
+        context.error("cat16's code is weak");
       } else {
         if (result.error) {
-          context.say(`:exclamation: An error occured while loading the module: ${result.error.stack}`);
+          context.error(`The module failed to load: ${result.error.stack}`);
         } else if (!result.found) {
-          context.say(":exclamation: You shouldn't see this message...");
+          context.error("You shouldn't see this message...");
         } else {
-          context.say(":white_check_mark: Module successfully added");
+          context.success("Module successfully added");
         }
         if(result.subErrors && result.subErrors.size > 0) {
-          context.say(`:exclamation: ${result.subErrors.size} errors occured within the module`)
+          context.error(`${result.subErrors.size} errors occured within the module`)
         }
       }
     } else {
-      context.say(":x: Module already downloaded");
+      context.invalid("Module already downloaded");
     }
   }
 };

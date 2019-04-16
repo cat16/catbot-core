@@ -1,22 +1,23 @@
 import { Arg, ArgValidators, CommandCreateInfo, tuple } from "../../../..";
-import { removeDirectory, existsDirectory } from "../../../../lib/util";
+import { existsDirectory, removeDirectory } from "../../../../lib/util";
 const { WORD } = ArgValidators;
 
 const args = tuple([new Arg("module", new WORD())]);
 
 const createInfo: CommandCreateInfo = {
-  args,
   aliases: ["delete"],
+  args,
   async run(context) {
     const moduleName = context.getArg(args[0]);
     const modulesDir = `${this.bot.directory}/modules`;
     if (existsDirectory(`${modulesDir}/${moduleName}`)) {
       removeDirectory(`${modulesDir}/${moduleName}`);
-      context.say(
-        `:white_check_mark: Successfully deleted module '${moduleName}'`
+      this.bot.moduleManager.unloadModule(moduleName);
+      context.success(
+        `Module '${moduleName}' was deleted`
       );
     } else {
-      context.say(`:x: There is no module named ${moduleName}`);
+      context.invalid(`There is no module named ${moduleName}`);
     }
   }
 };

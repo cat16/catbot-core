@@ -3,6 +3,13 @@ import { pathExists } from "../..";
 import ElementDirectoryLoader from "../loader";
 import RecursiveLoadResult from "../loader/recursive-result";
 
+export interface DirLoadResult<E extends FileElement> { // TODO: this should probably be an interface
+  element?: E,
+  found: boolean;
+  error?: Error;
+  subErrors?: Map<string, Error>;
+}
+
 export default class ElementDirectoryManager<
   E extends FileElement,
   L extends ElementDirectoryLoader<E>
@@ -31,7 +38,7 @@ export default class ElementDirectoryManager<
     return errors;
   }
 
-  public load(name: string): { element?: E, found: boolean, error?: Error, subErrors?: Map<string, Error> } {
+  public load(name: string): DirLoadResult<E> {
     if (!pathExists(this.getDirectory())) {
       return {
         found: false
@@ -46,6 +53,16 @@ export default class ElementDirectoryManager<
         this.elements.push(result.element);
       }
       return { element, found, error, subErrors }
+    }
+  }
+
+  public unload(name: string): boolean {
+    const index = this.elements.findIndex(e => e.getFileName() === name);
+    if(index === -1) {
+      return false;
+    } else {
+      this.elements.splice(index, 1);
+      return true;
     }
   }
 

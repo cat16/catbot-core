@@ -7,10 +7,7 @@ const createInfo: CommandCreateInfo = {
     this.bot.commandManager.handleMessage(msg, true);
   },
   async hasPermission(context) {
-    return (
-      context.user.id ===
-      (await this.bot.getClient().getOAuthApplication()).owner.id
-    );
+    return context.user.id === (await this.bot.getOwner()).id;
   }
 };
 

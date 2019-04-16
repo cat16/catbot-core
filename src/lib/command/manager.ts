@@ -1,15 +1,10 @@
 import chalk from "chalk";
-import {
-  GuildChannel,
-  Message,
-  PrivateChannel,
-  TextableChannel,
-  User
-} from "eris";
+import { DMChannel, GuildChannel, Message, TextBasedChannelFields, User } from "discord.js";
 import Command, { CommandChannelType } from ".";
 import Bot from "../bot";
 import SavedVariable from "../database/saved-variable";
-import { reportErrors, startsWithAny, ChannelType } from "../util";
+import { reportErrors, startsWithAny } from "../util";
+import { formatUser } from "../util/bot";
 import NamedElementSearcher from "../util/file-element/searcher";
 import Logger from "../util/logger";
 import Arg from "./arg";
@@ -115,7 +110,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                     await command.run(context);
                     if (!silent) {
                       this.logger.info(
-                        `'${this.bot.util.formatUser(
+                        `'${formatUser(
                           msg.author
                         )}' ran command '${chalk.magenta(
                           command.getFullName()
@@ -127,11 +122,28 @@ export default class CommandManager extends NamedElementSearcher<Command> {
                       err.stack
                     }`;
                     this.logger.error(report);
-                    context.say(
-                      ":exclamation: The command crashed! A report was sent to the author of this bot."
+                    const channelStr = `channel: ${
+                      msg.channel instanceof DMChannel
+                        ? "DM channel"
+                        : msg.channel.name
+                    } [${msg.channel.id}]\n`;
+                    const guildStr =
+                      msg.channel instanceof GuildChannel
+                        ? `guild: ${msg.channel.guild.name} [${
+                            msg.channel.guild.id
+                          }]\n`
+                        : "";
+                    await this.bot.report(
+                      "A command crashed!",
+                      `user: ${msg.author.username} [${msg.author.id}]\n` +
+                        guildStr +
+                        channelStr +
+                        `\`\`\`${report}\`\`\``,
+                      context
                     );
-                    // TODO: lmao await chains
-                    (await (await this.bot.util.getOwner()).getDMChannel()).createMessage(`\`\`\`ts\n${report}\`\`\``);
+                    await context.error(
+                      "The command crashed! A report was sent to the author of this bot."
+                    );
                   }
                 } else {
                   error = new PermissionError(command);
@@ -152,18 +164,18 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public handleError(
     error: CommandError,
     user: User,
-    channel: TextableChannel
+    channel: TextBasedChannelFields
   ) {
     if (error.type === CommandErrorType.PERMISSION) {
       this.logger.info(
-        `'${this.bot.util.formatUser(user)}' tried to run ` +
+        `'${formatUser(user)}' tried to run ` +
           (error.command
             ? `command '${error.command.getFullName()}'`
             : `an unknown command` + " but didn't have permission")
       );
     }
     if (this.shouldRespond(error)) {
-      channel.createMessage(`${error.type} ` + error.getMessage());
+      channel.send(`${error.type} ` + error.getMessage());
     }
   }
 
@@ -211,7 +223,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     if (prefix) {
       return msg.content.slice(prefix.length).trim();
     }
-    if (msg.channel.type === ChannelType.PRIVATE) {
+    if (msg.channel instanceof DMChannel) {
       return msg.content;
     }
     return null;
@@ -248,6 +260,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
           let failures: ArgFailure[] = [];
           for (const validator of validators) {
             const context: ValidatorContext = { bot: this.bot, msg };
+            // TODO: use this lol, except use built in djs stuff
             let commandChannelType: CommandChannelType = CommandChannelType.ANY;
             if (msg.channel instanceof GuildChannel && msg.member) {
               (context as GuildValidatorContext).member = msg.member;
@@ -255,12 +268,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
               (context as GuildValidatorContext).guild = msg.channel.guild;
               commandChannelType = CommandChannelType.GUILD;
             }
-            if (msg.channel instanceof PrivateChannel) {
+            if (msg.channel instanceof DMChannel) {
               (context as DMValidatorContext).channel = msg.channel;
               (context as DMValidatorContext).user = msg.author;
               commandChannelType = CommandChannelType.PRIVATE;
             }
-            const result = validator.validate(content, context); // figure out how 2 context here (generate context that is one of the 2 types, 3rd doesn't care lel)
+            const result = validator.validate(content, context); // TODO: figure out how 2 context here (generate context that is one of the 2 types, 3rd doesn't care lel)
             if (result instanceof ArgFailure) {
               failures.push(result);
             } else {

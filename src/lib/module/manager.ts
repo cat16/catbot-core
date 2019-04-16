@@ -2,6 +2,7 @@ import Module from ".";
 import DEF_DIR from "../../def-modules-dir";
 import Bot from "../bot";
 import { pathExists, reportErrors } from "../util";
+import { DirLoadResult } from "../util/file-element/manager/dir";
 import NamedElementSearcher from "../util/file-element/searcher";
 import Logger from "../util/logger";
 import { ModuleDirectoryManager } from "./dir-manager";
@@ -43,15 +44,19 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     );
   }
 
-  public loadModule(
+  public async loadModule(
     name: string
-  ): { // TODO: this should probably be an interface
-    element?: Module,
-    found: boolean;
-    error?: Error;
-    subErrors?: Map<string, Error>;
-  } {
-    return this.dirManager.load(name);
+  ): Promise<DirLoadResult<Module>> {
+    const result = this.dirManager.load(name);
+    if(result.element) {
+      // I'ma need to ajust db logistics to make this possible (I think)
+    }
+  }
+
+  public unloadModule(
+    name: string
+  ): boolean {
+    return this.dirManager.unload(name);
   }
 
   public loadMainModule() {

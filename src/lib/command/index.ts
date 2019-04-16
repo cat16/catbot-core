@@ -26,12 +26,12 @@ export default class Command extends RecursiveFileElement<Command>
     fileName: string,
     parent: Command,
     bot: Bot,
-    module2: Module,
+    module: Module,
     createInfo: CommandCreateInfo
   ) {
     super(fileName, parent);
     this.bot = bot;
-    this.module = module2;
+    this.module = module;
     this.name = fileName;
 
     this.aliases = this.createVariable("aliases", createInfo.aliases || []);

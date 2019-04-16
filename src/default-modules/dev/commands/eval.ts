@@ -1,4 +1,4 @@
-import { MessageContent } from "eris";
+import { RichEmbed, Message } from "discord.js";
 import * as ts from "typescript";
 import { inspect } from "util";
 import { Bot, CommandCreateInfo } from "../../..";
@@ -11,7 +11,7 @@ const createEvalMsg = (
   content: any,
   type: string,
   color: number
-): MessageContent => {
+): RichEmbed => {
   const output =
     content instanceof Error
       ? [
@@ -33,29 +33,26 @@ const createEvalMsg = (
               "```"
           }
         ];
-  return {
-    content: "",
-    embed: {
-      color,
-      fields: [
-        {
-          name: "Input",
-          value: "```ts\n" + input + "```"
-        },
-        ...output,
-        {
-          name: "Type",
-          value: "```ts\n" + type + "```"
-        }
-      ],
-      timestamp: new Date().toISOString()
-    }
-  };
+  return new RichEmbed({
+    color,
+    fields: [
+      {
+        name: "Input",
+        value: "```ts\n" + input + "```"
+      },
+      ...output,
+      {
+        name: "Type",
+        value: "```ts\n" + type + "```"
+      }
+    ],
+    timestamp: new Date()
+  });
 };
 
 const createInfo: CommandCreateInfo = {
   async run(context) {
-    const sending = context.say(
+    const sending = context.reply(
       createEvalMsg(
         this.bot,
         context.args.content,
@@ -66,7 +63,11 @@ const createInfo: CommandCreateInfo = {
     );
     try {
       // tslint:disable-next-line:no-eval
-      const result = await eval(ts.transpile(context.args.content, {moduleResolution: ts.ModuleResolutionKind.NodeJs}));
+      const result = await eval(
+        ts.transpile(context.args.content, {
+          moduleResolution: ts.ModuleResolutionKind.NodeJs
+        })
+      );
       let output = result;
       if (typeof output !== "string") {
         output = inspect(result, { depth });
@@ -80,7 +81,7 @@ const createInfo: CommandCreateInfo = {
               ? "object - " + result.constructor.name
               : typeof result;
       const promise = output.startsWith("Promise {");
-      const sent = await sending;
+      const sent = await sending as Message;
       sent.edit(
         createEvalMsg(
           this.bot,
@@ -91,7 +92,7 @@ const createInfo: CommandCreateInfo = {
         )
       );
     } catch (err) {
-      const sent = await sending;
+      const sent = await sending as Message;
       sent.edit(
         createEvalMsg(this.bot, context.args.content, err, err.name, 0xff0000)
       );

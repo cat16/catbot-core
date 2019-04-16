@@ -1,8 +1,9 @@
-import { Client } from "eris";
+import { Client, User, Message, RichEmbed } from "discord.js";
 import * as fs from "fs";
 import CommandManager from "./command/manager";
 import { CommandPermissionContext } from "./command/permission-context";
 import Config from "./config";
+import ConsoleInputManager from "./console-input/manager";
 import Database from "./database/database-interface";
 import DatabaseVariable from "./database/database-variable";
 import RuntimeDatabase from "./database/runtime-database";
@@ -11,13 +12,15 @@ import EventManager from "./event/manager";
 import DatabaseModule from "./module/database-module";
 import ModuleManager from "./module/manager";
 import PermissionModule from "./module/permission-module";
-import BotUtil, { createDirectory, pathExists } from "./util";
+import { createDirectory, pathExists } from "./util";
 import Logger from "./util/logger";
+import CommandRunContext from "./command/run-context";
+import { formatResponse } from "./util/bot";
 
 export default class Bot {
   public readonly directory: string;
   public readonly logger: Logger;
-  public readonly util: BotUtil;
+  public readonly inputManager: ConsoleInputManager;
 
   public readonly database: Database;
   public readonly moduleManager: ModuleManager;
@@ -33,16 +36,19 @@ export default class Bot {
   ) => Promise<boolean>;
   private config: Config;
 
-  constructor(directory: string) {
+  constructor(directory: string, config?: Config) {
     this.directory = directory.replace(/\\/g, "/");
     this.logger = new Logger("bot-core");
-    this.util = new BotUtil(this);
-    this.config = null;
-    this.client = null;
+    this.inputManager = new ConsoleInputManager();
+
+    this.config = config;
+    this.client = new Client();
+
     this.database = new Database();
     this.moduleManager = new ModuleManager(this.directory, this);
     this.commandManager = new CommandManager(this);
     this.eventManager = new EventManager(this);
+
     this.admins = this.createDatabaseVariable<string[]>("admins", []);
   }
 
@@ -53,7 +59,6 @@ export default class Bot {
       createDirectory(this.directory);
     }
     await this.loadConfig("config.json");
-    this.client = new Client(this.config.token, {});
     this.moduleManager.loadAll();
     await this.loadDBFromModule();
     this.loadPermCheckFromModule();
@@ -61,15 +66,17 @@ export default class Bot {
     this.eventManager.load();
     await this.database.load();
     this.logger.success(`Successfully loaded database.`);
-    await this.connect();
     this.logger.success("Successfully loaded.");
+    await this.connect();
+    this.logger.success("Successfully started.");
+    this.setupConsoleInput();
   }
 
   // replace with an exit, dummy, and find a way to make stop actually stop it
   public restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
       this.logger.info("Restarting...");
-      this.client.disconnect({ reconnect: false });
+      // TODO: idk if theres a way to disconnect djs hmm
       if (reloadFiles) {
         Object.keys(require.cache).forEach(key => {
           if (!key.includes("node_modules")) {
@@ -92,9 +99,10 @@ export default class Bot {
     });
   }
 
-  public stop() {
+  public async stop() {
     this.logger.info("Stopping...");
-    this.client.disconnect({ reconnect: false });
+    await this.client.destroy();
+    ConsoleInputManager.stop();
   }
 
   public getDatabase(): Database {
@@ -132,14 +140,35 @@ export default class Bot {
     });
   }
 
+  public async getOwner(): Promise<User> {
+    const application = await this.client.fetchApplication();
+    return application.owner;
+  }
+
+  public async report(
+    title: string,
+    description: string,
+    context: CommandRunContext
+  ): Promise<Message | Message[]> {
+    const owner = await this.getOwner();
+    return owner.send(
+      formatResponse({
+        color: 0xff0000,
+        description,
+        header: { title, symbol: ":exclamation:" },
+        trigger: context.msg
+      })
+    );
+  }
+
   private connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.logger.log("Connecting...");
-      this.client.on("ready", () => {
+      this.client.once("ready", () => {
         this.logger.success("Successfully connected.");
         resolve();
       });
-      this.client.connect();
+      this.client.login(this.config.token);
     });
   }
 
@@ -216,10 +245,14 @@ export default class Bot {
     }
   }
 
-  private loadModules() {
-    if (!pathExists(this.directory)) {
-      createDirectory(this.directory);
-    }
-    this.moduleManager.loadAll();
+  private setupConsoleInput() {
+    this.inputManager.addEvent({
+      func: () => {
+        this.stop();
+      },
+      trigger: "stop"
+    });
+    ConsoleInputManager.start();
+    this.logger.info('Type "stop" at any time to stop');
   }
 }

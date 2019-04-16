@@ -3,9 +3,10 @@ import { CommandCreateInfo } from "../../..";
 const createInfo: CommandCreateInfo = {
   run(context) {
     const now = new Date();
-    context.say("Ping: loading...").then(sent => {
+    context.msg.channel.send("Ping: loading...").then(sent => {
+      const msg = sent instanceof Array ? sent[0] : sent;
       const then = new Date();
-      sent.edit(`Ping: ${then.getTime() - now.getTime()}ms`);
+      msg.edit(`Ping: ${then.getTime() - now.getTime()}ms`);
     });
   },
   async hasPermission(context) {

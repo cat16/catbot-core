@@ -1,4 +1,6 @@
-import { VoiceChannel } from "eris";
+
+import { VoiceChannel } from "discord.js";
+import { trimID } from "../../../../util/bot";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
 import ValidatorContext from "../context";
@@ -10,8 +12,8 @@ export default class VoiceChannelValidator extends GuildArgValidator<
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);
-    const channel = bot.util.getVoiceChannel(parts[0]);
-    if (channel) {
+    const channel = bot.getClient().channels.get(trimID(parts[0]));
+    if (channel && channel instanceof VoiceChannel) {
       return new ArgSuccess(channel, parts[1]);
     } else {
       return new ArgFailure(this.getRequirements());

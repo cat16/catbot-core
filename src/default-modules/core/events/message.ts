@@ -1,4 +1,4 @@
-import { Message } from "eris";
+import { Message } from "discord.js";
 import { EventCreateInfo } from "../../..";
 
 const createInfo: EventCreateInfo = {

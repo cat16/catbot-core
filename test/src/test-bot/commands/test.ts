@@ -2,7 +2,7 @@ import { CommandCreateInfo } from "../../../../src";
 
 const createInfo: CommandCreateInfo = {
   run(context) {
-    context.say("the test command was run");
+    context.msg.channel.send("the test command was run");
   }
 };
 

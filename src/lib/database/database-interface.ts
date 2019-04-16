@@ -37,9 +37,7 @@ export default class DatabaseInterface {
 
   public async load(): Promise<void> {
     await mapPromiseAll(this.initValues, async (key, value) => {
-      if ((await this.get(key)) === undefined && value !== undefined) {
-        await this.set(key, value);
-      }
+      await this.loadInitValue(key, value);
     });
     await mapPromiseAll(this.syncFuncs, async (key, func) => {
       const value = await this.get(key);
@@ -122,5 +120,23 @@ export default class DatabaseInterface {
    */
   public async delete(key: string): Promise<void> {
     return this.db.delete(key);
+  }
+
+  /**
+   * Sets up a key that was added after the database was loaded;
+   * if not loaded, this method does nothing
+   * @param key - the key of the data you want to set up
+   */
+  public async setup(key: string) {
+    if (this.loaded) {
+      const value = await this.initValues.get(key);
+      if ((await this.get(key)) === undefined && value !== undefined) {
+        await this.set(key, value);
+      }
+      const func = await this.syncFuncs.get(key);
+      if (func) {
+        await func(value);
+      }
+    }
   }
 }
