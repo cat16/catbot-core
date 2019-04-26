@@ -54,25 +54,18 @@ const createInfo: CommandCreateInfo = {
       this.logger.debug(
         `Took ${delAttempts} tries to delete downloaded folder`
       );
-      const result = this.bot.moduleManager.loadModule(moduleName);
-      if(result.found && !result.error) {
-        const cmdErrors = result.element.commandDirManager.loadAll();
-        const evtErrors = result.element.eventDirManager.loadAll();
-      }
+      const result = await this.bot.moduleManager.loadModule(moduleName);
       if (result.error) {
         context.error(`Error loading module: ${result.error.stack}`);
       } else if (!result.found) {
         context.error("cat16's code is weak");
       } else {
-        if (result.error) {
-          context.error(`The module failed to load: ${result.error.stack}`);
-        } else if (!result.found) {
-          context.error("You shouldn't see this message...");
-        } else {
-          context.success("Module successfully added");
-        }
-        if(result.subErrors && result.subErrors.size > 0) {
-          context.error(`${result.subErrors.size} errors occured within the module`)
+        const cmdErrors = result.element.commandDirManager.loadAll();
+        const evtErrors = result.element.eventDirManager.loadAll();
+        const errors = (result.subErrors ? result.subErrors.size : 0) + cmdErrors.size + evtErrors.size;
+        context.success("Module successfully added");
+        if(errors > 0) {
+          context.error(`${errors} errors occured within the module`)
         }
       }
     } else {

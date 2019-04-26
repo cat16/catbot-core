@@ -35,14 +35,24 @@ export default class DatabaseInterface {
     return this.loaded;
   }
 
+  /**
+   * Loads all new database variables that were registered
+   *
+   * TODO: this (should) crash if the module database isn't ready yet xd
+   */
   public async load(): Promise<void> {
     await mapPromiseAll(this.initValues, async (key, value) => {
-      await this.loadInitValue(key, value);
+      if ((await this.get(key)) === undefined && value !== undefined) {
+        await this.set(key, value);
+      }
     });
     await mapPromiseAll(this.syncFuncs, async (key, func) => {
       const value = await this.get(key);
       await func(value);
     });
+    // TODO: I might want to instead remove them from a clone for reloading faster
+    this.initValues.clear();
+    this.syncFuncs.clear();
     this.loaded = true;
   }
 
@@ -62,6 +72,16 @@ export default class DatabaseInterface {
       return true;
     } else {
       return !unique;
+    }
+  }
+
+  public unregisterKey(key: string): boolean {
+    const index = this.registeredKeys.indexOf(key);
+    if (index === -1) {
+      return false;
+    } else {
+      this.registeredKeys.splice(index, 1);
+      return true;
     }
   }
 
@@ -120,23 +140,5 @@ export default class DatabaseInterface {
    */
   public async delete(key: string): Promise<void> {
     return this.db.delete(key);
-  }
-
-  /**
-   * Sets up a key that was added after the database was loaded;
-   * if not loaded, this method does nothing
-   * @param key - the key of the data you want to set up
-   */
-  public async setup(key: string) {
-    if (this.loaded) {
-      const value = await this.initValues.get(key);
-      if ((await this.get(key)) === undefined && value !== undefined) {
-        await this.set(key, value);
-      }
-      const func = await this.syncFuncs.get(key);
-      if (func) {
-        await func(value);
-      }
-    }
   }
 }

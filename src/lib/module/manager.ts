@@ -48,9 +48,8 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     name: string
   ): Promise<DirLoadResult<Module>> {
     const result = this.dirManager.load(name);
-    if(result.element) {
-      // I'ma need to ajust db logistics to make this possible (I think)
-    }
+    await this.bot.database.load();
+    return result;
   }
 
   public unloadModule(

@@ -55,6 +55,11 @@ export default class Command extends RecursiveFileElement<Command>
     return this.getFilePath(separator);
   }
 
+  public cleanup() {
+    this.aliases.unload();
+    this.guildOnly.unload();
+  }
+
   private createVariable<T>(
     key: string,
     initValue?: T

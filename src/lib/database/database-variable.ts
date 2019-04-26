@@ -42,4 +42,16 @@ export default class DatabaseVariable<T> {
   public async set(value: T): Promise<void> {
     return this.dbi.set(this.key, value);
   }
+
+  /**
+   * Unregisters the key in the database interface
+   * The variable should not be used afterward
+   */
+  public unload() {
+    // TODO: decided whether to make dbi null in order to render it uneffective
+    this.dbi.unregisterKey(this.key);
+  }
+
+  // TODO: add delete function to also remove the value in the database
+
 }
