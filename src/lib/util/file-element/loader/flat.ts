@@ -4,7 +4,7 @@ import { getDirectories, getFiles, requireFile } from "../..";
 import FileElementFactory from "../factory";
 import LoadResult from "./result";
 
-export interface FlatLoadOptions<E extends FileElement> {
+export interface FlatLoadOptions {
   targetFile?: string;
   createWithoutTargetFile?: boolean;
 }
@@ -19,7 +19,7 @@ export default class FlatElementDirectoryLoader<
   constructor(
     directory: string,
     factory: FileElementFactory<E>,
-    options: FlatLoadOptions<E> = {}
+    options: FlatLoadOptions = {}
   ) {
     super(directory);
     this.factory = factory;
@@ -45,17 +45,19 @@ export default class FlatElementDirectoryLoader<
           trimExtension: true
         });
     const elements = new Map<string, E | Error>();
-    const dirs = getDirectories(this.getDirectory());
     files.forEach(file => {
+      const path = `${this.getDirectory()}/${file}`;
       const rawElement = requireFile(
-        `${this.getDirectory()}/${this.targetFile ? `${file}/${this.targetFile}` : file}`
+        `${path}${
+          this.targetFile ? `/${this.targetFile}` : ""
+        }`
       );
       if (rawElement instanceof Error) {
         elements.set(file, rawElement);
       } else {
         let element: E | Error | undefined;
         try {
-          element = this.factory.create(rawElement, file);
+          element = this.factory.create(rawElement, file, path);
         } catch (err) {
           element = err;
         }
@@ -68,19 +70,27 @@ export default class FlatElementDirectoryLoader<
   }
 
   public load(fileName: string): LoadResult<E> {
+    return this.loadElement(`${this.getDirectory()}/${fileName}`, fileName);
+  }
+
+  public loadExternal(path: string, name: string) {
+    return this.loadElement(path, name);
+  }
+
+  private loadElement(path: string, name: string): LoadResult<E> {
     const rawElement = requireFile(
-      `${this.getDirectory()}/${fileName}` + this.targetFile
-        ? `/${this.targetFile}`
-        : ""
+      `${path}${
+        this.targetFile ? `/${this.targetFile}` : ""
+      }`
     );
     if (rawElement instanceof Error) {
-      return {element: rawElement, found: true};
+      return { element: rawElement, found: true };
     } else {
-      if(rawElement === undefined && !this.createWithoutTargetFile) {
-        return {element: undefined, found: false};
+      if (rawElement === undefined && !this.createWithoutTargetFile) {
+        return { element: undefined, found: false };
       }
       try {
-        const element = this.factory.create(rawElement, fileName);
+        const element = this.factory.create(rawElement, name, path);
         if (element !== null) {
           return { element, found: true };
         } else {

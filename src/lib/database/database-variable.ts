@@ -25,7 +25,7 @@ export default class DatabaseVariable<T> {
       );
     }
     this.dbi.registerKey(newKey);
-    if (initValue) {
+    if (initValue !== undefined) {
       this.dbi.registerInitValue(newKey, initValue);
     }
     this.key = newKey;

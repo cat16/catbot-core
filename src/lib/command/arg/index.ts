@@ -1,5 +1,5 @@
 import { array } from "../../util";
-import CommandRunContext from "../run-context";
+import CommandRunContext from "../runnable/run-context";
 import ArgValidator from "./validator";
 
 export default class Arg<T> {

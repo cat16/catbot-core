@@ -21,9 +21,9 @@ import NoCommandProvided from "./error/no-command-provided";
 import PermissionError from "./error/permission";
 import CommandErrorType from "./error/type";
 import UnknownCommand from "./error/unknownCommand";
-import CommandRunContext from "./run-context";
-import RunnableCommand from "./runnable";
 import Cooldown from "./trigger";
+import RunnableCommand from "./runnable";
+import CommandRunContext from "./runnable/run-context";
 
 export interface CommandMatch {
   command: RunnableCommand;
@@ -37,6 +37,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public readonly prefixes: SavedVariable<string[]>;
   public readonly silent: SavedVariable<boolean>;
   public readonly respondToUnknownCommands: SavedVariable<boolean>;
+  public readonly respondToBotAccounts: SavedVariable<boolean>;
   public readonly cooldownTime: SavedVariable<number>;
 
   private cooldowns: object;
@@ -50,6 +51,10 @@ export default class CommandManager extends NamedElementSearcher<Command> {
       "respondToUnkownCommands",
       false
     );
+    this.respondToBotAccounts = this.createVariable(
+      "respondToBotAccounts",
+      false
+    )
     this.cooldownTime = this.createVariable("cooldown", 0);
     this.cooldowns = {};
     this.logger = new Logger("command-manager", bot.logger);
@@ -59,7 +64,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     this.bot.moduleManager
       .getElements()
       .forEach(m =>
-        reportErrors(this.logger, "command", m.commandDirManager.loadAll())
+        reportErrors(this.logger, "command", m.loadCommands())
       );
     this.logger.success(
       `Successfully loaded ${this.getElements().length} commands.`
@@ -73,6 +78,8 @@ export default class CommandManager extends NamedElementSearcher<Command> {
         .map(m => m.commandDirManager.getElements())
     );
   }
+
+  // TODO: bruh
 
   public handleMessage(
     msg: Message,
@@ -174,6 +181,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
             : `an unknown command` + " but didn't have permission")
       );
     }
+    // TODO: I need to make the messages functions in run context universal so you don't need to have args
     if (this.shouldRespond(error)) {
       channel.send(`${error.type} ` + error.getMessage());
     }

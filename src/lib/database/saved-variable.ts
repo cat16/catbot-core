@@ -1,12 +1,13 @@
 import DatabaseInterface from "./database-interface";
-import DatabaseNotLoadedError from "./database-not-loaded";
 import DatabaseVariable, { DatabaseVariableOptions } from "./database-variable";
+import VariableNotLoadedError from "./error/variable-not-loaded";
 
 /**
  * Basically a perminantly cached database variable
  */
 export default class SavedVariable<T> extends DatabaseVariable<T> {
   private value: T;
+  private loaded: boolean;
 
   constructor(
     dbi: DatabaseInterface,
@@ -14,14 +15,22 @@ export default class SavedVariable<T> extends DatabaseVariable<T> {
     options?: DatabaseVariableOptions<T>
   ) {
     super(dbi, key, options);
-    this.dbi.addSyncFunction(this.key, (value) => {this.value = value});
+    this.loaded = false;
+    this.dbi.addSyncFunction(this.key, value => {
+      this.value = value;
+      this.loaded = true;
+    });
   }
 
   public getValue(): T {
-    if (!this.dbi.isLoaded()) {
-      throw new DatabaseNotLoadedError(this.dbi);
+    if (!this.isLoaded()) {
+      throw new VariableNotLoadedError(this.key, this.dbi);
     }
     return this.value;
+  }
+
+  public isLoaded(): boolean {
+    return this.loaded;
   }
 
   public async get(): Promise<T> {

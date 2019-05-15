@@ -6,6 +6,7 @@ import { isDatabaseModuleCreateInfo } from "../database-create-info";
 import DatabaseModule from "../database-module";
 import { isPermissionModuleCreateInfo } from "../permission-create-info";
 import PermissionModule from "../permission-module";
+import { inspect } from "util";
 
 export default class ModuleFactory implements FileElementFactory<Module> {
   public readonly bot: Bot;
@@ -16,36 +17,16 @@ export default class ModuleFactory implements FileElementFactory<Module> {
     this.directory = directory;
   }
 
-  public create(rawElement: ModuleCreateInfo, fileName: string) {
+  public create(rawElement: ModuleCreateInfo, fileName: string, path: string) {
     if (isDatabaseModuleCreateInfo(rawElement)) {
-      return new DatabaseModule(
-        fileName,
-        this.bot,
-        `${this.directory}/${fileName}`,
-        rawElement
-      );
+      return new DatabaseModule(fileName, this.bot, path, rawElement);
     }
     if (isPermissionModuleCreateInfo(rawElement)) {
-      return new PermissionModule(
-        fileName,
-        this.bot,
-        `${this.directory}/${fileName}`,
-        rawElement
-      );
+      return new PermissionModule(fileName, this.bot, path, rawElement);
     }
     if (isModuleCreateInfo(rawElement)) {
-      return new Module(
-        fileName,
-        this.bot,
-        `${this.directory}/${fileName}`,
-        rawElement
-      );
+      return new Module(fileName, this.bot, path, rawElement);
     }
-    return new Module(
-      fileName,
-      this.bot,
-      `${this.directory}/${fileName}`,
-      rawElement
-    );
+    return new Module(fileName, this.bot, path, rawElement);
   }
 }

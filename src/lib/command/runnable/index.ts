@@ -1,13 +1,10 @@
-import Command from ".";
-import Bot from "../bot";
-import Module from "../module";
-import Arg from "./arg";
-import { CommandPermissionContext } from "./permission-context";
+import Command from "..";
+import Bot from "../../bot";
+import Module from "../../module";
+import Arg from "../arg";
+import { CommandPermissionContext } from "../permission-context";
+import RunnableCommandCreateInfo, { CommandPermissionFunc, CommandRunFunc } from "./create-info";
 import CommandRunContext from "./run-context";
-import RunnableCommandCreateInfo, {
-  CommandPermissionFunc,
-  CommandRunFunc
-} from "./runnable-create-info";
 
 export default class RunnableCommand extends Command {
   private args: Arg<any>[];

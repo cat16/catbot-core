@@ -5,7 +5,7 @@ import RecursiveElementFactory from "../../util/file-element/factory/recursive";
 import RunnableCommand from "../runnable";
 import RunnableCommandCreateInfo, {
   isRunnableCommandCreateInfo
-} from "../runnable-create-info";
+} from "../runnable/create-info";
 
 export default class CommandFactory
   implements RecursiveElementFactory<Command> {
@@ -20,6 +20,7 @@ export default class CommandFactory
   public create(
     rawElement: RunnableCommandCreateInfo,
     fileName: string,
+    path: string,
     parent?: Command
   ) {
     if (isRunnableCommandCreateInfo(rawElement)) {

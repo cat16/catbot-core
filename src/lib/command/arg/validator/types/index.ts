@@ -3,6 +3,7 @@ import CommandValidator from "./command";
 import DMChannelValidator from "./dm-channel";
 import StringValidator from "./string";
 import TextChannelValidator from "./text-channel";
+import URLValidator from "./url";
 import UserValidator from "./user";
 import VoiceChannelValidator from "./voice-channel";
 import WordValidator from "./word";
@@ -13,6 +14,7 @@ export default {
   DM_CHANNEL: DMChannelValidator,
   STRING: StringValidator,
   TEXT_CHANNEL: TextChannelValidator,
+  URL: URLValidator,
   USER: UserValidator,
   VOICE_CHANNEL: VoiceChannelValidator,
   WORD: WordValidator

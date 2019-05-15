@@ -1,7 +1,9 @@
-import { Client, User, Message, RichEmbed } from "discord.js";
+import { Client, Message, User } from "discord.js";
 import * as fs from "fs";
+import { Command, Event, Module } from "..";
 import CommandManager from "./command/manager";
 import { CommandPermissionContext } from "./command/permission-context";
+import CommandRunContext from "./command/runnable/run-context";
 import Config from "./config";
 import ConsoleInputManager from "./console-input/manager";
 import Database from "./database/database-interface";
@@ -13,9 +15,8 @@ import DatabaseModule from "./module/database-module";
 import ModuleManager from "./module/manager";
 import PermissionModule from "./module/permission-module";
 import { createDirectory, pathExists } from "./util";
-import Logger from "./util/logger";
-import CommandRunContext from "./command/run-context";
 import { formatResponse } from "./util/bot";
+import Logger from "./util/logger";
 
 export default class Bot {
   public readonly directory: string;
@@ -27,9 +28,9 @@ export default class Bot {
   public readonly commandManager: CommandManager;
   public readonly eventManager: EventManager;
 
-  public readonly admins: DatabaseVariable<string[]>;
+  public readonly client: Client;
 
-  private client: Client;
+  public readonly admins: DatabaseVariable<string[]>;
 
   private activePermCheck: (
     context: CommandPermissionContext
@@ -50,6 +51,18 @@ export default class Bot {
     this.eventManager = new EventManager(this);
 
     this.admins = this.createDatabaseVariable<string[]>("admins", []);
+  }
+
+  public getModules(): Module[] {
+    return this.moduleManager.getElements();
+  }
+
+  public getCommands(): Command[] {
+    return this.commandManager.getElements();
+  }
+
+  public getEvents(): Event[] {
+    return this.eventManager.getElements();
   }
 
   public async start(): Promise<void> {
@@ -105,14 +118,6 @@ export default class Bot {
     ConsoleInputManager.stop();
   }
 
-  public getDatabase(): Database {
-    return this.database;
-  }
-
-  public getClient(): Client {
-    return this.client;
-  }
-
   public getConfig() {
     return this.config;
   }
@@ -129,13 +134,13 @@ export default class Bot {
     key: string,
     initValue?: T
   ): DatabaseVariable<T> {
-    return new DatabaseVariable<T>(this.getDatabase(), `bot.${key}`, {
+    return new DatabaseVariable<T>(this.database, `bot.${key}`, {
       initValue
     });
   }
 
   public createSavedVariable<T>(key: string, initValue?: T): SavedVariable<T> {
-    return new SavedVariable<T>(this.getDatabase(), `bot.${key}`, {
+    return new SavedVariable<T>(this.database, `bot.${key}`, {
       initValue
     });
   }

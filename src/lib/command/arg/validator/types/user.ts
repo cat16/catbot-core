@@ -9,7 +9,7 @@ export default class UserValidator extends GenericArgValidator<User> {
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);
-    const user = bot.getClient().fetchUser(trimID(parts[0]));
+    const user = bot.client.fetchUser(trimID(parts[0]));
     if (user) {
       return new ArgSuccess(user, parts[1]);
     } else {

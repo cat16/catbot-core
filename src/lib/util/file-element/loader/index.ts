@@ -9,6 +9,7 @@ export default abstract class ElementDirectoryLoader<E extends FileElement> {
 
   public abstract loadAll(): Map<string, E | Error>;
   public abstract load(fileName: string): LoadResult<E>;
+  public abstract loadExternal(path: string, name: string): LoadResult<E>;
 
   public getDirectory(): string {
     return this.directory;

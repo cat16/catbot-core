@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { join } from "path";
 import Logger from "./logger";
+import { URL } from "url";
 
 export function isFile(source: string): boolean {
   return fs.lstatSync(source).isFile();
@@ -194,4 +195,24 @@ export function createDirectory(path: string) {
   if (!fs.existsSync(path)) {
     fs.mkdirSync(path);
   }
+}
+
+export function isURL(url: string) {
+  try {
+    // tslint:disable-next-line: no-unused-expression
+    new URL(url);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export function createTempDir(path: string, base: string): string {
+  let tempDirName = base;
+  let i = 1;
+  while (existsDirectory(`${path}/${tempDirName}`)) {
+    tempDirName = `${base}-${++i}`;
+  }
+  createDirectory(`${path}/${tempDirName}`);
+  return `${path}/${tempDirName}`;
 }

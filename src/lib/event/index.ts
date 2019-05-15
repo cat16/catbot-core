@@ -15,6 +15,10 @@ export default class Event extends FileElement {
     this.runFunc = createInfo.run;
   }
 
+  public unload(): void {
+    // unload dbvs here later
+  }
+
   public run(context: EventContext): void {
     this.runFunc.call(this, context);
   }

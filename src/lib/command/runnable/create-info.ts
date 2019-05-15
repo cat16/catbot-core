@@ -1,8 +1,8 @@
-import Arg from "./arg";
-import CommandCreateInfo from "./create-info";
-import { CommandPermissionContext } from "./permission-context";
+import RunnableCommand from ".";
+import Arg from "../arg";
+import CommandCreateInfo from "../create-info";
+import { CommandPermissionContext } from "../permission-context";
 import CommandRunContext from "./run-context";
-import RunnableCommand from "./runnable";
 
 export type CommandRunFunc = (
   this: RunnableCommand,

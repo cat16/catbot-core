@@ -19,7 +19,7 @@ export default class EventManager {
     this.bot.moduleManager
       .getElements()
       .forEach(m =>
-        reportErrors(this.logger, "event", m.eventDirManager.loadAll())
+        reportErrors(this.logger, "event", m.loadEvents())
       );
     this.updateEvents();
     this.logger.success(
@@ -38,7 +38,7 @@ export default class EventManager {
   private updateEvents() {
     this.getElements().forEach(event => {
       if (this.addedEvents.find(e => e === event.name) == null) {
-        this.bot.getClient().on(event.name, (...data: any[]) => {
+        this.bot.client.on(event.name, (...data: any[]) => {
           this.runEvent(event.name, data);
         });
       }

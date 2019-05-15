@@ -45,19 +45,20 @@ export default class ElementDirectoryManager<
       };
     } else {
       const result = this.loader.load(name);
+      // TODO: LoadResult should probably just have an error variable lol
       const element = result.element instanceof Error ? undefined : result.element;
       const found = result.found;
       const error = result.element instanceof Error ? result.element : undefined;
       const subErrors = result instanceof RecursiveLoadResult ? result.errors : undefined;
-      if(!(result.element instanceof Error) && result.found) {
-        this.elements.push(result.element);
+      if(element) {
+        this.elements.push(element);
       }
       return { element, found, error, subErrors }
     }
   }
 
-  public unload(name: string): boolean {
-    const index = this.elements.findIndex(e => e.getFileName() === name);
+  public unload(element: E): boolean {
+    const index = this.elements.findIndex(e => e.getFileName() === element.getFileName());
     if(index === -1) {
       return false;
     } else {
@@ -72,5 +73,9 @@ export default class ElementDirectoryManager<
 
   public getElements(): E[] {
     return this.elements;
+  }
+
+  public getLoader(): L {
+    return this.loader;
   }
 }

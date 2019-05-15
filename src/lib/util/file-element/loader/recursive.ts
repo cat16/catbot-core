@@ -24,15 +24,23 @@ export default class RecursiveElementDirectoryLoader<
   }
 
   public load(fileName: string, parent?: E): RecursiveLoadResult<E> {
+    return this.loadElement(`${parent.getFilePath()}/${fileName}`, fileName, parent);
+  }
+
+  public loadExternal(path: string, name: string, parent?: E): RecursiveLoadResult<E> {
+    return this.loadElement(path, name, parent);
+  }
+
+  private loadElement(path: string, name: string, parent?: E): RecursiveLoadResult<E> {
     const fileElement = this.loadFileElement(
       this.getDirectory(),
-      `${parent.getFilePath()}/${fileName}`,
+      path,
       parent
     );
     if (!(fileElement instanceof Error)) {
       return this.loadDirElement(
         this.getDirectory(),
-        fileName,
+        name,
         fileElement,
         parent
       );
@@ -50,12 +58,7 @@ export default class RecursiveElementDirectoryLoader<
       return rawElement;
     } else {
       try {
-        const element = this.factory.create(rawElement, name, parent);
-        if (element !== null) {
-          return element;
-        } else {
-          return undefined;
-        }
+        return this.factory.create(rawElement, name, path, parent);
       } catch (err) {
         return err;
       }

@@ -2,8 +2,8 @@
   "name": "cat16-bot-core",
   "version": "2.0.9",
   "description": "the core code for cat16's discord bots; uses eris",
-  "main": "dist/index",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "test": "ts-node test/src/test-bot/main --debug",
     "test-dist": "node dist/test/src/test-bot/main --debug",

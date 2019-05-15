@@ -11,7 +11,7 @@ export default class TextChannelValidator extends GuildArgValidator<
   public validate(text: string, context: GuildValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);
-    const channel = bot.getClient().channels.get(trimID(parts[0]));
+    const channel = bot.client.channels.get(trimID(parts[0]));
     if (channel && channel instanceof TextChannel) {
       return new ArgSuccess(channel, parts[1]);
     } else {

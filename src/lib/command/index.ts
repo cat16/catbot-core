@@ -43,6 +43,11 @@ export default class Command extends RecursiveFileElement<Command>
     this.logger = new Logger(`command::${this.getFilePath(" ")}`, bot.logger);
   }
 
+  public unload(): void {
+    this.aliases.unload();
+    this.guildOnly.unload();
+  }
+
   public getName(): string {
     return this.name;
   }
@@ -55,15 +60,10 @@ export default class Command extends RecursiveFileElement<Command>
     return this.getFilePath(separator);
   }
 
-  public cleanup() {
-    this.aliases.unload();
-    this.guildOnly.unload();
-  }
-
-  private createVariable<T>(
-    key: string,
-    initValue?: T
-  ): SavedVariable<T> {
-    return this.module.createVariable(`command[${this.getFullName(".")}].${key}`, initValue)
+  private createVariable<T>(key: string, initValue?: T): SavedVariable<T> {
+    return this.module.createVariable(
+      `command[${this.getFullName(".")}].${key}`,
+      initValue
+    );
   }
 }

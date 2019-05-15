@@ -1,5 +1,6 @@
 import { mapPromiseAll } from "../util";
 import ModuleDatabase from "./module-database";
+import DatabaseNotSetError from "./error/database-not-set";
 
 export type SyncFunc = (value: any) => void;
 
@@ -31,16 +32,13 @@ export default class DatabaseInterface {
     this.cache = useCache ? new Map<string, any>() : null;
   }
 
-  public isLoaded(): boolean {
-    return this.loaded;
-  }
-
   /**
    * Loads all new database variables that were registered
-   *
-   * TODO: this (should) crash if the module database isn't ready yet xd
    */
   public async load(): Promise<void> {
+    if(!this.loaded) {
+      throw new DatabaseNotSetError();
+    }
     await mapPromiseAll(this.initValues, async (key, value) => {
       if ((await this.get(key)) === undefined && value !== undefined) {
         await this.set(key, value);
@@ -53,7 +51,6 @@ export default class DatabaseInterface {
     // TODO: I might want to instead remove them from a clone for reloading faster
     this.initValues.clear();
     this.syncFuncs.clear();
-    this.loaded = true;
   }
 
   public createUniqueKey(key: string): string {
