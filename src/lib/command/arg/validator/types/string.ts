@@ -1,12 +1,15 @@
+import ArgValidator from "..";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
-import GenericArgValidator from "../generic";
 
-export default class StringValidator extends GenericArgValidator<string> {
-  public readonly allowed: string[];
+export default class StringValidator extends ArgValidator<string> {
+  private _allowed: string[];
+  public get allowed(): string[] {
+    return this._allowed;
+  }
   constructor(allowed: string[]) {
     super();
-    this.allowed = allowed;
+    this._allowed = allowed;
   }
   public validate(text: string) {
     const match = this.allowed.find(str => str === text);

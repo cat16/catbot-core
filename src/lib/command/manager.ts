@@ -1,29 +1,38 @@
+// TODO: bruh
+
 import chalk from "chalk";
-import { DMChannel, GuildChannel, Message, TextBasedChannelFields, User } from "discord.js";
-import Command, { CommandChannelType } from ".";
+import {
+  DMChannel,
+  GuildChannel,
+  Message,
+  TextBasedChannelFields,
+  User
+} from "discord.js";
+import Command from ".";
 import Bot from "../bot";
 import SavedVariable from "../database/saved-variable";
 import { reportErrors, startsWithAny } from "../util";
-import { formatUser } from "../util/bot";
+import { formatErrorResponse, formatUser } from "../util/bot";
+import Logger from "../util/console/logger";
 import NamedElementSearcher from "../util/file-element/searcher";
-import Logger from "../util/logger";
 import Arg from "./arg";
 import ArgList from "./arg/list";
 import ArgFailure from "./arg/result/fail";
 import ValidatorContext from "./arg/validator/context";
-import DMValidatorContext from "./arg/validator/dm-context";
-import GuildValidatorContext from "./arg/validator/guild-context";
-import CommandError from "./error"; // lmao I might wanna add exprts to this so I don't have 200 import lines
+import CommandError from "./error";
 import CooldownError from "./error/cooldown";
+import CrashedError from "./error/crashed";
+import IgnoredForCooldownError from "./error/ignored/cooldown";
 import InvalidArgumentProvided from "./error/invalid-arg-provided";
+import InvalidChannelType from "./error/invalid-channel-type";
 import NoArgumentProvided from "./error/no-arg-provided";
 import NoCommandProvided from "./error/no-command-provided";
 import PermissionError from "./error/permission";
 import CommandErrorType from "./error/type";
 import UnknownCommand from "./error/unknownCommand";
-import Cooldown from "./trigger";
 import RunnableCommand from "./runnable";
 import CommandRunContext from "./runnable/run-context";
+import Cooldown from "./trigger";
 
 export interface CommandMatch {
   command: RunnableCommand;
@@ -54,7 +63,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     this.respondToBotAccounts = this.createVariable(
       "respondToBotAccounts",
       false
-    )
+    );
     this.cooldownTime = this.createVariable("cooldown", 0);
     this.cooldowns = {};
     this.logger = new Logger("command-manager", bot.logger);
@@ -63,9 +72,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   public load() {
     this.bot.moduleManager
       .getElements()
-      .forEach(m =>
-        reportErrors(this.logger, "command", m.loadCommands())
-      );
+      .forEach(m => reportErrors(this.logger, "command", m.loadCommands()));
     this.logger.success(
       `Successfully loaded ${this.getElements().length} commands.`
     );
@@ -79,92 +86,99 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     );
   }
 
-  // TODO: bruh
-
   public handleMessage(
     msg: Message,
     sudo: boolean = false,
     silent: boolean = sudo ? true : false
-  ): Promise<boolean> {
+  ): Promise<Command | CommandError | void> {
     return new Promise(async (resolve, reject) => {
       const content = this.parseMessage(msg);
-      let error: CommandError = null;
+      const handleError = (error: CommandError) => {
+        this.handleError(error, msg.author, msg.channel);
+        resolve(error);
+      };
       if (content) {
+        // cooldown check
+
         const cooldown = this.cooldown(msg.author);
-        if (typeof cooldown === "boolean") {
-          if (cooldown) {
-            resolve(false);
-          } else {
-            const result = this.parseContent(content);
-            if (result instanceof CommandError) {
-              error = result;
-            } else {
-              const command = result.command;
-              const argList = this.parseArgs(result, msg);
-              if (argList instanceof CommandError) {
-                error = argList;
-              } else {
-                if (
-                  sudo ||
-                  (await this.bot.hasPermission({
-                    command,
-                    member: msg.member,
-                    user: msg.author
-                  }))
-                ) {
-                  const context = new CommandRunContext(msg, argList);
-                  try {
-                    await command.run(context);
-                    if (!silent) {
-                      this.logger.info(
-                        `'${formatUser(
-                          msg.author
-                        )}' ran command '${chalk.magenta(
-                          command.getFullName()
-                        )}'`
-                      );
-                    }
-                  } catch (err) {
-                    const report = `Command '${command.getFullName()}' crashed: ${
-                      err.stack
-                    }`;
-                    this.logger.error(report);
-                    const channelStr = `channel: ${
-                      msg.channel instanceof DMChannel
-                        ? "DM channel"
-                        : msg.channel.name
-                    } [${msg.channel.id}]\n`;
-                    const guildStr =
-                      msg.channel instanceof GuildChannel
-                        ? `guild: ${msg.channel.guild.name} [${
-                            msg.channel.guild.id
-                          }]\n`
-                        : "";
-                    await this.bot.report(
-                      "A command crashed!",
-                      `user: ${msg.author.username} [${msg.author.id}]\n` +
-                        guildStr +
-                        channelStr +
-                        `\`\`\`${report}\`\`\``,
-                      context
-                    );
-                    await context.error(
-                      "The command crashed! A report was sent to the author of this bot."
-                    );
-                  }
-                } else {
-                  error = new PermissionError(command);
-                }
-              }
-            }
+        if (typeof cooldown === "number") {
+          return handleError(new CooldownError(Math.ceil(cooldown)));
+        }
+        if (cooldown) {
+          return resolve(new IgnoredForCooldownError());
+        }
+
+        // command check (does a command even exist & do they need a subcommand)
+
+        const result = this.parseContent(content);
+        if (result instanceof CommandError) {
+          return handleError(result);
+        }
+        const command = result.command;
+
+        // channel check
+
+        if (!command.canBeRunInChannel(msg.channel)) {
+          return handleError(new InvalidChannelType(command));
+        }
+
+        // permission check
+
+        if (
+          !(
+            sudo ||
+            (await this.bot.hasPermission({
+              command,
+              member: msg.member,
+              user: msg.author
+            }))
+          )
+        ) {
+          return handleError(new PermissionError(command));
+        }
+
+        // arg check
+
+        const argList = this.parseArgs(result, msg);
+        if (argList instanceof CommandError) {
+          return handleError(argList);
+        }
+
+        // run the command
+
+        const context = new CommandRunContext(msg, argList);
+        try {
+          await command.run(context);
+          if (!silent) {
+            this.logger.info(
+              `'${formatUser(msg.author)}' ran command '${chalk.magenta(
+                command.toString()
+              )}'`
+            );
           }
-        } else {
-          error = new CooldownError(Math.ceil(cooldown));
+          return resolve(command);
+        } catch (err) {
+          const report = `Command '${command}' crashed: ${err.stack}`;
+          this.logger.error(report);
+          const channelStr = `channel: ${
+            msg.channel instanceof DMChannel ? "DM channel" : msg.channel.name
+          } [${msg.channel.id}]\n`;
+          const guildStr =
+            msg.channel instanceof GuildChannel
+              ? `guild: ${msg.channel.guild.name} [${msg.channel.guild.id}]\n`
+              : "";
+          await this.bot.report(
+            "A command crashed!",
+            `user: ${msg.author.username} [${msg.author.id}]\n` +
+              guildStr +
+              channelStr +
+              `\`\`\`${report}\`\`\``,
+            context
+          );
+          return handleError(new CrashedError(command, err));
         }
       }
-      if (error) {
-        this.handleError(error, msg.author, msg.channel);
-      }
+      return resolve();
     });
   }
 
@@ -177,13 +191,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
       this.logger.info(
         `'${formatUser(user)}' tried to run ` +
           (error.command
-            ? `command '${error.command.getFullName()}'`
+            ? `command '${error.command}'`
             : `an unknown command` + " but didn't have permission")
       );
     }
-    // TODO: I need to make the messages functions in run context universal so you don't need to have args
     if (this.shouldRespond(error)) {
-      channel.send(`${error.type} ` + error.getMessage());
+      channel.send(formatErrorResponse(error, {}));
     }
   }
 
@@ -216,10 +229,12 @@ export default class CommandManager extends NamedElementSearcher<Command> {
   }
 
   public shouldRespond(error?: CommandError): boolean {
-    return !this.silent.get() && (error && error instanceof CommandError)
-      ? error instanceof UnknownCommand &&
-          !this.respondToUnknownCommands.getValue()
-      : true;
+    return (
+      !this.silent.getValue() &&
+      (error instanceof UnknownCommand
+        ? this.respondToUnknownCommands.getValue()
+        : true)
+    );
   }
 
   /**
@@ -239,7 +254,7 @@ export default class CommandManager extends NamedElementSearcher<Command> {
 
   public parseContent(content: string): CommandError | CommandMatch {
     const match = this.findMatch(content, { allowIncomplete: false });
-    const command = match.element;
+    const command = match ? match.element : null;
     if (command) {
       if (command instanceof RunnableCommand) {
         return { command, content: match.leftover };
@@ -261,27 +276,24 @@ export default class CommandManager extends NamedElementSearcher<Command> {
     const command = match.command;
     let content = match.content;
     const args = new Map<Arg<any>, any>();
-    if (command.getArgs().length > 0) {
-      for (const arg of command.getArgs()) {
+    if (command.args.length > 0) {
+      for (const arg of command.args) {
         const validators = arg.validationFuncs;
         if (content != null && content.length > 0) {
           let failures: ArgFailure[] = [];
           for (const validator of validators) {
-            const context: ValidatorContext = { bot: this.bot, msg };
-            // TODO: use this lol, except use built in djs stuff
-            let commandChannelType: CommandChannelType = CommandChannelType.ANY;
-            if (msg.channel instanceof GuildChannel && msg.member) {
-              (context as GuildValidatorContext).member = msg.member;
-              (context as GuildValidatorContext).channel = msg.channel;
-              (context as GuildValidatorContext).guild = msg.channel.guild;
-              commandChannelType = CommandChannelType.GUILD;
-            }
-            if (msg.channel instanceof DMChannel) {
-              (context as DMValidatorContext).channel = msg.channel;
-              (context as DMValidatorContext).user = msg.author;
-              commandChannelType = CommandChannelType.PRIVATE;
-            }
-            const result = validator.validate(content, context); // TODO: figure out how 2 context here (generate context that is one of the 2 types, 3rd doesn't care lel)
+            const context: ValidatorContext<typeof msg.channel> = {
+              bot: this.bot,
+              msg,
+              user:
+                msg.channel instanceof GuildChannel ? msg.member : msg.author,
+              channel: msg.channel,
+              guild:
+                msg.channel instanceof GuildChannel
+                  ? msg.channel.guild
+                  : undefined
+            };
+            const result = validator.validate(content, context);
             if (result instanceof ArgFailure) {
               failures.push(result);
             } else {

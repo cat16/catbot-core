@@ -3,7 +3,13 @@ import Command from "..";
 import CommandErrorType from "./type";
 
 export default class CustomError extends CommandError {
-  private message: string;
+  private _message: string;
+  public get message(): string {
+    return this._message;
+  }
+  public set message(value: string) {
+    this._message = value;
+  }
   constructor(message: string, command?: Command, type?: CommandErrorType) {
     super(command, type);
     this.message = message;

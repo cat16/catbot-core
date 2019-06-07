@@ -1,14 +1,12 @@
 import { TextChannel } from "discord.js";
+import ArgValidator from "..";
 import { trimID } from "../../../../util/bot";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
-import GuildArgValidator from "../guild";
-import GuildValidatorContext from "../guild-context";
+import ValidatorContext from "../context";
 
-export default class TextChannelValidator extends GuildArgValidator<
-  TextChannel
-> {
-  public validate(text: string, context: GuildValidatorContext) {
+export default class TextChannelValidator extends ArgValidator<TextChannel> {
+  public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);
     const channel = bot.client.channels.get(trimID(parts[0]));

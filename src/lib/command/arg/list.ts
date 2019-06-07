@@ -1,12 +1,15 @@
 import Arg from ".";
 
 export default class ArgList {
-  public content: string;
   private args: Map<Arg<any>, any>;
+  private _content: string;
+  get content() {
+    return this._content;
+  }
 
   constructor(args: Map<Arg<any>, any>, content: string) {
     this.args = args;
-    this.content = content;
+    this._content = content;
   }
 
   public get<K>(arg: Arg<K>): K {

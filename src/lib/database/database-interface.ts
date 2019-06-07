@@ -1,15 +1,15 @@
 import { mapPromiseAll } from "../util";
-import ModuleDatabase from "./module-database";
 import DatabaseNotSetError from "./error/database-not-set";
+import ModuleDatabase from "./module-database";
 
-export type SyncFunc = (value: any) => void;
+export type OnLoadFunc = (value: any) => void;
 
 export default class DatabaseInterface {
   private db: ModuleDatabase;
   private registeredKeys: string[];
   private cache: Map<string, any>;
   private initValues: Map<string, any>;
-  private syncFuncs: Map<string, SyncFunc>;
+  private onLoadFuncs: Map<string, OnLoadFunc[]>;
 
   private loaded: boolean;
 
@@ -17,7 +17,7 @@ export default class DatabaseInterface {
     this.db = null;
     this.registeredKeys = [];
     this.initValues = new Map<string, any>();
-    this.syncFuncs = new Map<string, SyncFunc>();
+    this.onLoadFuncs = new Map<string, OnLoadFunc[]>();
   }
 
   public setDB(db: ModuleDatabase): void {
@@ -33,32 +33,33 @@ export default class DatabaseInterface {
   }
 
   /**
-   * Loads all new database variables that were registered
+   * Loads all database variables that were registered
    */
   public async load(): Promise<void> {
-    if(!this.loaded) {
+    if (this.db == null) {
       throw new DatabaseNotSetError();
     }
     await mapPromiseAll(this.initValues, async (key, value) => {
-      if ((await this.get(key)) === undefined && value !== undefined) {
+      let finalValue = await this.get(key);
+      if (finalValue === undefined && value !== undefined) {
+        if (value instanceof Promise) {
+          value = await value;
+        }
         await this.set(key, value);
+        finalValue = value;
+      }
+      for (const func of this.onLoadFuncs.get(key)) {
+        await func(finalValue);
       }
     });
-    await mapPromiseAll(this.syncFuncs, async (key, func) => {
-      const value = await this.get(key);
-      await func(value);
-    });
-    // TODO: I might want to instead remove them from a clone for reloading faster
-    this.initValues.clear();
-    this.syncFuncs.clear();
   }
 
   public createUniqueKey(key: string): string {
-    const OGKey = key;
+    const originalKey = key;
     let count = 0;
     while (this.registeredKeys.some(k => k === key)) {
       count++;
-      key = OGKey + (count + 1);
+      key = originalKey + (count + 1);
     }
     return key;
   }
@@ -95,8 +96,12 @@ export default class DatabaseInterface {
     }
   }
 
-  public addSyncFunction(key: string, func: SyncFunc) {
-    this.syncFuncs.set(key, func);
+  public onLoad(key: string, func: OnLoadFunc) {
+    if (!this.onLoadFuncs.has(key)) {
+      this.onLoadFuncs.set(key, [func]);
+    } else {
+      this.onLoadFuncs.get(key).push(func);
+    }
   }
 
   /**
@@ -137,5 +142,9 @@ export default class DatabaseInterface {
    */
   public async delete(key: string): Promise<void> {
     return this.db.delete(key);
+  }
+
+  public isLoaded(): boolean {
+    return this.loaded;
   }
 }

@@ -1,7 +1,7 @@
 import Event from ".";
 import Bot from "../bot";
 import { reportErrors } from "../util";
-import Logger from "../util/logger";
+import Logger from "../util/console/logger";
 import EventContext from "./context";
 
 export default class EventManager {

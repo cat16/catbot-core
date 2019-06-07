@@ -11,7 +11,7 @@ export default class UnknownCommand extends CommandError {
   public getMessage() {
     const subcommand = this.command;
     return subcommand
-      ? `Unknown subcommand was provided for command '${subcommand.getFullName()}': '${
+      ? `Unknown subcommand was provided for command '${subcommand}': '${
           this.content
         }'`
       : `Unkown command '${this.content}'`;

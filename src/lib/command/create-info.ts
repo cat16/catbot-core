@@ -1,8 +1,10 @@
-import { CommandChannelType } from ".";
+import { CommandPermissionFunc } from ".";
+import { CommandChannelType } from "../util/bot";
 
 export default interface CommandCreateInfo {
   aliases?: string[];
-  guildOnly?: CommandChannelType;
+  channelTypes?: CommandChannelType[];
+  hasPermission?: CommandPermissionFunc;
 }
 
 export function isCommandCreateInfo(object) {

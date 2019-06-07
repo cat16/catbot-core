@@ -1,12 +1,19 @@
-import Logger from "../util/logger";
+import Logger from "../util/console/logger";
+import BotEmitter from "../util/emitter";
 import DatabaseInterface from "./database-interface";
 
 export interface DatabaseVariableOptions<T> {
-  initValue?: T;
+  initValue?: T | Promise<T>;
   unique?: boolean;
 }
 
-export default class DatabaseVariable<T> {
+export type DatabaseVariableEvents<T> = {
+  load: (value: T) => void;
+};
+
+export default class DatabaseVariable<T> extends BotEmitter<
+  DatabaseVariableEvents<T>
+> {
   public readonly key: string;
   public readonly dbi: DatabaseInterface;
 
@@ -15,6 +22,7 @@ export default class DatabaseVariable<T> {
     key: string,
     { unique = true, initValue }: DatabaseVariableOptions<T> = {}
   ) {
+    super();
     this.dbi = dbi;
 
     const newKey = unique ? this.dbi.createUniqueKey(key) : key;
@@ -29,10 +37,9 @@ export default class DatabaseVariable<T> {
       this.dbi.registerInitValue(newKey, initValue);
     }
     this.key = newKey;
-  }
-
-  public getKey(): string {
-    return this.key;
+    this.dbi.onLoad(newKey, value => {
+      this.emit("load", value);
+    });
   }
 
   public async get(): Promise<T> {
@@ -48,10 +55,9 @@ export default class DatabaseVariable<T> {
    * The variable should not be used afterward
    */
   public unload() {
-    // TODO: decided whether to make dbi null in order to render it uneffective
+    // TODO: decided whether to make dbi null in order to render it uneffective (or add destroy)
     this.dbi.unregisterKey(this.key);
   }
 
   // TODO: add delete function to also remove the value in the database
-
 }

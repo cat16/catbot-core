@@ -1,6 +1,7 @@
 import ElementDirectoryLoader from ".";
 import FileElement from "..";
-import { getDirectories, getFiles, requireFile } from "../..";
+import { requireFile } from "../..";
+import { getDirectories, getFiles } from "../../file";
 import FileElementFactory from "../factory";
 import LoadResult from "./result";
 

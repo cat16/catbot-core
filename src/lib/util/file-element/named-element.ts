@@ -1,4 +1,4 @@
 export default interface NamedElement {
-  getName(): string;
-  getAliases(): string[];
+  name: string;
+  aliases: string[];
 }

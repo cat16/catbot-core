@@ -1,3 +1,4 @@
+import { Command, Event } from "../..";
 import Bot from "../bot";
 import CommandDirectoryManager from "../command/dir-manager";
 import SavedVariable from "../database/saved-variable";
@@ -5,38 +6,35 @@ import EventDirectoryManager from "../event/dir-manager";
 import FileElement from "../util/file-element";
 import NamedElement from "../util/file-element/named-element";
 import ModuleCreateInfo from "./create-info";
-import { Command, Event } from "../..";
 
 export default class Module extends FileElement implements NamedElement {
-  public readonly bot: Bot;
-  public readonly name: string;
+  private _name: string;
 
-  public readonly commandDirManager: CommandDirectoryManager;
-  public readonly eventDirManager: EventDirectoryManager;
+  private _commandDirManager: CommandDirectoryManager;
+  private _eventDirManager: EventDirectoryManager;
 
-  public readonly aliases: SavedVariable<string[]>;
-  public readonly description?: string;
+  private _aliases: SavedVariable<string[]>;
+  private _description?: string;
 
   constructor(
     fileName: string,
-    bot: Bot,
+    private bot: Bot,
     directory: string,
     createInfo: ModuleCreateInfo = {}
   ) {
     super(fileName);
-    this.commandDirManager = new CommandDirectoryManager(
+    this._commandDirManager = new CommandDirectoryManager(
       `${directory}/commands`,
       bot,
       this
     );
-    this.eventDirManager = new EventDirectoryManager(
+    this._eventDirManager = new EventDirectoryManager(
       `${directory}/events`,
       bot
     );
-    this.bot = bot;
-    this.name = fileName;
-    this.aliases = this.createVariable("aliases", createInfo.aliases || []);
-    this.description = createInfo.description;
+    this._name = fileName;
+    this._aliases = this.createVariable("aliases", createInfo.aliases || []);
+    this._description = createInfo.description;
   }
 
   public load(): [Map<string, Error>, Map<string, Error>] {
@@ -58,7 +56,7 @@ export default class Module extends FileElement implements NamedElement {
     this.getEvents().forEach(e => () => {
       e.unload();
     });
-    this.aliases.unload();
+    this._aliases.unload();
   }
 
   public getCommands(): Command[] {
@@ -69,17 +67,29 @@ export default class Module extends FileElement implements NamedElement {
     return this.eventDirManager.getElements();
   }
 
-  public getName(): string {
-    return this.name;
+  get name(): string {
+    return this._name;
   }
 
-  public getAliases(): string[] {
-    return this.aliases.getValue();
+  get aliases(): string[] {
+    return this._aliases.getValue();
+  }
+
+  get description(): string {
+    return this._description;
+  }
+
+  get commandDirManager(): CommandDirectoryManager {
+    return this._commandDirManager;
+  }
+
+  get eventDirManager(): EventDirectoryManager {
+    return this._eventDirManager;
   }
 
   public createVariable<T>(
     name: string | string[],
-    initValue?: T
+    initValue?: T | Promise<T>
   ): SavedVariable<T> {
     return this.bot.createSavedVariable(
       `module[${this.name}].${name}`,

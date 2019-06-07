@@ -9,7 +9,7 @@ export default class NoCommandProvided extends CommandError {
   public getMessage() {
     const subcommand = this.command;
     return subcommand
-      ? `No subcommand was provided for command '${subcommand.getFullName()}'`
+      ? `No subcommand was provided for command '${subcommand}'`
       : `No command was provided`;
   }
 }

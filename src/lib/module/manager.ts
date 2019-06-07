@@ -1,10 +1,11 @@
 import Module from ".";
 import { DEFAULT_DIR } from "../../definitions";
 import Bot from "../bot";
-import { pathExists, reportErrors } from "../util";
+import { reportErrors } from "../util";
+import Logger from "../util/console/logger";
+import { pathExists } from "../util/file";
 import { DirLoadResult } from "../util/file-element/manager/dir";
 import NamedElementSearcher from "../util/file-element/searcher";
-import Logger from "../util/logger";
 import { ModuleDirectoryManager } from "./dir-manager";
 
 export default class ModuleManager extends NamedElementSearcher<Module> {
@@ -24,6 +25,7 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     this.bot = bot;
     this.dirManager = new ModuleDirectoryManager(`${directory}/modules`, bot);
     this.coreModule = null;
+    this.mainModule = null;
   }
 
   public loadAll() {
@@ -74,13 +76,17 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
   }
 
   private loadMainModule() {
-    const name = this.directory.split("/").pop();
+    const name = this.bot.name;
     const path = this.directory;
     const result = this.dirManager.getLoader().loadExternal(path, name);
-    if(result.element instanceof Module) {
+    if (result.element instanceof Module) {
       this.mainModule = result.element;
     } else {
-      this.logger.error(`Failed to load main module: ${result.found ? result.element : "module not found"}`);
+      this.logger.error(
+        `Failed to load main module: ${
+          result.found ? result.element : "module not found"
+        }`
+      );
     }
   }
 
@@ -88,10 +94,14 @@ export default class ModuleManager extends NamedElementSearcher<Module> {
     const name = "core";
     const path = `${DEFAULT_DIR}/core-module`;
     const result = this.dirManager.getLoader().loadExternal(path, name);
-    if(result.element instanceof Module) {
+    if (result.element instanceof Module) {
       this.coreModule = result.element;
     } else {
-      this.logger.error(`Failed to load core module: ${result.found ? result.element : "module not found"}`);
+      this.logger.error(
+        `Failed to load core module: ${
+          result.found ? result.element : "module not found"
+        }`
+      );
     }
   }
 }

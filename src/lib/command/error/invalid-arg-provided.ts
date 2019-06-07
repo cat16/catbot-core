@@ -14,7 +14,7 @@ export default class InvalidArgumentProvided extends CommandError {
   public getMessage() {
     return `Invalid input was provided for argument '${
       this.arg.name
-    }' of command '${this.command.getFullName()}': The following conditions were not met:\n - ${[
+    }' of command '${this.command}': The following conditions were not met:\n - ${[
       ...this.failures.map(f => f.conditionsFailed)
     ].join("\n - ")}`;
   }

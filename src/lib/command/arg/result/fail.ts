@@ -1,7 +1,11 @@
 export default class ArgFailure {
-  public readonly conditionsFailed: string[];
+  private _conditionsFailed: string[];
 
-  constructor(reasons: string[]) {
-    this.conditionsFailed = reasons;
+  constructor(conditionsFailed: string[]) {
+    this._conditionsFailed = conditionsFailed;
+  }
+
+  get conditionsFailed(): string[] {
+    return this._conditionsFailed;
   }
 }

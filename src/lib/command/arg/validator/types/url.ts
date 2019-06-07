@@ -5,9 +5,7 @@ import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
 import ValidatorContext from "../context";
 
-export default class URLValidator extends ArgValidator<
-  URL
-> {
+export default class URLValidator extends ArgValidator<URL> {
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);
@@ -20,8 +18,6 @@ export default class URLValidator extends ArgValidator<
   }
 
   public getRequirements() {
-    return [
-      `${this.inputStr} must be a valid text channel (channel mention or id)`
-    ];
+    return [`${this.inputStr} must be a valid URL`];
   }
 }

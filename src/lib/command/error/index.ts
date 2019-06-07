@@ -2,14 +2,20 @@ import Command from "..";
 import CommandErrorType from "./type";
 
 export default abstract class CommandError {
-  public readonly type: CommandErrorType;
-  public readonly command?: Command;
+  private _type: CommandErrorType;
+  public get type(): CommandErrorType {
+    return this._type;
+  }
+  private _command?: Command;
+  public get command(): Command {
+    return this._command;
+  }
   constructor(
     command?: Command,
     type: CommandErrorType = CommandErrorType.DEFAULT
   ) {
-    this.type = type;
-    this.command = command;
+    this._type = type;
+    this._command = command;
   }
   public abstract getMessage(): string;
 }

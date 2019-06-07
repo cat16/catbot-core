@@ -1,5 +1,6 @@
 import ElementDirectoryLoader from ".";
-import { getDirectories, getFiles, pathExists, requireFile } from "../..";
+import { requireFile } from "../..";
+import { getDirectories, getFiles, pathExists } from "../../file";
 import RecursiveElementFactory from "../factory/recursive";
 import RecursiveFileElement from "../recursive-file-element";
 import RecursiveLoadResult from "./recursive-result";
@@ -24,19 +25,27 @@ export default class RecursiveElementDirectoryLoader<
   }
 
   public load(fileName: string, parent?: E): RecursiveLoadResult<E> {
-    return this.loadElement(`${parent.getFilePath()}/${fileName}`, fileName, parent);
+    return this.loadElement(
+      `${parent.getFilePath()}/${fileName}`,
+      fileName,
+      parent
+    );
   }
 
-  public loadExternal(path: string, name: string, parent?: E): RecursiveLoadResult<E> {
+  public loadExternal(
+    path: string,
+    name: string,
+    parent?: E
+  ): RecursiveLoadResult<E> {
     return this.loadElement(path, name, parent);
   }
 
-  private loadElement(path: string, name: string, parent?: E): RecursiveLoadResult<E> {
-    const fileElement = this.loadFileElement(
-      this.getDirectory(),
-      path,
-      parent
-    );
+  private loadElement(
+    path: string,
+    name: string,
+    parent?: E
+  ): RecursiveLoadResult<E> {
+    const fileElement = this.loadFileElement(this.getDirectory(), path, parent);
     if (!(fileElement instanceof Error)) {
       return this.loadDirElement(
         this.getDirectory(),
@@ -72,7 +81,7 @@ export default class RecursiveElementDirectoryLoader<
     parent?: E
   ): RecursiveLoadResult<E> {
     const errors = new Map<string, Error>();
-    const contents = this.loadDir(`${directory}/${name}`, parent);
+    const contents = this.loadDir(`${directory}/${name}`, element);
     if (contents === null) {
       // tslint:disable-next-line: object-literal-sort-keys
       return { element: undefined, found: false, errors: new Map() };

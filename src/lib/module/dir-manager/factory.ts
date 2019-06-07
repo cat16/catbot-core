@@ -6,7 +6,6 @@ import { isDatabaseModuleCreateInfo } from "../database-create-info";
 import DatabaseModule from "../database-module";
 import { isPermissionModuleCreateInfo } from "../permission-create-info";
 import PermissionModule from "../permission-module";
-import { inspect } from "util";
 
 export default class ModuleFactory implements FileElementFactory<Module> {
   public readonly bot: Bot;

@@ -2,8 +2,9 @@ dependencies:
   chalk: 2.4.2
   discord.js: 11.4.2
   simple-git: 1.112.0
+  string-length: 3.1.0
   ts-node: 7.0.1
-  typescript: 3.4.5
+  typescript: 3.5.1
 devDependencies:
   '@types/node': 10.14.6
   prettier: 1.14.2
@@ -30,6 +31,12 @@ packages:
     dev: true
     resolution:
       integrity: sha512-Fvm24+u85lGmV4hT5G++aht2C5I4Z4dYlWZIh62FAfFO/TfzXtPpoLI6I7AuBWkIFqZCnhFOoTT7RjjaIL5Fjg==
+  /ansi-regex/4.1.0:
+    dev: false
+    engines:
+      node: '>=6'
+    resolution:
+      integrity: sha512-1apePfXM1UOSqw0o9IiFAovVz9M5S1Dg+4TrDwfMewQ6p/rmMueb7tWZjQ1rx4Loy1ArBggoqGpfqqdI4rondg==
   /ansi-styles/3.2.1:
     dependencies:
       color-convert: 1.9.3
@@ -49,6 +56,12 @@ packages:
       node: '>=0.10.0'
     resolution:
       integrity: sha1-iYUI2iIm84DfkEcoRWhJwVAaSw0=
+  /astral-regex/1.0.0:
+    dev: false
+    engines:
+      node: '>=4'
+    resolution:
+      integrity: sha512-+Ryf6g3BKoRc7jfp7ad8tM4TtMiaWvbF/1/sQcZPkkS7ag3D5nMBCe2UfOTONtAkaG0tO0ij3C5Lwmf1EiyjHg==
   /async-limiter/1.0.0:
     dev: false
     resolution:
@@ -297,6 +310,23 @@ packages:
     dev: true
     resolution:
       integrity: sha1-BOaSb2YolTVPPdAVIDYzuFcpfiw=
+  /string-length/3.1.0:
+    dependencies:
+      astral-regex: 1.0.0
+      strip-ansi: 5.2.0
+    dev: false
+    engines:
+      node: '>=8'
+    resolution:
+      integrity: sha512-Ttp5YvkGm5v9Ijagtaz1BnN+k9ObpvS0eIBblPMp2YWL8FBmi9qblQ9fexc2k/CXFgrTIteU3jAw3payCnwSTA==
+  /strip-ansi/5.2.0:
+    dependencies:
+      ansi-regex: 4.1.0
+    dev: false
+    engines:
+      node: '>=6'
+    resolution:
+      integrity: sha512-DuRs1gKbBqsMKIZlrffwlug8MHkcnpjs5VPmL1PAh+mA30U0DTotfDZ0d2UUsXpPmPmMMJ6W773MaA3J+lbiWA==
   /supports-color/5.5.0:
     dependencies:
       has-flag: 3.0.0
@@ -366,13 +396,13 @@ packages:
     dev: false
     resolution:
       integrity: sha512-kcoMoKTPYnoeS50tzoqjPY3Uv9axeuuFAZY9M/9zFnhoVvRfxz9K29IMPD7jGmt2c8SW7i3gT9WqDl2+nV7p4A==
-  /typescript/3.4.5:
+  /typescript/3.5.1:
     dev: false
     engines:
       node: '>=4.2.0'
     hasBin: true
     resolution:
-      integrity: sha512-YycBxUb49UUhdNMU5aJ7z5Ej2XGmaIBL0x34vZ82fn3hGvD+bgrMrVDpatgz2f7YxUMJxMkbWxJZeAvDxVe7Vw==
+      integrity: sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==
   /wrappy/1.0.2:
     dev: true
     resolution:
@@ -397,7 +427,8 @@ specifiers:
   prettier: 1.14.2
   require-self: ^0.2.1
   simple-git: ^1.107.0
+  string-length: ^3.1.0
   ts-node: ^7.0.1
   tslint: ^5.11.0
   tslint-config-prettier: ^1.16.0
-  typescript: ^3.4.0-dev.20190130
+  typescript: ^3.5.1

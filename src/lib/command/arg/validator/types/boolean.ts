@@ -1,19 +1,29 @@
+import ArgValidator from "..";
 import { array } from "../../../../util";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
-import GenericArgValidator from "../generic";
 
-export default class BooleanValidator extends GenericArgValidator<boolean> {
-  public readonly trueStrs: string[];
-  public readonly falseStrs: string[];
+export default class BooleanValidator extends ArgValidator<boolean> {
+  private _trueStrs: string[];
+  private _falseStrs: string[];
+
   constructor(
     trueStrs: string | string[] = "true",
     falseStrs: string | string[] = "false"
   ) {
     super();
-    this.trueStrs = array(trueStrs);
-    this.falseStrs = array(falseStrs);
+    this._trueStrs = array(trueStrs);
+    this._falseStrs = array(falseStrs);
   }
+
+  get trueStrs(): string[] {
+    return this._trueStrs;
+  }
+
+  get falseStrs(): string[] {
+    return this._falseStrs;
+  }
+
   public validate(text: string) {
     const trueMatch = this.trueStrs.find(str => text.startsWith(str));
     const falseMatch = this.falseStrs.find(str => text.startsWith(str));

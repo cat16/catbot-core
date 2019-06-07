@@ -9,12 +9,18 @@ import RunnableCommandCreateInfo, {
 
 export default class CommandFactory
   implements RecursiveElementFactory<Command> {
-  public readonly bot: Bot;
-  public readonly module: Module;
+  private _bot: Bot;
+  public get bot(): Bot {
+    return this._bot;
+  }
+  private _module: Module;
+  public get module(): Module {
+    return this._module;
+  }
 
   constructor(bot: Bot, module2: Module) {
-    this.bot = bot;
-    this.module = module2;
+    this._bot = bot;
+    this._module = module2;
   }
 
   public create(
@@ -31,8 +37,9 @@ export default class CommandFactory
         this.module,
         rawElement
       );
+    } else {
+      return new Command(fileName, parent, this.bot, this.module, rawElement);
     }
-    return null;
   }
   public createDir(dirName: string, parent: Command) {
     return new Command(dirName, parent, this.bot, this.module, {});

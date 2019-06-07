@@ -1,12 +1,11 @@
-
 import { DMChannel } from "discord.js";
+import ArgValidator from "..";
 import { trimID } from "../../../../util/bot";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
 import ValidatorContext from "../context";
-import DMArgValidator from "../dm";
 
-export default class DMChannelValidator extends DMArgValidator<DMChannel> {
+export default class DMChannelValidator extends ArgValidator<DMChannel> {
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);

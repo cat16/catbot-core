@@ -5,25 +5,30 @@ import CommandManager from "./command/manager";
 import { CommandPermissionContext } from "./command/permission-context";
 import CommandRunContext from "./command/runnable/run-context";
 import Config from "./config";
-import ConsoleInputManager from "./console-input/manager";
-import Database from "./database/database-interface";
-import DatabaseVariable from "./database/database-variable";
-import RuntimeDatabase from "./database/runtime-database";
-import SavedVariable from "./database/saved-variable";
+import {
+  DatabaseInterface,
+  DatabaseVariable,
+  RuntimeDatabase,
+  SavedVariable
+} from "./database";
 import EventManager from "./event/manager";
 import DatabaseModule from "./module/database-module";
 import ModuleManager from "./module/manager";
 import PermissionModule from "./module/permission-module";
-import { createDirectory, pathExists } from "./util";
+import { clearModuleCache } from "./util";
 import { formatResponse } from "./util/bot";
-import Logger from "./util/logger";
+import Logger from "./util/console/logger";
+import ConsoleInputManager from "./util/console/manager";
+import { createDirectory, pathExists } from "./util/file";
 
 export default class Bot {
   public readonly directory: string;
   public readonly logger: Logger;
   public readonly inputManager: ConsoleInputManager;
 
-  public readonly database: Database;
+  public readonly name: string;
+
+  public readonly database: DatabaseInterface;
   public readonly moduleManager: ModuleManager;
   public readonly commandManager: CommandManager;
   public readonly eventManager: EventManager;
@@ -38,17 +43,20 @@ export default class Bot {
   private config: Config;
 
   constructor(directory: string, config?: Config) {
-    this.directory = directory.replace(/\\/g, "/");
-    this.logger = new Logger("bot-core");
+    this.directory = directory.replace(/\\/g, "/"); // smh windows
     this.inputManager = new ConsoleInputManager();
+
+    this.name = config.name || this.directory.split("/").pop();
 
     this.config = config;
     this.client = new Client();
 
-    this.database = new Database();
+    this.database = new DatabaseInterface();
     this.moduleManager = new ModuleManager(this.directory, this);
     this.commandManager = new CommandManager(this);
     this.eventManager = new EventManager(this);
+
+    this.logger = new Logger("bot-core");
 
     this.admins = this.createDatabaseVariable<string[]>("admins", []);
   }
@@ -77,11 +85,11 @@ export default class Bot {
     this.loadPermCheckFromModule();
     this.commandManager.load();
     this.eventManager.load();
-    await this.database.load();
+    await this.loadDatabase();
     this.logger.success(`Successfully loaded database.`);
-    this.logger.success("Successfully loaded.");
+    this.logger.success("Loading complete.");
     await this.connect();
-    this.logger.success("Successfully started.");
+    this.logger.success("Bot started; messages will now be recieved.");
     this.setupConsoleInput();
   }
 
@@ -89,33 +97,20 @@ export default class Bot {
   public restart(reloadFiles: boolean = false): Promise<Bot> {
     return new Promise(async (resolve, reject) => {
       this.logger.info("Restarting...");
-      // TODO: idk if theres a way to disconnect djs hmm
+      await this.stop();
       if (reloadFiles) {
-        Object.keys(require.cache).forEach(key => {
-          if (!key.includes("node_modules")) {
-            delete require.cache[key];
-          }
-        });
-        const NewBot = require(__filename).default;
-        const bot = new NewBot(this.directory);
-        bot.start().then(
-          () => {
-            resolve(bot);
-          },
-          err => {
-            reject(err);
-          }
-        );
-      } else {
-        this.start().then(resolve.bind(null, this), reject.bind(null, this));
+        clearModuleCache();
       }
+      const newBot = (await import("./bot")).default;
+      const bot = new newBot(this.directory);
+      bot.start().then(resolve.bind(null, bot), reject);
     });
   }
 
   public async stop() {
     this.logger.info("Stopping...");
     await this.client.destroy();
-    ConsoleInputManager.stop();
+    this.inputManager.destroy();
   }
 
   public getConfig() {
@@ -139,7 +134,10 @@ export default class Bot {
     });
   }
 
-  public createSavedVariable<T>(key: string, initValue?: T): SavedVariable<T> {
+  public createSavedVariable<T>(
+    key: string,
+    initValue?: T | Promise<T>
+  ): SavedVariable<T> {
     return new SavedVariable<T>(this.database, `bot.${key}`, {
       initValue
     });
@@ -166,11 +164,30 @@ export default class Bot {
     );
   }
 
+  private afterDatabaseLoaded() {
+    // TODO:
+  }
+
+  private afterConnected() {
+    this.commandManager.prefixes.set(
+      this.commandManager.prefixes
+        .getValue()
+        .concat(this.client.user.toString())
+    );
+  }
+
+  private loadDatabase() {
+    return this.database.load().then(() => {
+      this.afterDatabaseLoaded();
+    });
+  }
+
   private connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.logger.log("Connecting...");
       this.client.once("ready", () => {
         this.logger.success("Successfully connected.");
+        this.afterConnected();
         resolve();
       });
       this.client.login(this.config.token);
@@ -201,7 +218,8 @@ export default class Bot {
     if (!dbModuleExists) {
       this.database.setDB(new RuntimeDatabase());
       this.logger.warn(
-        "No database module detected; defaulting to runtime database."
+        "No database module detected; defaulting to runtime database." +
+          "\nThis means that no data will be saved when the program is stopped!"
       );
     }
   }
@@ -256,6 +274,12 @@ export default class Bot {
         this.stop();
       },
       trigger: "stop"
+    });
+    this.inputManager.addEvent({
+      func: () => {
+        this.restart(true);
+      },
+      trigger: "restart full"
     });
     ConsoleInputManager.start();
     this.logger.info('Type "stop" at any time to stop');

@@ -1,11 +1,11 @@
 import { User } from "discord.js";
+import ArgValidator from "..";
 import { trimID } from "../../../../util/bot";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
 import ValidatorContext from "../context";
-import GenericArgValidator from "../generic";
 
-export default class UserValidator extends GenericArgValidator<User> {
+export default class UserValidator extends ArgValidator<User> {
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const parts = text.split(" ", 2);

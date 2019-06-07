@@ -33,13 +33,15 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
     return match ? match.element : null;
   }
 
+  // TODO: I'm like 90% sure there's flaws in the logic here with the results having null elements
+
   public findMatch(
     name: string,
     options?: NamedElementSearchOptions
   ): ElementMatch<E> {
     const matches = this.search(name, options);
     return (
-      matches.exact ||
+      (matches.exact.element ? matches.exact : null) ||
       matches.aliases[0] ||
       matches.incompleteExacts[0] ||
       matches.incompleteAliases[0] ||
@@ -80,16 +82,16 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
     // first, search for equal names
     for (const element of elements) {
       // if it's directly equal
-      if (element.getName() === name) {
+      if (element.name === name) {
         results.exact = { element, leftover: "" };
-      } else if (allowIncomplete && element.getName().startsWith(name)) {
+      } else if (allowIncomplete && element.name.startsWith(name)) {
         results.incompleteExacts.push({ element, leftover: "" });
       }
-      // if it's recursive & part of the command
+      // if it's recursive & part of the element
       if (recursive && element instanceof RecursiveFileElement) {
-        if (name.startsWith(`${element.getName()}${this.separator}`)) {
+        if (name.startsWith(`${element.name}${this.separator}`)) {
           const results2 = this.searchRecursive(
-            name.slice(element.getName().length + this.separator.length),
+            name.slice(element.name.length + this.separator.length),
             element.children,
             options,
             element
@@ -102,36 +104,39 @@ export default abstract class NamedElementSearcher<E extends NamedElement> {
           results.incompleteAliases.push(...results2.incompleteAliases);
         } else if (
           allowIncomplete &&
-          element.getName().startsWith(name.split(this.separator, 2)[0])
+          element.name.startsWith(name.split(this.separator, 2)[0])
         ) {
-          const results2 = this.searchRecursive(
-            name.split(this.separator, 2)[1],
-            element.children,
-            options,
-            element
-          );
-          if (results2.exact) {
-            results.incompleteExacts.push(results2.exact);
+          const newName = name.split(this.separator, 2)[1];
+          if (newName) {
+            const results2 = this.searchRecursive(
+              newName,
+              element.children,
+              options,
+              element
+            );
+            if (results2.exact) {
+              results.incompleteExacts.push(results2.exact);
+            }
+            results.incompleteExacts.push(...results2.incompleteExacts);
+            results.incompleteAliases.push(
+              ...results2.aliases,
+              ...results2.incompleteAliases
+            );
           }
-          results.incompleteExacts.push(...results2.incompleteExacts);
-          results.incompleteAliases.push(
-            ...results2.aliases,
-            ...results2.incompleteAliases
-          );
         }
       }
     }
     // second, search for equal aliases
     if (allowAliases) {
       for (const element of elements) {
-        for (const alias of element.getAliases()) {
+        for (const alias of element.aliases) {
           // if it's directly equal
           if (alias === name) {
             results.aliases.push({ element, leftover: "" });
           } else if (allowIncomplete && alias.startsWith(name)) {
             results.incompleteAliases.push({ element, leftover: "" });
           }
-          // if it's recursive & part of the command
+          // if it's recursive & part of the element
           if (recursive && element instanceof RecursiveFileElement) {
             if (name.startsWith(`${alias}${this.separator}`)) {
               const results2 = this.searchRecursive(

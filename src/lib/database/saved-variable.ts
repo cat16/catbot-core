@@ -3,6 +3,7 @@ import DatabaseVariable, { DatabaseVariableOptions } from "./database-variable";
 import VariableNotLoadedError from "./error/variable-not-loaded";
 
 /**
+ * TODO: remove the word basically
  * Basically a perminantly cached database variable
  */
 export default class SavedVariable<T> extends DatabaseVariable<T> {
@@ -16,7 +17,7 @@ export default class SavedVariable<T> extends DatabaseVariable<T> {
   ) {
     super(dbi, key, options);
     this.loaded = false;
-    this.dbi.addSyncFunction(this.key, value => {
+    this.on("load", value => {
       this.value = value;
       this.loaded = true;
     });

@@ -1,10 +1,11 @@
 import FileElement from "..";
-import { pathExists } from "../..";
+import { pathExists } from "../../file";
 import ElementDirectoryLoader from "../loader";
 import RecursiveLoadResult from "../loader/recursive-result";
 
-export interface DirLoadResult<E extends FileElement> { // TODO: this should probably be an interface
-  element?: E,
+export interface DirLoadResult<E extends FileElement> {
+  // TODO: this should probably be an interface
+  element?: E;
   found: boolean;
   error?: Error;
   subErrors?: Map<string, Error>;
@@ -46,20 +47,23 @@ export default class ElementDirectoryManager<
     } else {
       const result = this.loader.load(name);
       // TODO: LoadResult should probably just have an error variable lol
-      const element = result.element instanceof Error ? undefined : result.element;
+      const element =
+        result.element instanceof Error ? undefined : result.element;
       const found = result.found;
-      const error = result.element instanceof Error ? result.element : undefined;
-      const subErrors = result instanceof RecursiveLoadResult ? result.errors : undefined;
-      if(element) {
+      const error =
+        result.element instanceof Error ? result.element : undefined;
+      const subErrors =
+        result instanceof RecursiveLoadResult ? result.errors : undefined;
+      if (element) {
         this.elements.push(element);
       }
-      return { element, found, error, subErrors }
+      return { element, found, error, subErrors };
     }
   }
 
   public unload(element: E): boolean {
-    const index = this.elements.findIndex(e => e.getFileName() === element.getFileName());
-    if(index === -1) {
+    const index = this.elements.findIndex(e => e.fileName === element.fileName);
+    if (index === -1) {
       return false;
     } else {
       this.elements.splice(index, 1);

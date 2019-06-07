@@ -1,7 +1,8 @@
 import chalk from "chalk";
-import { getInput } from ".";
-import MsgType from "./msg-type";
+import stringLength from "string-length";
 import { inspect } from "util";
+import { getInput } from "..";
+import MsgType from "../msg-type";
 
 const twoDigit = (num: string) => {
   return num.length === 1 ? `0${num}` : num;
@@ -18,13 +19,16 @@ export default class Logger {
   }
 
   public getLogString(msg: any, msgType: MsgType = MsgType.INFO) {
-    if(typeof msg !== "string") {
+    if (typeof msg !== "string") {
       msg = inspect(msg);
     }
     const date = chalk.gray(this.getLogDateString(new Date()));
     const name = this.name;
     const type = msgType.getColoredName();
-    return `[${date}] [${name}] [${type}] ${msg}`;
+    const prefix = `[${date}] [${name}] [${type}]`;
+    return `${prefix} ${msg
+      .split("\n")
+      .join("\n" + " ".repeat(stringLength(prefix) - 1) + "| ")}`;
   }
 
   public getLogDateString(d: Date): string {

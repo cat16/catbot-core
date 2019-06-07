@@ -1,10 +1,10 @@
+import ArgValidator from "..";
 import Command from "../../..";
 import ArgFailure from "../../result/fail";
 import ArgSuccess from "../../result/success";
 import ValidatorContext from "../context";
-import GenericArgValidator from "../generic";
 
-export default class CommandValidator extends GenericArgValidator<Command> {
+export default class CommandValidator extends ArgValidator<Command> {
   public validate(text: string, context: ValidatorContext) {
     const bot = context.bot;
     const match = bot.commandManager.findMatch(text, {

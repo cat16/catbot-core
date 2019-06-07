@@ -1,7 +1,13 @@
 // tslint:disable-next-line: no-submodule-imports
 import * as simpleGit from "simple-git/promise";
 import { Arg, ArgValidators, CommandCreateInfo, tuple } from "../../../..";
-import { copyDirectory, createDirectory, createTempDir, existsDirectory, removeDirectory } from "../../../../lib/util";
+import {
+  copyDirectory,
+  createDirectory,
+  createTempDir,
+  existsDirectory,
+  removeDirectory
+} from "../../../../lib/util/file";
 const { WORD } = ArgValidators;
 
 const args = tuple([
@@ -42,9 +48,9 @@ async function getModuleUrl(
 const createInfo: CommandCreateInfo = {
   args,
   async run(context) {
-    const user = context.getArg(args[0]);
-    let moduleName = context.getArg(args[1]);
-    if(moduleName.startsWith("bot-module-")) {
+    const user = args[0].from(context);
+    let moduleName = args[1].from(context);
+    if (moduleName.startsWith("bot-module-")) {
       moduleName = moduleName.slice(11);
     }
     const url = await getModuleUrl(user, moduleName);
@@ -74,7 +80,7 @@ const createInfo: CommandCreateInfo = {
     // setup git and temp directory
     createDirectory(tempLoc);
     const git = simpleGit(tempLoc);
-    const tempDir = createTempDir(tempLoc, "module-download")
+    const tempDir = createTempDir(tempLoc, "module-download");
 
     // download the module
     try {

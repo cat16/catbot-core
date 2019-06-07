@@ -1,8 +1,7 @@
 import { CommandCreateInfo } from "../../../..";
-import CommandRunContext from "../../../../lib/command/runnable/run-context";
 
 const createInfo: CommandCreateInfo = {
-  async run(context: CommandRunContext) {
+  async run(context) {
     context.list(
       "Installed Modules",
       this.bot.getModules().map(m => {

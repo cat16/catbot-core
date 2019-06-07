@@ -10,5 +10,5 @@ export { default as Event } from "./lib/event";
 export { default as Arg } from "./lib/command/arg";
 import { default as ArgValidators } from "./lib/command/arg/validator/types";
 export { ArgValidators };
-export { default as Logger } from "./lib/util/logger";
+export { default as Logger } from "./lib/util/console/logger";
 export { tuple } from "./lib/util";
